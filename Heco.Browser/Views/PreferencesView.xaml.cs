@@ -73,8 +73,8 @@ public partial class PreferencesView : UserControl
         var searchCombo = MakeCombo(200, Math.Max(0, idxEngine), engines);
         searchCombo.SelectionChanged += (s, e) => 
         { 
-            if (searchCombo.SelectedItem is ComboBoxItem cbi)
-                AppSettings.Current.SearchEngine = cbi.Content?.ToString() ?? "Google";
+            if (searchCombo.SelectedItem is HecoComboBoxItem hcbi)
+                AppSettings.Current.SearchEngine = hcbi.Content?.ToString() ?? "Google";
             AppSettings.Current.Save(); 
         };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_DefaultEngine"], LanguageManager.Instance["Pref_SelectEngine"], searchCombo));
@@ -123,9 +123,9 @@ public partial class PreferencesView : UserControl
         var profileCombo = MakeCombo(200, Math.Max(0, idxProfile), profiles);
         profileCombo.SelectionChanged += (s, e) =>
         {
-            if (profileCombo.SelectedItem is ComboBoxItem cbi)
+            if (profileCombo.SelectedItem is HecoComboBoxItem hcbi)
             {
-                AppSettings.Current.CurrentProfile = cbi.Content?.ToString() ?? LanguageManager.Instance["Pref_PersonalProfile"];
+                AppSettings.Current.CurrentProfile = hcbi.Content?.ToString() ?? LanguageManager.Instance["Pref_PersonalProfile"];
                 AppSettings.Current.Save();
             }
         };
@@ -205,8 +205,8 @@ public partial class PreferencesView : UserControl
         var themeCombo = MakeCombo(180, Math.Max(0, idxTheme), themes);
         themeCombo.SelectionChanged += (s, e) => 
         { 
-            if (themeCombo.SelectedItem is ComboBoxItem cbi)
-                AppSettings.Current.Theme = cbi.Content?.ToString() ?? LanguageManager.Instance["Pref_SystemTitle"];
+            if (themeCombo.SelectedItem is HecoComboBoxItem hcbi)
+                AppSettings.Current.Theme = hcbi.Content?.ToString() ?? LanguageManager.Instance["Pref_SystemTitle"];
             AppSettings.Current.Save(); 
         };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_Theme"], LanguageManager.Instance["Pref_SelectTheme"], themeCombo));
@@ -247,8 +247,8 @@ public partial class PreferencesView : UserControl
         var searchCombo = MakeCombo(200, Math.Max(0, idxEngine), engines);
         searchCombo.SelectionChanged += (s, e) => 
         {
-            if (searchCombo.SelectedItem is ComboBoxItem cbi)
-                AppSettings.Current.SearchEngine = cbi.Content?.ToString() ?? "Google";
+            if (searchCombo.SelectedItem is HecoComboBoxItem hcbi)
+                AppSettings.Current.SearchEngine = hcbi.Content?.ToString() ?? "Google";
             AppSettings.Current.Save();
         };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_DefaultEngine"], LanguageManager.Instance["Pref_SearchEngineTitle"], searchCombo));
@@ -334,14 +334,26 @@ public partial class PreferencesView : UserControl
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_Languages"], FontSize = 20, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("Ink100Brush"), Margin = new Thickness(0, 0, 0, 16) });
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_LangTitle"], Foreground = (Brush)FindResource("Ink400Brush"), Margin = new Thickness(0, 0, 0, 24) });
 
-        var langs = new[] { LanguageManager.Instance["Pref_LangVietnamese"], "English", "日本語", "中文 (简体)" };
-        var idxLang = Array.IndexOf(langs, AppSettings.Current.DisplayLanguage);
+        var langs = LanguageManager.Instance.AvailableLanguages.Select(l => l.Name).ToArray();
+        var currentLangName = LanguageManager.Instance.CurrentLanguage?.Name ?? "English";
+        var idxLang = Array.IndexOf(langs, currentLangName);
         var langCombo = MakeCombo(200, Math.Max(0, idxLang), langs);
         langCombo.SelectionChanged += (s, e) =>
         {
-            if (langCombo.SelectedItem is ComboBoxItem cbi)
-                AppSettings.Current.DisplayLanguage = cbi.Content?.ToString() ?? LanguageManager.Instance["Pref_LangVietnamese"];
-            AppSettings.Current.Save();
+            if (langCombo.SelectedItem is HecoComboBoxItem hcbi)
+            {
+                var selectedName = hcbi.Content?.ToString();
+                var selectedLang = LanguageManager.Instance.AvailableLanguages.FirstOrDefault(l => l.Name == selectedName);
+                if (selectedLang != null && LanguageManager.Instance.CurrentLanguage != selectedLang)
+                {
+                    LanguageManager.Instance.CurrentLanguage = selectedLang;
+                    AppSettings.Current.DisplayLanguage = selectedLang.Code;
+                    AppSettings.Current.Save();
+                    
+                    // Cập nhật lại giao diện (vì các text trong phần nội dung được tạo cứng bằng C#)
+                    LoadSettingsSection("Languages");
+                }
+            }
         };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_DisplayLang"], LanguageManager.Instance["Pref_SelectUILang"], langCombo));
 
