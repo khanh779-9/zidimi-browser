@@ -1,0 +1,19 @@
+﻿<ctrl:HecoWindow x:Class="Heco.Browser.MainWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ctrl="clr-namespace:Heco.Browser.Controls"
+                 xmlns:views="clr-namespace:Heco.Browser.Views"
+                 Title="Heco Browser"
+                 
+                 BrandText="Heco Browser"
+                 Icon="/Heco_Browser.ico"
+                 MinHeight="640" MinWidth="960">
+
+    <ctrl:HecoWindow.TabStripContent>
+        <views:TabStrip Margin="0,3,0,0" />
+    </ctrl:HecoWindow.TabStripContent>
+
+    <Grid Background="{DynamicResource ContentBackgroundBrush}">
+        <ContentControl x:Name="PageHost" />
+    </Grid>
+</ctrl:HecoWindow>

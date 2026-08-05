@@ -1,0 +1,148 @@
+<UserControl x:Class="Heco.Browser.Views.BookmarksView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:infra="clr-namespace:Heco.Browser.Infrastructure"
+             xmlns:models="clr-namespace:Heco.Browser.Models"
+             Background="{DynamicResource ContentBackgroundBrush}">
+    <UserControl.Resources>
+        <CollectionViewSource x:Key="BookmarksSource" Source="{Binding Bookmarks}" />
+    </UserControl.Resources>
+    <Grid Margin="32,24,32,24" MinWidth="600" MaxWidth="800" HorizontalAlignment="Center">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- header -->
+        <StackPanel Grid.Row="0">
+            <TextBlock Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Bookmarks_Title]}" Style="{DynamicResource HeaderText}" Foreground="{DynamicResource Ink100Brush}" />
+            <TextBlock Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Bookmarks_ViewLater]}" Style="{DynamicResource SubHeaderText}" Margin="0,4,0,0" />
+        </StackPanel>
+
+        <!-- search -->
+        <Border Grid.Row="1" Background="{DynamicResource HecoBgSurfaceBrush}"
+                BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1"
+                CornerRadius="19" Height="38" Margin="0,20,0,12">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Path Grid.Column="0" Width="16" Height="16" Margin="14,0,0,0"
+                      Stretch="Uniform" VerticalAlignment="Center"
+                      Stroke="{DynamicResource Ink400Brush}" StrokeThickness="1.5"
+                      Data="M15.5,14 h-.79 l-.28,-.27 a6.5,6.5 0 1 0 -.7,.7 l.27,.28 v.79 l5,4.99 L20.49,19 z" />
+                <TextBox Grid.Column="1" x:Name="SearchBox"
+                         Margin="6,0,12,0"
+                         Background="Transparent" BorderThickness="0"
+                         VerticalContentAlignment="Center"
+                         Foreground="{DynamicResource Ink100Brush}"
+                         CaretBrush="{DynamicResource HecoPurpleLightBrush}"
+                         ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Bookmarks_Search]}" />
+            </Grid>
+        </Border>
+
+        <!-- empty state -->
+        <Border Grid.Row="2" x:Name="EmptyState"
+                Background="{DynamicResource HecoBgSurfaceBrush}"
+                BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1"
+                CornerRadius="12" Padding="32"
+                VerticalAlignment="Center" HorizontalAlignment="Center"
+                Visibility="Collapsed">
+            <StackPanel HorizontalAlignment="Center">
+                <Border Width="56" Height="56" CornerRadius="28"
+                        Background="{DynamicResource HecoBgElevatedBrush}" Margin="0,0,0,12">
+                    <Path Width="26" Height="26" Stretch="Uniform"
+                          Stroke="{DynamicResource HecoPurpleLightBrush}" StrokeThickness="1.5"
+                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                          Data="M12,17.27 L18.18,21 L16.54,13.97 L22,9.24 L14.71,8.42 L12,2 L9.29,8.42 L2,9.24 L7.46,13.97 L5.82,21 Z"
+                          HorizontalAlignment="Center" VerticalAlignment="Center" />
+                </Border>
+                <TextBlock Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Bookmarks_Empty]}"
+                           FontSize="15" FontWeight="SemiBold"
+                           Foreground="{DynamicResource Ink200Brush}" HorizontalAlignment="Center" />
+                <TextBlock Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Bookmarks_EmptyDesc]}"
+                           FontSize="12"
+                           Foreground="{DynamicResource Ink400Brush}" HorizontalAlignment="Center" Margin="0,6,0,0" />
+            </StackPanel>
+        </Border>
+
+        <!-- grid view -->
+        <ItemsControl Grid.Row="2" x:Name="Grid"
+                      ItemsSource="{Binding Source={StaticResource BookmarksSource}}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <UniformGrid Columns="3" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="{x:Type models:Bookmark}">
+                    <Border Background="{DynamicResource HecoBgSurfaceBrush}"
+                            BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1"
+                            CornerRadius="10" Padding="14,18" Margin="6"
+                            Cursor="Hand"
+                            MouseLeftButtonDown="Bookmark_Click">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="BorderBrush" Value="{DynamicResource HecoPurpleBrush}" />
+                                        <Setter Property="Background" Value="{DynamicResource HecoBgElevatedBrush}" />
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <StackPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <Border Grid.Column="0" Width="44" Height="44" CornerRadius="10"
+                                        Background="{DynamicResource HecoBgElevatedBrush}"
+                                        HorizontalAlignment="Left">
+                                    <Path Width="22" Height="22" Stretch="Uniform"
+                                          Fill="{DynamicResource HecoPurpleLightBrush}"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center"
+                                          Data="M12,17.27 L18.18,21 L16.54,13.97 L22,9.24 L14.71,8.42 L12,2 L9.29,8.42 L2,9.24 L7.46,13.97 L5.82,21 Z" />
+                                </Border>
+                                <Button Grid.Column="1" Width="28" Height="28"
+                                        Background="Transparent" BorderThickness="0" Cursor="Hand"
+                                        Command="{Binding DataContext.RemoveBookmarkCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding}"
+                                        ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Bookmarks_Delete]}">
+                                    <Button.Template>
+                                        <ControlTemplate TargetType="Button">
+                                            <Border x:Name="bd" Background="Transparent" CornerRadius="14">
+                                                <Path Width="12" Height="12" Stretch="Uniform"
+                                                      Stroke="{DynamicResource Ink400Brush}" StrokeThickness="1.5"
+                                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                      Data="M2,2 L10,10 M10,2 L2,10" />
+                                            </Border>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="bd" Property="Background" Value="{DynamicResource DangerBrush}" />
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Button.Template>
+                                </Button>
+                            </Grid>
+                            <TextBlock Text="{Binding Title}"
+                                       FontSize="14" FontWeight="SemiBold"
+                                       Foreground="{DynamicResource Ink100Brush}"
+                                       TextTrimming="CharacterEllipsis" Margin="0,12,0,4"
+                                       TextOptions.TextFormattingMode="Ideal" />
+                            <TextBlock Text="{Binding Url}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource Ink400Brush}"
+                                       TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                    </Border>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+    </Grid>
+</UserControl>

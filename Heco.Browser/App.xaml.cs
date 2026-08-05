@@ -1,0 +1,100 @@
+using System.IO;
+using System.Windows;
+using CefSharp;
+using CefSharp.Wpf;
+using Heco.Browser.Infrastructure;
+
+using Heco.Browser.Models;
+
+namespace Heco.Browser;
+
+public partial class App : Application
+{
+    public static MainViewModel ViewModel { get; private set; } = null!;
+    public static RequestContextFactory RequestContexts { get; private set; } = null!;
+
+    private static readonly System.Threading.Mutex SingleInstanceMutex =
+        new(false, @"Local\Heco.Browser.SingleInstance");
+
+    protected override void OnStartup(StartupEventArgs e)
+    {
+        if (!SingleInstanceMutex.WaitOne(0, false))
+        {
+            // Đã có instance Heco.Browser đang chạy — CEF không cho 2 instance dùng chung cache.
+            MessageBox.Show("Heco Browser đã đang chạy.\nHãy mở cửa sổ đang chạy hoặc đóng nó rồi thử lại.",
+                "Heco Browser", MessageBoxButton.OK, MessageBoxImage.Information);
+            Shutdown();
+            return;
+        }
+
+        DispatcherUnhandledException += OnUnhandled;
+        AppDomain.CurrentDomain.UnhandledException += OnDomainException;
+        try
+        {
+            AppSettings.Load();
+            var dummy = LanguageManager.Instance; // Initialize LanguageManager
+            InitializeCef();
+        }
+        catch (Exception ex)
+        {
+            File.AppendAllText("heco-browser-crash.log",
+                $"[{DateTime.Now:O}] [CefInit] {ex}\n\n");
+            throw;
+        }
+        base.OnStartup(e);
+
+        var history = new HistoryService();
+        var bookmarks = new BookmarkService();
+        RequestContexts = new RequestContextFactory(Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "HecoBrowser", "Cache"));
+        ViewModel = new MainViewModel(history, bookmarks);
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        RequestContexts?.Dispose();
+        base.OnExit(e);
+    }
+
+    private static void InitializeCef()
+    {
+        // CefSharp phải được khởi tạo trước khi dùng bất kỳ control ChromiumWebBrowser nào.
+        var appData = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
+            "HecoBrowser");
+        var cachePath = Path.Combine(appData, "Cache");
+        Directory.CreateDirectory(cachePath);
+
+        var settings = new CefSettings
+        {
+            CachePath = cachePath,
+            LogSeverity = LogSeverity.Error,
+        };
+        // Bỏ qua GPU blacklist để chạy ổn định trên nhiều GPU khác nhau.
+        // CefSharp 150 tự thêm một số switch mặc định nên phải dùng indexer để tránh trùng key.
+        if (!AppSettings.Current.EnableGpu)
+        {
+            settings.CefCommandLineArgs["disable-gpu"] = "1";
+            settings.CefCommandLineArgs["disable-gpu-compositing"] = "1";
+        }
+        var ok = Cef.Initialize(settings, performDependencyCheck: true, browserProcessHandler: null);
+        if (!ok)
+            throw new InvalidOperationException(
+                "Cef.Initialize trả về false — kiểm tra log CEF (debug.log) và các subprocess CefSharp.BrowserSubprocess còn sót.");
+    }
+
+    private void OnUnhandled(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
+    {
+        File.AppendAllText("heco-browser-crash.log",
+            $"[{DateTime.Now:O}] [Dispatcher] {e.Exception}\n\n");
+        e.Handled = true;
+    }
+
+    private void OnDomainException(object sender, UnhandledExceptionEventArgs e)
+    {
+        if (e.ExceptionObject is Exception ex)
+            File.AppendAllText("heco-browser-crash.log",
+                $"[{DateTime.Now:O}] [AppDomain] {ex}\n\n");
+    }
+}

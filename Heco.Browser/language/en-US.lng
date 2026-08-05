@@ -1,0 +1,269 @@
+[Info]
+LanguageName=English
+
+[Menu]
+NewTab=New Tab (Ctrl+T)
+CloseTab=Close Tab (Ctrl+W)
+History=History
+Bookmarks=Bookmarks
+FindInPage=Find in Page (Ctrl+F)
+DevTools=Developer Tools (F12)
+ZoomOut=Zoom Out (Ctrl+-)
+ZoomIn=Zoom In (Ctrl++)
+ZoomReset=Reset Zoom (Ctrl+0)
+Preferences=Preferences (Ctrl+,)
+Language=Language
+
+[Toolbar]
+BackTooltip=Go Back (Alt+←)
+ForwardTooltip=Go Forward (Alt+→)
+ReloadTooltip=Reload (F5)
+HomeTooltip=Home
+SecurityTooltip=Site Information
+BookmarkTooltip=Bookmark this page
+AvatarTooltip=Profile & Guest Mode
+MenuTooltip=Menu
+
+[Page]
+EmptyHint=No tabs open
+Find=Find:
+
+[Profile]
+Default=Default Profile
+GuestMode=Guest Mode (no data saved)
+Manage=Manage Profiles
+
+[Security]
+SafeConn=Connection is secure
+SafeDesc=Your connection to this site is encrypted
+Perm=Permissions
+Cookies=Cookies and site data
+Cert=SSL Certificate
+Settings=Site settings
+
+[Menu]
+History=History
+
+[History]
+Desc=Websites you visited recently
+
+[Common]
+ClearAll=Clear all
+
+[Downloads]
+Title=Downloads
+Desc=Files you have downloaded
+Empty=No downloads yet
+EmptyDesc=Files you download will appear here.
+
+[Bookmarks]
+Title=Bookmarks
+Desc=Pages you have saved
+
+[Tab]
+ScrollLeft=Scroll left
+Mute=Mute/Unmute
+ScrollRight=Scroll right
+List=Tab list
+
+[Login]
+Title=Sign in to sync
+Desc=Your history, passwords, and bookmarks will be safe.
+Email=Email
+Password=Password
+
+[Clear]
+Title=Clear browsing data
+TimeRange=Time range:
+HistoryDesc=Clears browsing history from this device.
+CookiesDesc=Signs you out of most websites.
+CacheDesc=Frees up storage space.
+
+[Data]
+Title=Manage data
+Add=Add new
+
+[Pref]
+General=General
+GeneralDesc=General settings for the browser
+StartupPage=New tab page
+HomeUrl=Homepage URL
+DefaultEngine=Default search engine
+SelectEngine=Select search engine
+OnStartup=On startup
+StartupAction=Select startup action
+StartupNewPage=Open the New Tab page
+StartupContinue=Continue where you left off
+StartupSpecific=Open a specific page or set of pages
+Profile=You and Heco
+ProfileDesc=Manage profiles and sync
+Logout=Sign out
+Login=Sign in
+SyncData=Sync data
+SyncDesc=Sign in to sync history, bookmarks and passwords
+CurrentProfile=Current profile
+ProfileApplyDesc=Changing profile will apply when opening a new Tab
+AddProfile=Add profile
+Autofill=Autofill and passwords
+AutofillDesc=Manage form storage data
+ManagePasswords=Manage passwords
+PasswordManager=Password Manager
+PasswordDesc=View and edit saved passwords
+ManagePayments=Manage payments
+PaymentMethods=Payment methods
+PaymentDesc=Save credit card numbers securely
+ManageAddresses=Manage addresses
+AddressAndMore=Addresses and more
+AddressDesc=Save phone numbers, emails, shipping addresses
+DefaultBrowser=Default browser
+MakeDefault=Make Heco the default browser
+SetDefault=Make default
+NotDefault=Heco is not currently your default browser
+Privacy=Privacy and security
+Appearance=Appearance
+Search=Search engine
+Downloads=Downloads
+Languages=Languages
+System=System
+About=About Heco
+SearchPlaceholder=Search...
+Bookmarks_EmptyDesc=Click the star on the address bar to save the page.
+Bookmarks_Empty=No bookmarks yet
+Bookmarks_ViewLater=Pages you saved for later
+Bookmarks_Search=Search bookmarks
+Bookmarks_Delete=Delete bookmark
+Browser_Next=Next (Enter)
+Browser_Prev=Previous (Shift+Enter)
+Browser_RemoveBookmark=Remove bookmark
+Browser_SiteSettingsWIP=Site settings — to be implemented in a future release.
+Browser_StopLoad=Stop loading (Esc)
+Browser_AskDefault=Ask (default)
+Browser_DefaultProfile=Default profile
+Browser_Guest=Guest
+Browser_NotSecure=Not secure
+Browser_NotSecureHttp=Not secure — unencrypted HTTP page
+Browser_NoDataSaved=No data saved
+Browser_SecureConn=Secure connection
+Browser_SecureConnHttps=Secure connection (HTTPS)
+Browser_EncryptedConn=Your connection to this site is encrypted
+Browser_UnencryptedConn=Unencrypted connection — attackers might be able to see or change information
+Browser_SavePage=Save page
+Browser_History=History
+Browser_CookieWIP=Cookie & site data management — to be implemented later.
+Browser_SiteInfo=Site information
+Browser_InternalPage=Internal page
+Browser_LocalBrowserPage=Local browser page
+Browser_Search=Search
+Browser_SearchQuery=Search: {query}
+Browser_SearchOnEngine=Search on {engine}
+Browser_Reload=Reload (F5)
+Clear_1Hour=Last hour
+Clear_24Hours=Last 24 hours
+Clear_7Days=Last 7 days
+Clear_CookiesData=Cookies and other site data
+Clear_Cancel=Cancel
+Clear_BrowsingHistory=Browsing history
+Clear_CachedImages=Cached images and files
+Clear_AllTime=All time
+Clear_ClearData=Clear data
+Clear_ClearBrowsingData=Clear browsing data
+Clear_ErrorMsg=An error occurred: {ex.Message}
+Clear_DataCleared=Browsing data cleared.
+Pref_Error=Error
+Clear_Success=Success
+Clear_Clearing=Clearing...
+DataMgr_Save=Save
+DataMgr_ManageData=Manage data
+History_Delete=Delete
+Login_Close=Close
+DataMgr_FullName=Full name
+DataMgr_Password=Password
+DataMgr_ExpiryDate=Expiry date (MM/YY)
+DataMgr_ManagePasswords=Manage passwords
+DataMgr_ManageCards=Manage payment cards
+DataMgr_ManageAddresses=Manage addresses
+DataMgr_CardNumber=Card number
+DataMgr_Phone=Phone number
+DataMgr_NameOnCard=Name on card
+DataMgr_Username=Username
+DataMgr_AddressDetail=Detailed address
+Pref_OpenFolder=Open folder
+Downloads_Search=Search downloads
+Downloads_RemoveFromList=Remove from list
+Downloads_Downloading=Downloading...
+History_Reopen=Reopen
+History_Search=Search by page name or URL
+Login_SignIn=Sign in
+Login_SignInHeco=Sign in to Heco
+Login_InvalidEmail=Invalid email.
+Login_EmptyFields=Please enter both Email and Password.
+Login_Processing=Processing...
+Login_SuccessMsg=Successfully signed in as {TxtEmail.Text}!
+Login_Sync=Sync
+Pref_ConfirmLogout=Are you sure you want to sign out and stop syncing?
+Pref_ProtectData=Protect personal data
+Pref_RunInBackground=Run in background when closed
+Pref_BlockThirdPartyCookies=Block third-party cookies
+Pref_SelectUILang=Select UI language
+Pref_SelectTheme=Select light/dark theme
+Pref_Theme=Theme
+Pref_SearchSettings=Search engine settings
+Pref_SystemSettings=System & performance settings
+Pref_PersonalProfile=Personal
+Pref_WarnDangerousSites=Warn about dangerous sites
+Pref_Update=Update
+Pref_FontSize=Font size
+Pref_SearchEngineTitle=Search engine
+Pref_License=License
+Pref_DoNotTrack=Send a "Do Not Track" request
+Pref_UpToDate=Heco Browser is up to date.
+Pref_ShowSearchSuggestions=Show search suggestions as you type
+Pref_ShowDownloadBar=Show download bar when download starts
+Pref_SystemTitle=System
+Pref_AskWhereToSave=Ask where to save each file before downloading
+Pref_ProfileCount=Profile {AppSettings.Current.Profiles.Count + 1}
+Pref_ProxyError=Could not open Windows Proxy Settings: 
+Pref_WinSettingsError=Could not open Windows Settings: 
+Pref_SafeBrowsing=Safe Browsing
+Pref_CheckUpdate=Check for updates
+Pref_DefaultFontSize=Default font size
+Pref_SizeLarge=Large (16px)
+Pref_SourceCode=Source code
+Pref_OpenProxySettings=Open Windows proxy settings
+Pref_DisplayLang=Display language
+Pref_LangTitle=Display language & translation
+Pref_SizeSmall=Small (12px)
+Pref_Version=Version
+Pref_ManageDownloads=Manage downloaded files
+Pref_SizeExtraLarge=Extra large (18px)
+Pref_ThemeLight=Light
+Pref_UseSystemProxy=Use system proxy settings
+Pref_HardwareAccel=Use hardware acceleration when available
+Pref_VersionInfo=Version & copyright info
+Pref_DefaultDownloadFolder=Default download folder
+Pref_LangVietnamese=Vietnamese
+Pref_CustomizeAppearance=Customize browser appearance
+Pref_ThemeDark=Dark
+Pref_AutoTranslate=Automatically translate pages not in your language
+Pref_SizeMedium=Medium (14px)
+Pref_ClearBrowsingDataBtn=Clear browsing data...
+Pref_DefaultZoom=Default zoom for all pages
+Pref_CheckingUpdate=Checking...
+Tab_NewTabShortcut=New tab (Ctrl+T)
+Tab_UnmuteTab=Unmute tab
+Tab_UnpinTab=Unpin tab
+Tab_PinTab=Pin tab
+Tab_DuplicateTab=Duplicate tab
+Tab_NewTab=New tab
+Tab_ReloadTab=Reload tab
+Tab_MuteTab=Mute tab
+Tab_CloseTab=Close tab
+Browser_HecoBrowser=Heco Browser
+Browser_GuestInitial=G
+Browser_HecoInitial=H
+Perm_Camera=Camera
+Perm_Microphone=Microphone
+Perm_Location=Location
+Perm_Notifications=Notifications
+Perm_Popups=Popups
+Perm_JavaScript=JavaScript
