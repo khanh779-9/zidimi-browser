@@ -105,7 +105,7 @@ public partial class PreferencesView : UserControl
         tbHome.TextChanged += (s, e) => { AppSettings.Current.HomePageUrl = tbHome.Text; AppSettings.Current.Save(); };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_StartupPage"], LanguageManager.Instance["Pref_HomeUrl"], tbHome));
 
-        var engines = new[] { "DuckDuckGo", "Google", "Bing", "Brave Search" };
+        var engines = new[] { "DuckDuckGo", "Google", "Bing", "Brave Search", "Yahoo", "Yandex", "Baidu", "Ecosia", "Startpage", "Qwant", "Ask.com" };
         var idxEngine = Array.IndexOf(engines, AppSettings.Current.SearchEngine);
         var searchCombo = MakeCombo(200, Math.Max(0, idxEngine), engines);
         searchCombo.SelectionChanged += (s, e) => 
@@ -327,7 +327,7 @@ public partial class PreferencesView : UserControl
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_Search"], FontSize = 20, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("Ink100Brush"), Margin = new Thickness(0, 0, 0, 16) });
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_SearchSettings"], Foreground = (Brush)FindResource("Ink400Brush"), Margin = new Thickness(0, 0, 0, 24) });
 
-        var engines = new[] { "DuckDuckGo", "Google", "Bing", "Brave Search" };
+        var engines = new[] { "DuckDuckGo", "Google", "Bing", "Brave Search", "Yahoo", "Yandex", "Baidu", "Ecosia", "Startpage", "Qwant", "Ask.com" };
         var idxEngine = Array.IndexOf(engines, AppSettings.Current.SearchEngine);
         var searchCombo = MakeCombo(200, Math.Max(0, idxEngine), engines);
         searchCombo.SelectionChanged += (s, e) => 

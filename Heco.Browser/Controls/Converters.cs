@@ -55,6 +55,13 @@ public sealed class StringToUrlConverter : IValueConverter{
                 "DuckDuckGo" => "https://duckduckgo.com/?q=" + query,
                 "Bing" => "https://www.bing.com/search?q=" + query,
                 "Brave Search" => "https://search.brave.com/search?q=" + query,
+                "Yahoo" => "https://search.yahoo.com/search?p=" + query,
+                "Yandex" => "https://yandex.com/search/?text=" + query,
+                "Baidu" => "https://www.baidu.com/s?wd=" + query,
+                "Ecosia" => "https://www.ecosia.org/search?q=" + query,
+                "Startpage" => "https://www.startpage.com/sp/search?query=" + query,
+                "Qwant" => "https://www.qwant.com/?q=" + query,
+                "Ask.com" => "https://www.ask.com/web?q=" + query,
                 _ => "https://www.google.com/search?q=" + query
             };
         }

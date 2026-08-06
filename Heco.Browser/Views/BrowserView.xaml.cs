@@ -471,6 +471,13 @@ public partial class BrowserView : UserControl
             "DuckDuckGo" => "https://duckduckgo.com/?q=" + query,
             "Bing" => "https://www.bing.com/search?q=" + query,
             "Brave Search" => "https://search.brave.com/search?q=" + query,
+            "Yahoo" => "https://search.yahoo.com/search?p=" + query,
+            "Yandex" => "https://yandex.com/search/?text=" + query,
+            "Baidu" => "https://www.baidu.com/s?wd=" + query,
+            "Ecosia" => "https://www.ecosia.org/search?q=" + query,
+            "Startpage" => "https://www.startpage.com/sp/search?query=" + query,
+            "Qwant" => "https://www.qwant.com/?q=" + query,
+            "Ask.com" => "https://www.ask.com/web?q=" + query,
             _ => "https://www.google.com/search?q=" + query
         };
     }
@@ -678,6 +685,13 @@ public partial class BrowserView : UserControl
                 "DuckDuckGo" => "https://duckduckgo.com/?q=",
                 "Bing" => "https://www.bing.com/search?q=",
                 "Brave Search" => "https://search.brave.com/search?q=",
+                "Yahoo" => "https://search.yahoo.com/search?p=",
+                "Yandex" => "https://yandex.com/search/?text=",
+                "Baidu" => "https://www.baidu.com/s?wd=",
+                "Ecosia" => "https://www.ecosia.org/search?q=",
+                "Startpage" => "https://www.startpage.com/sp/search?query=",
+                "Qwant" => "https://www.qwant.com/?q=",
+                "Ask.com" => "https://www.ask.com/web?q=",
                 _ => "https://www.google.com/search?q="
             };
             _allSuggestions.Add(new Models.AutocompleteSuggestion
