@@ -1,4 +1,4 @@
-using System.Globalization;
+﻿using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 
@@ -48,7 +48,7 @@ public sealed class StringToUrlConverter : IValueConverter{
             if (s.Contains('.') && !s.Contains(' '))
                 return "https://" + s;
 
-            var engine = Heco.Browser.Models.AppSettings.Current.SearchEngine;
+            var engine = Heco.Browser.Models.AppSettings.Profile.SearchEngine;
             var query = Uri.EscapeDataString(s);
             return engine switch
             {
@@ -68,3 +68,4 @@ public sealed class StringToUrlConverter : IValueConverter{
         return "";
     }
 }
+

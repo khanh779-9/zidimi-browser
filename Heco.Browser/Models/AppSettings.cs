@@ -5,64 +5,25 @@ using System.Text.Json.Serialization;
 
 namespace Heco.Browser.Models;
 
-public class AppSettings
+public static class AppSettings
 {
-    [JsonIgnore]
-    public static AppSettings Current { get; private set; } = new AppSettings();
+    public static GlobalSettings Global { get; private set; } = new GlobalSettings();
+    public static ProfileSettings Profile { get; private set; } = new ProfileSettings();
 
-    [JsonIgnore]
-    private static readonly string SettingsFilePath = Path.Combine(
+    private static readonly string GlobalSettingsFilePath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), 
         "HecoBrowser", 
         "settings.json");
 
-    // --- Cài đặt Chung ---
-    public string HomePageUrl { get; set; } = "https://duckduckgo.com";
-    public string SearchEngine { get; set; } = "DuckDuckGo"; 
-    public int StartupBehavior { get; set; } = 0; // 0: Trang mới, 1: Tiếp tục, 2: Tập trang cụ thể
-    public System.Collections.Generic.List<string> StartupPages { get; set; } = new();
-    public System.Collections.Generic.List<string> LastSessionTabs { get; set; } = new();
-    public bool SearchSuggestEnabled { get; set; } = true;
+    private static string ProfileSettingsFilePath(string profileName) => 
+        Infrastructure.UserDataPaths.PreferencesFile(profileName);
 
-    // --- Hồ sơ (Profiles) ---
-    public System.Collections.Generic.List<string> Profiles { get; set; } = new System.Collections.Generic.List<string> { "Cá nhân" };
-    public string CurrentProfile { get; set; } = "Cá nhân";
-
-    // --- Ngôn ngữ ---
-    public string DisplayLanguage { get; set; } = "vi-VN";
-    public bool AutoTranslate { get; set; } = true;
-
-    // --- Cài đặt Hệ thống ---
-    public bool EnableGpu { get; set; } = true;
-    public bool EnhanceVideos { get; set; } = true;
-    public bool RunInBackground { get; set; } = false;
-    public bool UseSystemProxy { get; set; } = true;
-
-    // --- Cài đặt Giao diện ---
-    public string Theme { get; set; } = "system"; // system / dark / light (key ổn định, không theo ngôn ngữ) 
-    public double FontSize { get; set; } = 14;
-    public double ZoomLevel { get; set; } = 0.0; // 0 = 100%
-    public string? LoggedInUser { get; set; }
-
-    // --- Cài đặt Quyền riêng tư ---
-    public bool BlockThirdPartyCookies { get; set; } = true;
-    public bool SendDoNotTrack { get; set; } = true;
-    public bool SafeBrowsing { get; set; } = true;
-    public bool WarnDangerousSites { get; set; } = true;
-
-    // --- Cài đặt Tải xuống ---
-    public string DownloadPath { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-    public bool AskBeforeSave { get; set; } = true;
-    public bool ShowDownloadBar { get; set; } = true;
-
-    // --- Phương thức ---
-    /// <summary>Chuẩn hoá DisplayLanguage: chấp nhận mã ("vi-VN") hoặc tên cũ ("Tiếng Việt").</summary>
     private static string NormalizeLanguageCode(string value)
     {
         if (string.IsNullOrWhiteSpace(value)) return "vi-VN";
         var v = value.Trim();
-        if (v.Length <= 10 && v.Contains("-")) return v; // đã là mã như "vi-VN", "zh-CN"
-        var map = new System.Collections.Generic.Dictionary<string, string>(System.StringComparer.OrdinalIgnoreCase)
+        if (v.Length <= 10 && v.Contains("-")) return v;
+        var map = new System.Collections.Generic.Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["Tiếng Việt"] = "vi-VN",
             ["Vietnamese"] = "vi-VN",
@@ -86,37 +47,89 @@ public class AppSettings
     {
         try
         {
-            if (File.Exists(SettingsFilePath))
+            if (File.Exists(GlobalSettingsFilePath))
             {
-                var json = File.ReadAllText(SettingsFilePath);
-                Current = JsonSerializer.Deserialize<AppSettings>(json) ?? new AppSettings();
+                var json = File.ReadAllText(GlobalSettingsFilePath);
+                Global = JsonSerializer.Deserialize<GlobalSettings>(json) ?? new GlobalSettings();
+
+                // MIGRATION: If old monolithic settings.json, move profile data
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("HomePageUrl", out _))
+                {
+                    var legacyProfileSettings = JsonSerializer.Deserialize<ProfileSettings>(json) ?? new ProfileSettings();
+                    legacyProfileSettings.Theme = Infrastructure.ThemeManager.NormalizeThemeKey(legacyProfileSettings.Theme);
+                    
+                    var profilePath = ProfileSettingsFilePath(Global.CurrentProfile);
+                    Infrastructure.UserDataPaths.EnsureProfileDir(Global.CurrentProfile);
+                    File.WriteAllText(profilePath, JsonSerializer.Serialize(legacyProfileSettings, new JsonSerializerOptions { WriteIndented = true }));
+                    
+                    // Save global to remove profile keys
+                    SaveGlobal();
+                }
             }
 
-            // Migrate legacy: DisplayLanguage trước đây lưu tên ngôn ngữ ("Tiếng Việt")
-            // → chuẩn hoá về mã ngôn ngữ ("vi-VN"). Làm trước vì LanguageManager đọc giá trị này.
-            Current.DisplayLanguage = NormalizeLanguageCode(Current.DisplayLanguage);
-
-            // Migrate legacy: Theme trước đây lưu label theo ngôn ngữ ("Hệ thống", "Tối"...)
-            // → chuẩn hoá về key ổn định để không vỡ khi đổi ngôn ngữ.
-            Current.Theme = Infrastructure.ThemeManager.NormalizeThemeKey(Current.Theme);
+            Global.DisplayLanguage = NormalizeLanguageCode(Global.DisplayLanguage);
         }
         catch
         {
-            Current = new AppSettings();
+            Global = new GlobalSettings();
+        }
+
+        LoadProfile(Global.CurrentProfile);
+    }
+
+    public static void LoadProfile(string profileName)
+    {
+        Global.CurrentProfile = profileName;
+        try
+        {
+            var path = ProfileSettingsFilePath(profileName);
+            if (File.Exists(path))
+            {
+                var json = File.ReadAllText(path);
+                Profile = JsonSerializer.Deserialize<ProfileSettings>(json) ?? new ProfileSettings();
+                Profile.Theme = Infrastructure.ThemeManager.NormalizeThemeKey(Profile.Theme);
+            }
+            else
+            {
+                Profile = new ProfileSettings();
+            }
+        }
+        catch
+        {
+            Profile = new ProfileSettings();
         }
     }
 
-    public void Save()
+    public static void SaveAll()
+    {
+        SaveGlobal();
+        SaveProfile();
+    }
+
+    public static void SaveGlobal()
     {
         try
         {
-            var dir = Path.GetDirectoryName(SettingsFilePath);
+            var dir = Path.GetDirectoryName(GlobalSettingsFilePath);
             if (dir != null && !Directory.Exists(dir))
             {
                 Directory.CreateDirectory(dir);
             }
-            var json = JsonSerializer.Serialize(this, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(SettingsFilePath, json);
+            var json = JsonSerializer.Serialize(Global, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(GlobalSettingsFilePath, json);
+        }
+        catch { }
+    }
+
+    public static void SaveProfile()
+    {
+        try
+        {
+            var path = ProfileSettingsFilePath(Global.CurrentProfile);
+            Infrastructure.UserDataPaths.EnsureProfileDir(Global.CurrentProfile);
+            var json = JsonSerializer.Serialize(Profile, new JsonSerializerOptions { WriteIndented = true });
+            File.WriteAllText(path, json);
         }
         catch { }
     }

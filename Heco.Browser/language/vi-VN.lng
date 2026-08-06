@@ -331,3 +331,15 @@ Pref_EngineLabel=Engine
 Pref_AboutLicense=MIT (Heco) / BSD-3 (CEF/CefSharp)
 Pref_AboutSourceCode=CefSharp / Chromium Embedded Framework
 
+
+[ProfileManager]
+Title=Quản lý hồ sơ
+Switch=Chuyển sang
+Delete=Xoá
+Add=Thêm hồ sơ
+Active=Đang dùng
+DeleteConfirmTitle=Xác nhận xoá
+DeleteConfirmMsg=Bạn có chắc chắn muốn xoá hồ sơ này và toàn bộ dữ liệu của nó không? Hành động này không thể hoàn tác.
+CantDeleteActiveTitle=Không thể xoá
+CantDeleteActiveMsg=Không thể xoá hồ sơ đang được sử dụng. Vui lòng chuyển sang hồ sơ khác trước.
+

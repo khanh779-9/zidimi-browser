@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
@@ -81,7 +81,7 @@ namespace Heco.Browser.Infrastructure
 
             // Load last used language: ưu tiên AppSettings.DisplayLanguage (nguồn chính),
             // fallback về config.ini cũ rồi mới đến mặc định.
-            string lastLangCode = Heco.Browser.Models.AppSettings.Current.DisplayLanguage;
+            string lastLangCode = Heco.Browser.Models.AppSettings.Global.DisplayLanguage;
             if (string.IsNullOrEmpty(lastLangCode) || lastLangCode.Length > 10)
                 lastLangCode = "vi-VN";
             if (File.Exists(ConfigPath) && AvailableLanguages.All(l => l.Code != lastLangCode))
@@ -180,8 +180,8 @@ namespace Heco.Browser.Infrastructure
             // config.ini chỉ giữ lại để tương thích ngược.
             try
             {
-                Heco.Browser.Models.AppSettings.Current.DisplayLanguage = langCode;
-                Heco.Browser.Models.AppSettings.Current.Save();
+                Heco.Browser.Models.AppSettings.Global.DisplayLanguage = langCode;
+                Heco.Browser.Models.AppSettings.SaveAll();
             }
             catch { }
 
@@ -215,3 +215,4 @@ namespace Heco.Browser.Infrastructure
     }
 }
 }
+

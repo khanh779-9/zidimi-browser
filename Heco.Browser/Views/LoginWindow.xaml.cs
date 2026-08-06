@@ -1,4 +1,4 @@
-using Heco.Browser.Controls;
+﻿using Heco.Browser.Controls;
 using Heco.Browser.Infrastructure;
 using System;
 using System.Threading.Tasks;
@@ -44,8 +44,8 @@ namespace Heco.Browser.Views
             await Task.Delay(1500);
 
             // Fake login success
-            AppSettings.Current.LoggedInUser = TxtEmail.Text;
-            AppSettings.Current.Save();
+            AppSettings.Global.LoggedInUser = TxtEmail.Text;
+            AppSettings.SaveAll();
 
             HecoMessageBox.Show(string.Format(LanguageManager.Instance["Login_SuccessMsg"], TxtEmail.Text), LanguageManager.Instance["Login_Sync"], HecoMessageBoxButton.OK, HecoMessageBoxImage.Success, this);
             
@@ -54,3 +54,4 @@ namespace Heco.Browser.Views
         }
     }
 }
+

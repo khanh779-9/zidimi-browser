@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
@@ -63,14 +63,14 @@ public sealed class MainViewModel : ViewModelBase
         });
 
         // Tạo tab mặc định
-        var startupBehavior = Heco.Browser.Models.AppSettings.Current.StartupBehavior;
+        var startupBehavior = Heco.Browser.Models.AppSettings.Profile.StartupBehavior;
         if (startupBehavior == 0) // Mở trang mới
         {
             NewTab("about:newtab");
         }
         else if (startupBehavior == 1) // Tiếp tục từ nơi đã dừng
         {
-            var urls = Heco.Browser.Models.AppSettings.Current.LastSessionTabs;
+            var urls = Heco.Browser.Models.AppSettings.Profile.LastSessionTabs;
             if (urls.Count > 0)
             {
                 foreach (var url in urls)
@@ -83,7 +83,7 @@ public sealed class MainViewModel : ViewModelBase
         }
         else // Mở tập trang cụ thể
         {
-            var pages = Heco.Browser.Models.AppSettings.Current.StartupPages;
+            var pages = Heco.Browser.Models.AppSettings.Profile.StartupPages;
             if (pages.Count > 0)
             {
                 foreach (var p in pages)
@@ -91,7 +91,7 @@ public sealed class MainViewModel : ViewModelBase
             }
             else
             {
-                NewTab(Heco.Browser.Models.AppSettings.Current.HomePageUrl);
+                NewTab(Heco.Browser.Models.AppSettings.Profile.HomePageUrl);
             }
         }
     }
@@ -181,7 +181,7 @@ public sealed class MainViewModel : ViewModelBase
     /// <summary>Lấy RequestContext cho tab mới theo profile hiện tại.
     /// Nếu là chế độ khách (GuestMode) thì dùng in-memory context.</summary>
     public CefSharp.IRequestContext? GetRequestContext()
-        => IsGuestMode ? App.RequestContexts.GetGuestContext() : App.RequestContexts.GetProfileContext(Heco.Browser.Models.AppSettings.Current.CurrentProfile);
+        => IsGuestMode ? App.RequestContexts.GetGuestContext() : App.RequestContexts.GetProfileContext(Heco.Browser.Models.AppSettings.Global.CurrentProfile);
 
     public ICommand NewTabCommand { get; }
     public ICommand CloseTabCommand { get; }
@@ -309,7 +309,8 @@ public sealed class MainViewModel : ViewModelBase
             .Where(t => t.Kind == TabKind.Web && !string.IsNullOrEmpty(t.Address))
             .Select(t => t.Address!)
             .ToList();
-        Heco.Browser.Models.AppSettings.Current.LastSessionTabs = urls;
-        Heco.Browser.Models.AppSettings.Current.Save();
+        Heco.Browser.Models.AppSettings.Profile.LastSessionTabs = urls;
+        Heco.Browser.Models.AppSettings.SaveAll();
     }
 }
+

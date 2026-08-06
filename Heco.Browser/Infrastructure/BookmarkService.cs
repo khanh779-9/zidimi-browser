@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using Heco.Browser.Models;
 using System.IO;
 using System.Text.Json;
@@ -9,7 +9,7 @@ namespace Heco.Browser.Infrastructure;
 /// <summary>Bookmark service có persistence JSON theo profile (User Data\&lt;profile&gt;\Bookmarks — giống Chrome).</summary>
 public sealed class BookmarkService
 {
-    private string _profileName = AppSettings.Current.CurrentProfile;
+    private string _profileName = AppSettings.Global.CurrentProfile;
 
     public ObservableCollection<Bookmark> Items { get; } = new();
 
@@ -86,3 +86,4 @@ public sealed class BookmarkService
         catch { }
     }
 }
+

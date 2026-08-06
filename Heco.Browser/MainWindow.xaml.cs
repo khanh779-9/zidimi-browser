@@ -33,14 +33,14 @@ public partial class MainWindow : HecoWindow
 
     private void UpdateAppFontSize()
     {
-        FontSize = Models.AppSettings.Current.FontSize;
+        FontSize = Models.AppSettings.Profile.FontSize;
     }
 
     private void OnMainWindowClosing(object? sender, CancelEventArgs e)
     {
         // "RunInBackground": ẩn window thay vì thoát để CEF chạy nền,
         // hiện system tray icon để user mở lại hoặc thoát hẳn.
-        if (Models.AppSettings.Current.RunInBackground)
+        if (Models.AppSettings.Global.RunInBackground)
         {
             e.Cancel = true;
             Hide();
@@ -69,3 +69,4 @@ public partial class MainWindow : HecoWindow
         PageHost.Content = page;
     }
 }
+

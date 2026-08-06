@@ -28,7 +28,7 @@ public static class UserDataPaths
     public static string LocalStatePath => Path.Combine(Root, "Local State");
 
     /// <summary>Cache dùng chung cho mọi profile, nằm ngay trong User Data root (giống CocCoc).</summary>
-    public static string SharedCacheDir => Path.Combine(Root, "Cache");
+    public static string SharedCacheDir => Path.Combine(Root);
 
     /// <summary>Tên thư mục trên đĩa cho một profile (Default cho profile mặc định).</summary>
     public static string ProfileFolder(string profileName)
@@ -56,6 +56,9 @@ public static class UserDataPaths
     public static string LoginDataFile(string profileName) => Path.Combine(ProfileDir(profileName), "Login Data");
 
     public static string PreferencesFile(string profileName) => Path.Combine(ProfileDir(profileName), "Preferences");
+
+    /// <summary>Avatar icon for the profile (.ico)</summary>
+    public static string AvatarIconFile(string profileName) => Path.Combine(ProfileDir(profileName), "avatar.ico");
 
     /// <summary>Làm sạch tên profile để dùng làm tên thư mục.</summary>
     private static string CleanProfileName(string name)

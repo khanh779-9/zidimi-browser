@@ -331,3 +331,15 @@ Pref_EngineLabel=Moteur
 Pref_AboutLicense=MIT (Heco) / BSD-3 (CEF/CefSharp)
 Pref_AboutSourceCode=CefSharp / Chromium Embedded Framework
 
+
+[ProfileManager]
+Title=Manage Profiles
+Switch=Switch to
+Delete=Delete
+Add=Add Profile
+Active=Active
+DeleteConfirmTitle=Confirm Delete
+DeleteConfirmMsg=Are you sure you want to delete this profile and all its data? This cannot be undone.
+CantDeleteActiveTitle=Cannot Delete
+CantDeleteActiveMsg=You cannot delete the currently active profile. Please switch to another profile first.
+

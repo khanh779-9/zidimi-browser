@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -15,7 +15,7 @@ namespace Heco.Browser.Infrastructure;
 /// </summary>
 public sealed class HistoryService
 {
-    private string _profileName = AppSettings.Current.CurrentProfile;
+    private string _profileName = AppSettings.Global.CurrentProfile;
 
     public ObservableCollection<HistoryEntry> Entries { get; } = new();
 
@@ -289,3 +289,4 @@ public sealed class HistoryService
         catch { }
     }
 }
+

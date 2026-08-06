@@ -1,4 +1,4 @@
-using Heco.Browser.Controls;
+﻿using Heco.Browser.Controls;
 using Heco.Browser.Infrastructure;
 using System;
 using System.IO;
@@ -42,7 +42,7 @@ namespace Heco.Browser.Views
             // (Skipping bookmark removal intentionally.)
 
             // 3) Cookies + cache qua CEF request context
-            var profile = AppSettings.Current.CurrentProfile;
+            var profile = AppSettings.Global.CurrentProfile;
             var context = App.RequestContexts.GetProfileContext(profile) ?? Cef.GetGlobalRequestContext();
 
             if (ChkCookies.IsChecked == true)
@@ -72,3 +72,4 @@ namespace Heco.Browser.Views
     }
     }
 }
+

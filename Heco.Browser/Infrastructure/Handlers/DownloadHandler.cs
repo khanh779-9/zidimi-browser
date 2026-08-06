@@ -1,4 +1,4 @@
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using CefSharp;
 using Heco.Browser.Infrastructure;
 using Heco.Browser.Models;
@@ -39,7 +39,7 @@ public sealed class DownloadHandler : IDownloadHandler
         string finalPath = entry.FullPath;
 
         // Nếu AppSettings yêu cầu hỏi nơi lưu → hiển thị SaveFileDialog (trên UI thread).
-        if (AppSettings.Current.AskBeforeSave)
+        if (AppSettings.Profile.AskBeforeSave)
         {
             System.Windows.Application.Current?.Dispatcher.Invoke(() =>
             {
@@ -47,7 +47,7 @@ public sealed class DownloadHandler : IDownloadHandler
                 {
                     FileName = entry.SuggestedFileName,
                     Title = LanguageManager.Instance["Download_ChooseLocation"],
-                    InitialDirectory = AppSettings.Current.DownloadPath,
+                    InitialDirectory = AppSettings.Profile.DownloadPath,
                 };
                 var ok = dlg.ShowDialog() == true;
                 if (ok)
@@ -67,8 +67,8 @@ public sealed class DownloadHandler : IDownloadHandler
             // Tự lưu vào DownloadPath với tên file đề nghị.
             try
             {
-                System.IO.Directory.CreateDirectory(AppSettings.Current.DownloadPath);
-                finalPath = System.IO.Path.Combine(AppSettings.Current.DownloadPath, entry.SuggestedFileName);
+                System.IO.Directory.CreateDirectory(AppSettings.Profile.DownloadPath);
+                finalPath = System.IO.Path.Combine(AppSettings.Profile.DownloadPath, entry.SuggestedFileName);
             }
             catch { }
         }
@@ -96,3 +96,4 @@ public sealed class DownloadHandler : IDownloadHandler
         DownloadUpdated?.Invoke(entry);
     }
 }
+

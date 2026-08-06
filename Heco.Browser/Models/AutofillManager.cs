@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
@@ -48,7 +48,7 @@ namespace Heco.Browser.Models
     {
         public static AutofillData Data { get; private set; } = new AutofillData();
 
-        private static string CurrentProfile => Heco.Browser.Models.AppSettings.Current.CurrentProfile;
+        private static string CurrentProfile => Heco.Browser.Models.AppSettings.Global.CurrentProfile;
 
         static AutofillManager()
         {

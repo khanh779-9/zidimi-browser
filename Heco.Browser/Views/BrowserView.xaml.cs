@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -220,22 +220,22 @@ public partial class BrowserView : UserControl
             RequestContext = _vm.GetRequestContext(),
             BrowserSettings = new CefSharp.BrowserSettings
             {
-                DefaultFontSize = (int)Models.AppSettings.Current.FontSize,
-                DefaultFixedFontSize = (int)Models.AppSettings.Current.FontSize
+                DefaultFontSize = (int)Models.AppSettings.Profile.FontSize,
+                DefaultFixedFontSize = (int)Models.AppSettings.Profile.FontSize
             }
         };
 
         // Áp dụng zoom level mặc định từ AppSettings khi trang bắt đầu load.
         browser.FrameLoadStart += (s, args) =>
         {
-            Dispatcher.BeginInvoke(() => browser.SetZoomLevel(Models.AppSettings.Current.ZoomLevel));
+            Dispatcher.BeginInvoke(() => browser.SetZoomLevel(Models.AppSettings.Profile.ZoomLevel));
         };
 
         // Auto-translate: redirect sang Google Translate khi người dùng bật AutoTranslate và trang
         // có ngôn ngữ khác tiếng Việt (giải pháp đơn giản, hiển thị trang dịch bằng Google Translate).
         browser.FrameLoadEnd += (s, args) =>
         {
-            if (!Models.AppSettings.Current.AutoTranslate) return;
+            if (!Models.AppSettings.Global.AutoTranslate) return;
             if (args.Frame.IsMain == false) return;
             var url = args.Frame.Url ?? "";
             if (string.IsNullOrEmpty(url)) return;
@@ -266,7 +266,7 @@ public partial class BrowserView : UserControl
             {
                 _vm.Downloads.Insert(0, entry);
                 // Nếu AppSettings yêu cầu mở thanh Downloads khi bắt đầu tải → mở trang Downloads.
-                if (Models.AppSettings.Current.ShowDownloadBar)
+                if (Models.AppSettings.Profile.ShowDownloadBar)
                     _vm.OpenAppTab(TabKind.Downloads);
             });
         };
@@ -460,11 +460,11 @@ public partial class BrowserView : UserControl
     private static string NormalizeUrl(string raw)
     {
         raw = (raw ?? "").Trim();
-        if (string.IsNullOrEmpty(raw) || raw == "about:newtab") return Heco.Browser.Models.AppSettings.Current.HomePageUrl;
+        if (string.IsNullOrEmpty(raw) || raw == "about:newtab") return Heco.Browser.Models.AppSettings.Profile.HomePageUrl;
         if (Uri.IsWellFormedUriString(raw, UriKind.Absolute)) return raw;
         if (raw.Contains('.') && !raw.Contains(' ')) return "https://" + raw;
         
-        var engine = Heco.Browser.Models.AppSettings.Current.SearchEngine;
+        var engine = Heco.Browser.Models.AppSettings.Profile.SearchEngine;
         var query = Uri.EscapeDataString(raw);
         return engine switch
         {
@@ -573,7 +573,7 @@ public partial class BrowserView : UserControl
 
     private void Home_Click(object sender, RoutedEventArgs e)
     {
-        NavigateTo(Heco.Browser.Models.AppSettings.Current.HomePageUrl);
+        NavigateTo(Heco.Browser.Models.AppSettings.Profile.HomePageUrl);
     }
 
     private void Address_KeyDown(object sender, KeyEventArgs e)
@@ -627,7 +627,7 @@ public partial class BrowserView : UserControl
     {
         if (AutocompletePopup == null || AutocompleteList == null) return;
 
-        if (!AddressBox.IsKeyboardFocusWithin || !Heco.Browser.Models.AppSettings.Current.SearchSuggestEnabled)
+        if (!AddressBox.IsKeyboardFocusWithin || !Heco.Browser.Models.AppSettings.Profile.SearchSuggestEnabled)
         {
             AutocompletePopup.IsOpen = false;
             return;
@@ -679,7 +679,7 @@ public partial class BrowserView : UserControl
         // Search suggestion
         if (!string.IsNullOrWhiteSpace(query))
         {
-            var engine = Heco.Browser.Models.AppSettings.Current.SearchEngine;
+            var engine = Heco.Browser.Models.AppSettings.Profile.SearchEngine;
             var engineUrl = engine switch
             {
                 "DuckDuckGo" => "https://duckduckgo.com/?q=",
@@ -882,7 +882,7 @@ public partial class BrowserView : UserControl
     private void Avatar_ManageProfiles(object sender, RoutedEventArgs e)
     {
         AvatarPopup.IsOpen = false;
-        _vm.OpenAppTab(TabKind.Settings);
+        new ProfileManagerWindow { Owner = Window.GetWindow(this) }.ShowDialog();
     }
 
     private void OpenDevTools()
@@ -989,3 +989,4 @@ public partial class BrowserView : UserControl
             LanguageManager.Instance["Browser_HecoBrowser"], HecoMessageBoxButton.OK, HecoMessageBoxImage.Information, Window.GetWindow(this));
     }
 }
+

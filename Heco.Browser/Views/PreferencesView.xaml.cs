@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using CefSharp;
@@ -101,23 +101,23 @@ public partial class PreferencesView : UserControl
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_General"], FontSize = 20, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("Ink100Brush"), Margin = new Thickness(0, 0, 0, 16) });
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_GeneralDesc"], Foreground = (Brush)FindResource("Ink400Brush"), Margin = new Thickness(0, 0, 0, 24) });
 
-        var tbHome = new TextBox { Width = 320, Text = AppSettings.Current.HomePageUrl, FontSize = 13 };
-        tbHome.TextChanged += (s, e) => { AppSettings.Current.HomePageUrl = tbHome.Text; AppSettings.Current.Save(); };
+        var tbHome = new TextBox { Width = 320, Text = AppSettings.Profile.HomePageUrl, FontSize = 13 };
+        tbHome.TextChanged += (s, e) => { AppSettings.Profile.HomePageUrl = tbHome.Text; AppSettings.SaveAll(); };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_StartupPage"], LanguageManager.Instance["Pref_HomeUrl"], tbHome));
 
         var engines = new[] { "DuckDuckGo", "Google", "Bing", "Brave Search", "Yahoo", "Yandex", "Baidu", "Ecosia", "Startpage", "Qwant", "Ask.com" };
-        var idxEngine = Array.IndexOf(engines, AppSettings.Current.SearchEngine);
+        var idxEngine = Array.IndexOf(engines, AppSettings.Profile.SearchEngine);
         var searchCombo = MakeCombo(200, Math.Max(0, idxEngine), engines);
         searchCombo.SelectionChanged += (s, e) => 
         { 
             if (searchCombo.SelectedItem is HecoComboBoxItem hcbi)
-                AppSettings.Current.SearchEngine = hcbi.Content?.ToString() ?? "Google";
-            AppSettings.Current.Save(); 
+                AppSettings.Profile.SearchEngine = hcbi.Content?.ToString() ?? "Google";
+            AppSettings.SaveAll(); 
         };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_DefaultEngine"], LanguageManager.Instance["Pref_SelectEngine"], searchCombo));
 
-        var startupCombo = MakeCombo(280, AppSettings.Current.StartupBehavior, LanguageManager.Instance["Pref_StartupNewPage"], LanguageManager.Instance["Pref_StartupContinue"], LanguageManager.Instance["Pref_StartupSpecific"]);
-        startupCombo.SelectionChanged += (s, e) => { AppSettings.Current.StartupBehavior = startupCombo.SelectedIndex; AppSettings.Current.Save(); };
+        var startupCombo = MakeCombo(280, AppSettings.Profile.StartupBehavior, LanguageManager.Instance["Pref_StartupNewPage"], LanguageManager.Instance["Pref_StartupContinue"], LanguageManager.Instance["Pref_StartupSpecific"]);
+        startupCombo.SelectionChanged += (s, e) => { AppSettings.Profile.StartupBehavior = startupCombo.SelectedIndex; AppSettings.SaveAll(); };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_OnStartup"], LanguageManager.Instance["Pref_StartupAction"], startupCombo));
 
         var tbPages = new TextBox
@@ -128,16 +128,16 @@ public partial class PreferencesView : UserControl
             TextWrapping = TextWrapping.Wrap,
             VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
             FontSize = 13,
-            Text = string.Join("\n", AppSettings.Current.StartupPages),
+            Text = string.Join("\n", AppSettings.Profile.StartupPages),
         };
         tbPages.TextChanged += (s, e) =>
         {
-            AppSettings.Current.StartupPages = tbPages.Text
+            AppSettings.Profile.StartupPages = tbPages.Text
                 .Split(new[] { '\n' }, System.StringSplitOptions.RemoveEmptyEntries)
                 .Select(x => x.Trim())
                 .Where(x => x.Length > 0)
                 .ToList();
-            AppSettings.Current.Save();
+            AppSettings.SaveAll();
         };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_SpecificPages"], LanguageManager.Instance["Pref_OnePerLine"], tbPages));
 
@@ -150,17 +150,17 @@ public partial class PreferencesView : UserControl
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_Profile"], FontSize = 20, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("Ink100Brush"), Margin = new Thickness(0, 0, 0, 16) });
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_ProfileDesc"], Foreground = (Brush)FindResource("Ink400Brush"), Margin = new Thickness(0, 0, 0, 24) });
 
-        var isLoggedIn = !string.IsNullOrEmpty(AppSettings.Current.LoggedInUser);
+        var isLoggedIn = !string.IsNullOrEmpty(AppSettings.Global.LoggedInUser);
         var btnLogin = new HecoButton { Content = isLoggedIn ? LanguageManager.Instance["Pref_Logout"] : LanguageManager.Instance["Login_SignIn"], Style = (Style)FindResource("HecoButtonPrimary"), Padding = new Thickness(16,8,16,8) };
         btnLogin.Click += (s, e) => 
         {
-            if (!string.IsNullOrEmpty(AppSettings.Current.LoggedInUser))
+            if (!string.IsNullOrEmpty(AppSettings.Global.LoggedInUser))
             {
                 var res = HecoMessageBox.Show(LanguageManager.Instance["Pref_ConfirmLogout"], "Heco Browser", HecoMessageBoxButton.YesNo, HecoMessageBoxImage.Question, Window.GetWindow(this));
                 if (res == HecoMessageBoxResult.Yes)
                 {
-                    AppSettings.Current.LoggedInUser = null;
-                    AppSettings.Current.Save();
+                    AppSettings.Global.LoggedInUser = null;
+                    AppSettings.SaveAll();
                     LoadSettingsSection("Profiles"); // Reload UI
                 }
             }
@@ -173,21 +173,21 @@ public partial class PreferencesView : UserControl
                 }
             }
         };
-        var syncTitle = isLoggedIn ? $"{LanguageManager.Instance["Pref_SyncTitle"]} ({AppSettings.Current.LoggedInUser})" : LanguageManager.Instance["Pref_SyncTitle"];
+        var syncTitle = isLoggedIn ? $"{LanguageManager.Instance["Pref_SyncTitle"]} ({AppSettings.Global.LoggedInUser})" : LanguageManager.Instance["Pref_SyncTitle"];
         panel.Children.Add(CreateSettingRow(syncTitle, LanguageManager.Instance["Pref_SyncDataBeta"], btnLogin));
 
-        var profiles = AppSettings.Current.Profiles.ToArray();
-        var idxProfile = Array.IndexOf(profiles, AppSettings.Current.CurrentProfile);
+        var profiles = AppSettings.Global.Profiles.ToArray();
+        var idxProfile = Array.IndexOf(profiles, AppSettings.Global.CurrentProfile);
         var profileCombo = MakeCombo(200, Math.Max(0, idxProfile), profiles);
         profileCombo.SelectionChanged += (s, e) =>
         {
             if (profileCombo.SelectedItem is HecoComboBoxItem hcbi)
             {
                 var name = hcbi.Content?.ToString() ?? LanguageManager.Instance["Pref_PersonalProfile"];
-                if (AppSettings.Current.CurrentProfile != name)
+                if (AppSettings.Global.CurrentProfile != name)
                 {
-                    AppSettings.Current.CurrentProfile = name;
-                    AppSettings.Current.Save();
+                    AppSettings.Global.CurrentProfile = name;
+                    AppSettings.SaveAll();
                     App.ViewModel?.SwitchProfile(name);
                 }
             }
@@ -196,10 +196,10 @@ public partial class PreferencesView : UserControl
         var btnAddProfile = new HecoButton { Content = LanguageManager.Instance["Pref_AddProfile"], Padding = new Thickness(16,8,16,8) };
         btnAddProfile.Click += (s, e) => 
         {
-            var newProfile = string.Format(LanguageManager.Instance["Pref_ProfileCount"], AppSettings.Current.Profiles.Count + 1);
-            AppSettings.Current.Profiles.Add(newProfile);
-            AppSettings.Current.CurrentProfile = newProfile;
-            AppSettings.Current.Save();
+            var newProfile = string.Format(LanguageManager.Instance["Pref_ProfileCount"], AppSettings.Global.Profiles.Count + 1);
+            AppSettings.Global.Profiles.Add(newProfile);
+            AppSettings.Global.CurrentProfile = newProfile;
+            AppSettings.SaveAll();
             Infrastructure.UserDataPaths.EnsureProfileDir(newProfile);
             Infrastructure.UserDataPaths.RegisterProfile(newProfile);
             App.ViewModel?.SwitchProfile(newProfile);
@@ -272,48 +272,48 @@ public partial class PreferencesView : UserControl
             (Key: "dark", Label: LanguageManager.Instance["Pref_ThemeDark"]),
             (Key: "system", Label: LanguageManager.Instance["Pref_SystemTitle"]),
         };
-        var currentTheme = Infrastructure.ThemeManager.NormalizeThemeKey(AppSettings.Current.Theme);
+        var currentTheme = Infrastructure.ThemeManager.NormalizeThemeKey(AppSettings.Profile.Theme);
         var idxTheme = Array.FindIndex(themeOptions, o => o.Key == currentTheme);
         var themeCombo = MakeCombo(180, Math.Max(0, idxTheme), themeOptions.Select(o => o.Label).ToArray());
         themeCombo.SelectionChanged += (s, e) => 
         {
             if (themeCombo.SelectedIndex >= 0 && themeCombo.SelectedIndex < themeOptions.Length)
             {
-                AppSettings.Current.Theme = themeOptions[themeCombo.SelectedIndex].Key;
-                AppSettings.Current.Save();
-                Infrastructure.ThemeManager.ApplyFromSettings(AppSettings.Current.Theme);
+                AppSettings.Profile.Theme = themeOptions[themeCombo.SelectedIndex].Key;
+                AppSettings.SaveAll();
+                Infrastructure.ThemeManager.ApplyFromSettings(AppSettings.Profile.Theme);
             }
         };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_Theme"], LanguageManager.Instance["Pref_SelectTheme"], themeCombo));
 
         var fontSizes = new[] { LanguageManager.Instance["Pref_SizeSmall"], LanguageManager.Instance["Pref_SizeMedium"], LanguageManager.Instance["Pref_SizeLarge"], LanguageManager.Instance["Pref_SizeExtraLarge"] };
-        var idxFont = AppSettings.Current.FontSize switch { 12 => 0, 14 => 1, 16 => 2, 18 => 3, _ => 1 };
+        var idxFont = AppSettings.Profile.FontSize switch { 12 => 0, 14 => 1, 16 => 2, 18 => 3, _ => 1 };
         var fontCombo = MakeCombo(180, idxFont, fontSizes);
         fontCombo.SelectionChanged += (s, e) => 
         { 
-            AppSettings.Current.FontSize = fontCombo.SelectedIndex switch { 0 => 12, 1 => 14, 2 => 16, 3 => 18, _ => 14 };
-            AppSettings.Current.Save();
+            AppSettings.Profile.FontSize = fontCombo.SelectedIndex switch { 0 => 12, 1 => 14, 2 => 16, 3 => 18, _ => 14 };
+            AppSettings.SaveAll();
             // Áp dụng real-time cho UI
             if (Application.Current?.MainWindow is MainWindow mw)
-                mw.FontSize = AppSettings.Current.FontSize;
+                mw.FontSize = AppSettings.Profile.FontSize;
         };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_FontSize"], LanguageManager.Instance["Pref_DefaultFontSize"], fontCombo));
 
         var zooms = new[] { "25%", "50%", "75%", "90%", "100%", "110%", "125%", "150%", "200%" };
         var zoomLevels = new[] { -1.5, -1.0, -0.5, -0.2, 0.0, 0.5, 1.0, 1.5, 2.0 }; // CefSharp ZoomLevels are approx these values
-        var idxZoom = Array.IndexOf(zoomLevels, AppSettings.Current.ZoomLevel);
+        var idxZoom = Array.IndexOf(zoomLevels, AppSettings.Profile.ZoomLevel);
         var zoomCombo = MakeCombo(140, Math.Max(0, idxZoom), zooms);
         zoomCombo.SelectionChanged += (s, e) => 
         {
             if (zoomCombo.SelectedIndex >= 0 && zoomCombo.SelectedIndex < zoomLevels.Length)
-                AppSettings.Current.ZoomLevel = zoomLevels[zoomCombo.SelectedIndex];
-            AppSettings.Current.Save();
+                AppSettings.Profile.ZoomLevel = zoomLevels[zoomCombo.SelectedIndex];
+            AppSettings.SaveAll();
             // Áp dụng ngay cho tab web đang active (nếu có).
             var activeTab = App.ViewModel?.ActiveTab;
             if (activeTab != null)
             {
                 var b = App.ViewModel?.GetBrowser(activeTab) as CefSharp.Wpf.ChromiumWebBrowser;
-                b?.SetZoomLevel(AppSettings.Current.ZoomLevel);
+                b?.SetZoomLevel(AppSettings.Profile.ZoomLevel);
             }
         };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_ZoomPage"], LanguageManager.Instance["Pref_DefaultZoom"], zoomCombo));
@@ -328,19 +328,19 @@ public partial class PreferencesView : UserControl
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_SearchSettings"], Foreground = (Brush)FindResource("Ink400Brush"), Margin = new Thickness(0, 0, 0, 24) });
 
         var engines = new[] { "DuckDuckGo", "Google", "Bing", "Brave Search", "Yahoo", "Yandex", "Baidu", "Ecosia", "Startpage", "Qwant", "Ask.com" };
-        var idxEngine = Array.IndexOf(engines, AppSettings.Current.SearchEngine);
+        var idxEngine = Array.IndexOf(engines, AppSettings.Profile.SearchEngine);
         var searchCombo = MakeCombo(200, Math.Max(0, idxEngine), engines);
         searchCombo.SelectionChanged += (s, e) => 
         {
             if (searchCombo.SelectedItem is HecoComboBoxItem hcbi)
-                AppSettings.Current.SearchEngine = hcbi.Content?.ToString() ?? "Google";
-            AppSettings.Current.Save();
+                AppSettings.Profile.SearchEngine = hcbi.Content?.ToString() ?? "Google";
+            AppSettings.SaveAll();
         };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_DefaultEngine"], LanguageManager.Instance["Pref_SearchEngineTitle"], searchCombo));
 
-        var suggestCheck = MakeCheck(LanguageManager.Instance["Pref_ShowSearchSuggestions"], AppSettings.Current.SearchSuggestEnabled);
-        suggestCheck.Checked += (s, e) => { AppSettings.Current.SearchSuggestEnabled = true; AppSettings.Current.Save(); };
-        suggestCheck.Unchecked += (s, e) => { AppSettings.Current.SearchSuggestEnabled = false; AppSettings.Current.Save(); };
+        var suggestCheck = MakeCheck(LanguageManager.Instance["Pref_ShowSearchSuggestions"], AppSettings.Profile.SearchSuggestEnabled);
+        suggestCheck.Checked += (s, e) => { AppSettings.Profile.SearchSuggestEnabled = true; AppSettings.SaveAll(); };
+        suggestCheck.Unchecked += (s, e) => { AppSettings.Profile.SearchSuggestEnabled = false; AppSettings.SaveAll(); };
         panel.Children.Add(CreateSettingRow("", "", suggestCheck));
 
         return panel;
@@ -352,24 +352,24 @@ public partial class PreferencesView : UserControl
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_Privacy"], FontSize = 20, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("Ink100Brush"), Margin = new Thickness(0, 0, 0, 16) });
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_ProtectData"], Foreground = (Brush)FindResource("Ink400Brush"), Margin = new Thickness(0, 0, 0, 24) });
 
-        var chkCookie = MakeCheck(LanguageManager.Instance["Pref_BlockThirdPartyCookies"], AppSettings.Current.BlockThirdPartyCookies);
-        chkCookie.Checked += (s, e) => { AppSettings.Current.BlockThirdPartyCookies = true; AppSettings.Current.Save(); };
-        chkCookie.Unchecked += (s, e) => { AppSettings.Current.BlockThirdPartyCookies = false; AppSettings.Current.Save(); };
+        var chkCookie = MakeCheck(LanguageManager.Instance["Pref_BlockThirdPartyCookies"], AppSettings.Profile.BlockThirdPartyCookies);
+        chkCookie.Checked += (s, e) => { AppSettings.Profile.BlockThirdPartyCookies = true; AppSettings.SaveAll(); };
+        chkCookie.Unchecked += (s, e) => { AppSettings.Profile.BlockThirdPartyCookies = false; AppSettings.SaveAll(); };
         panel.Children.Add(CreateSettingRow("", "", chkCookie));
 
-        var chkDnt = MakeCheck(LanguageManager.Instance["Pref_DoNotTrack"], AppSettings.Current.SendDoNotTrack);
-        chkDnt.Checked += (s, e) => { AppSettings.Current.SendDoNotTrack = true; AppSettings.Current.Save(); };
-        chkDnt.Unchecked += (s, e) => { AppSettings.Current.SendDoNotTrack = false; AppSettings.Current.Save(); };
+        var chkDnt = MakeCheck(LanguageManager.Instance["Pref_DoNotTrack"], AppSettings.Profile.SendDoNotTrack);
+        chkDnt.Checked += (s, e) => { AppSettings.Profile.SendDoNotTrack = true; AppSettings.SaveAll(); };
+        chkDnt.Unchecked += (s, e) => { AppSettings.Profile.SendDoNotTrack = false; AppSettings.SaveAll(); };
         panel.Children.Add(CreateSettingRow("", "", chkDnt));
 
-        var chkSafe = MakeCheck(LanguageManager.Instance["Pref_SafeBrowsing"], AppSettings.Current.SafeBrowsing);
-        chkSafe.Checked += (s, e) => { AppSettings.Current.SafeBrowsing = true; AppSettings.Current.Save(); };
-        chkSafe.Unchecked += (s, e) => { AppSettings.Current.SafeBrowsing = false; AppSettings.Current.Save(); };
+        var chkSafe = MakeCheck(LanguageManager.Instance["Pref_SafeBrowsing"], AppSettings.Profile.SafeBrowsing);
+        chkSafe.Checked += (s, e) => { AppSettings.Profile.SafeBrowsing = true; AppSettings.SaveAll(); };
+        chkSafe.Unchecked += (s, e) => { AppSettings.Profile.SafeBrowsing = false; AppSettings.SaveAll(); };
         panel.Children.Add(CreateSettingRow("", "", chkSafe));
 
-        var chkWarn = MakeCheck(LanguageManager.Instance["Pref_WarnDangerousSites"], AppSettings.Current.WarnDangerousSites);
-        chkWarn.Checked += (s, e) => { AppSettings.Current.WarnDangerousSites = true; AppSettings.Current.Save(); };
-        chkWarn.Unchecked += (s, e) => { AppSettings.Current.WarnDangerousSites = false; AppSettings.Current.Save(); };
+        var chkWarn = MakeCheck(LanguageManager.Instance["Pref_WarnDangerousSites"], AppSettings.Profile.WarnDangerousSites);
+        chkWarn.Checked += (s, e) => { AppSettings.Profile.WarnDangerousSites = true; AppSettings.SaveAll(); };
+        chkWarn.Unchecked += (s, e) => { AppSettings.Profile.WarnDangerousSites = false; AppSettings.SaveAll(); };
         panel.Children.Add(CreateSettingRow("", "", chkWarn));
 
         var btnClear = MakeButton(LanguageManager.Instance["Pref_ClearBrowsingDataBtn"], 200);
@@ -389,22 +389,22 @@ public partial class PreferencesView : UserControl
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_Downloads"], FontSize = 20, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("Ink100Brush"), Margin = new Thickness(0, 0, 0, 16) });
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_ManageDownloads"], Foreground = (Brush)FindResource("Ink400Brush"), Margin = new Thickness(0, 0, 0, 24) });
 
-        var tbDownload = new TextBox { Text = AppSettings.Current.DownloadPath, IsReadOnly = true, FontSize = 13 };
+        var tbDownload = new TextBox { Text = AppSettings.Profile.DownloadPath, IsReadOnly = true, FontSize = 13 };
 
         var btnBrowse = MakeButton(LanguageManager.Instance["Pref_ChooseFolder"], 130);
         btnBrowse.Click += (s, e) => 
         {
             var dlg = new Microsoft.Win32.OpenFolderDialog
             {
-                InitialDirectory = System.IO.Directory.Exists(AppSettings.Current.DownloadPath)
-                    ? AppSettings.Current.DownloadPath
+                InitialDirectory = System.IO.Directory.Exists(AppSettings.Profile.DownloadPath)
+                    ? AppSettings.Profile.DownloadPath
                     : System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile),
                 Title = LanguageManager.Instance["Pref_ChooseDownloadFolder"],
             };
             if (dlg.ShowDialog(Window.GetWindow(this)) == true)
             {
-                AppSettings.Current.DownloadPath = dlg.FolderName;
-                AppSettings.Current.Save();
+                AppSettings.Profile.DownloadPath = dlg.FolderName;
+                AppSettings.SaveAll();
                 tbDownload.Text = dlg.FolderName;
             }
         };
@@ -428,19 +428,19 @@ public partial class PreferencesView : UserControl
         var btnOpen = MakeButton(LanguageManager.Instance["Pref_OpenFolder"], 140);
         btnOpen.Click += (s, e) => 
         {
-            try { System.Diagnostics.Process.Start("explorer.exe", AppSettings.Current.DownloadPath); }
+            try { System.Diagnostics.Process.Start("explorer.exe", AppSettings.Profile.DownloadPath); }
             catch { }
         };
         panel.Children.Add(CreateSettingRow("", "", btnOpen));
 
-        var chkAsk = MakeCheck(LanguageManager.Instance["Pref_AskWhereToSave"], AppSettings.Current.AskBeforeSave);
-        chkAsk.Checked += (s, e) => { AppSettings.Current.AskBeforeSave = true; AppSettings.Current.Save(); };
-        chkAsk.Unchecked += (s, e) => { AppSettings.Current.AskBeforeSave = false; AppSettings.Current.Save(); };
+        var chkAsk = MakeCheck(LanguageManager.Instance["Pref_AskWhereToSave"], AppSettings.Profile.AskBeforeSave);
+        chkAsk.Checked += (s, e) => { AppSettings.Profile.AskBeforeSave = true; AppSettings.SaveAll(); };
+        chkAsk.Unchecked += (s, e) => { AppSettings.Profile.AskBeforeSave = false; AppSettings.SaveAll(); };
         panel.Children.Add(CreateSettingRow("", "", chkAsk));
 
-        var chkBar = MakeCheck(LanguageManager.Instance["Pref_ShowDownloadBar"], AppSettings.Current.ShowDownloadBar);
-        chkBar.Checked += (s, e) => { AppSettings.Current.ShowDownloadBar = true; AppSettings.Current.Save(); };
-        chkBar.Unchecked += (s, e) => { AppSettings.Current.ShowDownloadBar = false; AppSettings.Current.Save(); };
+        var chkBar = MakeCheck(LanguageManager.Instance["Pref_ShowDownloadBar"], AppSettings.Profile.ShowDownloadBar);
+        chkBar.Checked += (s, e) => { AppSettings.Profile.ShowDownloadBar = true; AppSettings.SaveAll(); };
+        chkBar.Unchecked += (s, e) => { AppSettings.Profile.ShowDownloadBar = false; AppSettings.SaveAll(); };
         panel.Children.Add(CreateSettingRow("", "", chkBar));
 
         return panel;
@@ -465,8 +465,8 @@ public partial class PreferencesView : UserControl
                 if (selectedLang != null && LanguageManager.Instance.CurrentLanguage != selectedLang)
                 {
                     LanguageManager.Instance.CurrentLanguage = selectedLang;
-                    AppSettings.Current.DisplayLanguage = selectedLang.Code;
-                    AppSettings.Current.Save();
+                    AppSettings.Global.DisplayLanguage = selectedLang.Code;
+                    AppSettings.SaveAll();
                     
                     // Cập nhật lại giao diện (vì các text trong phần nội dung được tạo cứng bằng C#)
                     LoadSettingsSection("Languages");
@@ -475,9 +475,9 @@ public partial class PreferencesView : UserControl
         };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_DisplayLang"], LanguageManager.Instance["Pref_SelectUILang"], langCombo));
 
-        var translateCheck = MakeCheck(LanguageManager.Instance["Pref_AutoTranslate"], AppSettings.Current.AutoTranslate);
-        translateCheck.Checked += (s, e) => { AppSettings.Current.AutoTranslate = true; AppSettings.Current.Save(); };
-        translateCheck.Unchecked += (s, e) => { AppSettings.Current.AutoTranslate = false; AppSettings.Current.Save(); };
+        var translateCheck = MakeCheck(LanguageManager.Instance["Pref_AutoTranslate"], AppSettings.Global.AutoTranslate);
+        translateCheck.Checked += (s, e) => { AppSettings.Global.AutoTranslate = true; AppSettings.SaveAll(); };
+        translateCheck.Unchecked += (s, e) => { AppSettings.Global.AutoTranslate = false; AppSettings.SaveAll(); };
         panel.Children.Add(CreateSettingRow("", "", translateCheck));
 
         return panel;
@@ -489,24 +489,24 @@ public partial class PreferencesView : UserControl
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_System"], FontSize = 20, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("Ink100Brush"), Margin = new Thickness(0, 0, 0, 16) });
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_SystemSettings"], Foreground = (Brush)FindResource("Ink400Brush"), Margin = new Thickness(0, 0, 0, 24) });
 
-        var gpuCheck = MakeCheck(LanguageManager.Instance["Pref_HardwareAccel"], AppSettings.Current.EnableGpu);
-        gpuCheck.Checked += (s, e) => { AppSettings.Current.EnableGpu = true; AppSettings.Current.Save(); };
-        gpuCheck.Unchecked += (s, e) => { AppSettings.Current.EnableGpu = false; AppSettings.Current.Save(); };
+        var gpuCheck = MakeCheck(LanguageManager.Instance["Pref_HardwareAccel"], AppSettings.Global.EnableGpu);
+        gpuCheck.Checked += (s, e) => { AppSettings.Global.EnableGpu = true; AppSettings.SaveAll(); };
+        gpuCheck.Unchecked += (s, e) => { AppSettings.Global.EnableGpu = false; AppSettings.SaveAll(); };
         panel.Children.Add(CreateSettingRow("", "", gpuCheck));
 
-        var enhanceCheck = MakeCheck(LanguageManager.Instance["Pref_EnhanceVideos"], AppSettings.Current.EnhanceVideos);
-        enhanceCheck.Checked += (s, e) => { AppSettings.Current.EnhanceVideos = true; AppSettings.Current.Save(); };
-        enhanceCheck.Unchecked += (s, e) => { AppSettings.Current.EnhanceVideos = false; AppSettings.Current.Save(); };
+        var enhanceCheck = MakeCheck(LanguageManager.Instance["Pref_EnhanceVideos"], AppSettings.Global.EnhanceVideos);
+        enhanceCheck.Checked += (s, e) => { AppSettings.Global.EnhanceVideos = true; AppSettings.SaveAll(); };
+        enhanceCheck.Unchecked += (s, e) => { AppSettings.Global.EnhanceVideos = false; AppSettings.SaveAll(); };
         panel.Children.Add(CreateSettingRow("", "", enhanceCheck));
 
-        var bgCheck = MakeCheck(LanguageManager.Instance["Pref_RunInBackground"], AppSettings.Current.RunInBackground);
-        bgCheck.Checked += (s, e) => { AppSettings.Current.RunInBackground = true; AppSettings.Current.Save(); };
-        bgCheck.Unchecked += (s, e) => { AppSettings.Current.RunInBackground = false; AppSettings.Current.Save(); };
+        var bgCheck = MakeCheck(LanguageManager.Instance["Pref_RunInBackground"], AppSettings.Global.RunInBackground);
+        bgCheck.Checked += (s, e) => { AppSettings.Global.RunInBackground = true; AppSettings.SaveAll(); };
+        bgCheck.Unchecked += (s, e) => { AppSettings.Global.RunInBackground = false; AppSettings.SaveAll(); };
         panel.Children.Add(CreateSettingRow("", "", bgCheck));
 
-        var proxyCheck = MakeCheck(LanguageManager.Instance["Pref_UseSystemProxy"], AppSettings.Current.UseSystemProxy);
-        proxyCheck.Checked += (s, e) => { AppSettings.Current.UseSystemProxy = true; AppSettings.Current.Save(); };
-        proxyCheck.Unchecked += (s, e) => { AppSettings.Current.UseSystemProxy = false; AppSettings.Current.Save(); };
+        var proxyCheck = MakeCheck(LanguageManager.Instance["Pref_UseSystemProxy"], AppSettings.Global.UseSystemProxy);
+        proxyCheck.Checked += (s, e) => { AppSettings.Global.UseSystemProxy = true; AppSettings.SaveAll(); };
+        proxyCheck.Unchecked += (s, e) => { AppSettings.Global.UseSystemProxy = false; AppSettings.SaveAll(); };
         panel.Children.Add(CreateSettingRow("", "", proxyCheck));
 
         var btnProxy = MakeButton(LanguageManager.Instance["Pref_OpenProxySettings"], 200);
@@ -628,3 +628,4 @@ public partial class PreferencesView : UserControl
         return btn;
     }
 }
+

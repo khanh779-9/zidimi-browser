@@ -1,4 +1,4 @@
-using CefSharp;
+﻿using CefSharp;
 using CefSharp.Handler;
 using System.Security.Cryptography.X509Certificates;
 using System.Windows;
@@ -13,7 +13,7 @@ public class RequestHandler : CefSharp.Handler.RequestHandler
     protected override bool OnBeforeBrowse(IWebBrowser chromiumWebBrowser, IBrowser browser, IFrame frame,
         IRequest request, bool userGesture, bool isRedirect)
     {
-        if (AppSettings.Current.SendDoNotTrack && !request.IsReadOnly)
+        if (AppSettings.Profile.SendDoNotTrack && !request.IsReadOnly)
         {
             // request.Headers là NameValueCollection read-only trong OnBeforeBrowse —
             // dùng SetHeaderByName (native, không qua collection).
@@ -27,7 +27,7 @@ public class RequestHandler : CefSharp.Handler.RequestHandler
     protected override bool OnCertificateError(IWebBrowser chromiumWebBrowser, IBrowser browser, CefErrorCode errorCode, string requestUrl, ISslInfo sslInfo, IRequestCallback callback)
     {
         // Safe Browsing: Nếu người dùng tắt cảnh báo trang nguy hiểm, không hiển thị dialog và chặn luôn.
-        if (!AppSettings.Current.WarnDangerousSites)
+        if (!AppSettings.Profile.WarnDangerousSites)
         {
             callback.Continue(false);
             return true;
@@ -57,3 +57,4 @@ public class RequestHandler : CefSharp.Handler.RequestHandler
         return true; 
     }
 }
+
