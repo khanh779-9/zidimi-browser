@@ -389,7 +389,7 @@ public partial class PreferencesView : UserControl
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_Downloads"], FontSize = 20, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("Ink100Brush"), Margin = new Thickness(0, 0, 0, 16) });
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_ManageDownloads"], Foreground = (Brush)FindResource("Ink400Brush"), Margin = new Thickness(0, 0, 0, 24) });
 
-        var tbDownload = new TextBox { Width = 380, Text = AppSettings.Current.DownloadPath, IsReadOnly = true, FontSize = 13 };
+        var tbDownload = new TextBox { Text = AppSettings.Current.DownloadPath, IsReadOnly = true, FontSize = 13 };
 
         var btnBrowse = MakeButton(LanguageManager.Instance["Pref_ChooseFolder"], 130);
         btnBrowse.Click += (s, e) => 
@@ -409,11 +409,21 @@ public partial class PreferencesView : UserControl
             }
         };
 
-        var dlPanel = new StackPanel { Orientation = Orientation.Horizontal };
+        var dlPanel = new Grid();
+        dlPanel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        dlPanel.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(8) });
+        dlPanel.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        
+        Grid.SetColumn(tbDownload, 0);
+        Grid.SetColumn(btnBrowse, 2);
+
         dlPanel.Children.Add(tbDownload);
-        dlPanel.Children.Add(new Border { Width = 8 });
         dlPanel.Children.Add(btnBrowse);
-        panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_DefaultDownloadFolder"], LanguageManager.Instance["Pref_ManageDownloads"], dlPanel));
+
+        var row = CreateSettingRow(LanguageManager.Instance["Pref_DefaultDownloadFolder"], "", dlPanel);
+        dlPanel.HorizontalAlignment = HorizontalAlignment.Stretch;
+        dlPanel.Margin = new Thickness(16, 0, 0, 0);
+        panel.Children.Add(row);
 
         var btnOpen = MakeButton(LanguageManager.Instance["Pref_OpenFolder"], 140);
         btnOpen.Click += (s, e) => 

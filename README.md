@@ -13,7 +13,7 @@
 
 ---
 
-## ✨ Key Features
+## Key Features
 
 ### Modern & Customizable UI
 - **Sleek interface** — clean, pill-shaped design language with smooth animations and custom popups/toasts built from scratch (no third-party UI kit).
