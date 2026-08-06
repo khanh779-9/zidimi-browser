@@ -14,6 +14,6 @@
     </ctrl:HecoWindow.TabStripContent>
 
     <Grid Background="{DynamicResource ContentBackgroundBrush}">
-        <ContentControl x:Name="PageHost" />
+        <ContentControl x:Name="PageHost" Margin="1,0,1,1"/>
     </Grid>
 </ctrl:HecoWindow>
