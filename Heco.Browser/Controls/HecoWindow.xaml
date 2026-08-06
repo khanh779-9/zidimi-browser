@@ -87,7 +87,7 @@
                                         <Border Width="22" Height="22" CornerRadius="6"
                                                 Background="{DynamicResource BrandBadgeBrush}">
                                             <Path Width="13" Height="13" Stretch="Uniform"
-                                                  Stroke="White" StrokeThickness="1.8"
+                                                  Stroke="{DynamicResource OnAccentBrush}" StrokeThickness="1.8"
                                                   StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                                                   Data="M9,4 L15,12 L9,20 L7.5,18.5 L12,12 L7.5,5.5 z"
                                                   HorizontalAlignment="Center"
@@ -168,7 +168,7 @@
                         </Trigger>
                         <!-- Close button: icon trắng khi hover (nền danger tối) -->
                         <Trigger SourceName="PART_CloseBtn" Property="IsMouseOver" Value="True">
-                            <Setter TargetName="CloseGlyph" Property="Stroke" Value="White" />
+                            <Setter TargetName="CloseGlyph" Property="Stroke" Value="{DynamicResource OnAccentBrush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>

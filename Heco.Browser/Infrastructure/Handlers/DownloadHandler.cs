@@ -33,11 +33,48 @@ public sealed class DownloadHandler : IDownloadHandler
         };
         DownloadStarted?.Invoke(entry);
 
-        // Auto-accept suggested file path (đặt vào đây để CEF bắt đầu tải)
         if (callback.IsDisposed) return true;
+
+        string finalPath = entry.FullPath;
+
+        // Nếu AppSettings yêu cầu hỏi nơi lưu → hiển thị SaveFileDialog (trên UI thread).
+        if (AppSettings.Current.AskBeforeSave)
+        {
+            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+            {
+                var dlg = new Microsoft.Win32.SaveFileDialog
+                {
+                    FileName = entry.SuggestedFileName,
+                    Title = "Chọn nơi lưu file",
+                    InitialDirectory = AppSettings.Current.DownloadPath,
+                };
+                var ok = dlg.ShowDialog() == true;
+                if (ok)
+                {
+                    finalPath = dlg.FileName;
+                }
+                else
+                {
+                    // Cancel
+                    using (callback) callback.Continue("", showDialog: false);
+                    return;
+                }
+            });
+        }
+        else
+        {
+            // Tự lưu vào DownloadPath với tên file đề nghị.
+            try
+            {
+                System.IO.Directory.CreateDirectory(AppSettings.Current.DownloadPath);
+                finalPath = System.IO.Path.Combine(AppSettings.Current.DownloadPath, entry.SuggestedFileName);
+            }
+            catch { }
+        }
+
         using (callback)
         {
-            callback.Continue(entry.FullPath, showDialog: false);
+            callback.Continue(finalPath, showDialog: false);
         }
         return true;
     }

@@ -73,6 +73,8 @@ public sealed class RequestContextFactory : System.IDisposable
             CachePath = cachePath,
             PersistSessionCookies = persist,
         };
+        // Block 3rd-party cookies: áp dụng qua cookie manager sau khi context đã tạo (xem ClearDataWindow &
+        // BrowserView). RequestContextSettings không có thuộc tính AcceptThirdPartyCookies trong CefSharp 150.
         return new RequestContext(settings);
     }
 

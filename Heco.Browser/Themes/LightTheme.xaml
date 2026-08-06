@@ -1,0 +1,44 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!-- ===== LIGHT THEME — brush nền / chữ / viền, đổi theo theme ===== -->
+
+    <!-- Surfaces -->
+    <SolidColorBrush x:Key="HecoBgDarkestBrush" Color="#FAFAFB" />
+    <SolidColorBrush x:Key="HecoBgDarkBrush" Color="#F1F1F4" />
+    <SolidColorBrush x:Key="HecoBgSurfaceBrush" Color="#E9E9EF" />
+    <SolidColorBrush x:Key="HecoBgElevatedBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="HecoBgHoverBrush" Color="#DFDFE8" />
+
+    <!-- Special-case surfaces -->
+    <SolidColorBrush x:Key="TabActiveBgBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="OmniboxFocusBgBrush" Color="#F6F6FC" />
+    <SolidColorBrush x:Key="DangerBgBrush" Color="#FBECEE" />
+    <SolidColorBrush x:Key="TabBarBgBrush" Color="#E0E0E6" />
+
+    <!-- Layout surfaces -->
+    <SolidColorBrush x:Key="AppBackgroundBrush" Color="#F1F1F4" />
+    <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#EAEAF0" />
+    <SolidColorBrush x:Key="TabBarBackgroundBrush" Color="#E0E0E6" />
+    <SolidColorBrush x:Key="ToolbarBackgroundBrush" Color="#EAEAF0" />
+    <SolidColorBrush x:Key="ContentBackgroundBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="GlassCardBrush" Color="#CCFFFFFF" />
+
+    <!-- Text -->
+    <SolidColorBrush x:Key="Ink100Brush" Color="#181727" />
+    <SolidColorBrush x:Key="Ink200Brush" Color="#3A3855" />
+    <SolidColorBrush x:Key="Ink300Brush" Color="#5C5982" />
+    <SolidColorBrush x:Key="Ink400Brush" Color="#8582AC" />
+    <SolidColorBrush x:Key="Ink500Brush" Color="#BDBBD5" />
+
+    <!-- Stroke -->
+    <SolidColorBrush x:Key="StrokeBrush" Color="#D8D8E0" />
+    <SolidColorBrush x:Key="StrokeLightBrush" Color="#C4C4CE" />
+
+    <!-- Scrollbar thumb -->
+    <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#C4C4CE" />
+
+    <!-- Overlay backdrop -->
+    <SolidColorBrush x:Key="OverlayBackdropBrush" Color="#66181727" />
+
+</ResourceDictionary>

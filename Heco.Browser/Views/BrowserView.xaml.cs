@@ -6,6 +6,7 @@ using System.Windows.Media;
 using System.Windows.Shapes;
 using CefSharp;
 using CefSharp.Wpf;
+using Heco.Browser.Controls;
 using Heco.Browser.Infrastructure;
 using Heco.Browser.Infrastructure.Handlers;
 using Heco.Browser.Models;
@@ -222,12 +223,50 @@ public partial class BrowserView : UserControl
             RequestContext = _vm.GetRequestContext(),
         };
 
+        // Áp dụng zoom level mặc định từ AppSettings khi trang bắt đầu load.
+        browser.FrameLoadStart += (s, args) =>
+        {
+            Dispatcher.BeginInvoke(() => browser.SetZoomLevel(Models.AppSettings.Current.ZoomLevel));
+        };
+
+        // Auto-translate: redirect sang Google Translate khi người dùng bật AutoTranslate và trang
+        // có ngôn ngữ khác tiếng Việt (giải pháp đơn giản, hiển thị trang dịch bằng Google Translate).
+        browser.FrameLoadEnd += (s, args) =>
+        {
+            if (!Models.AppSettings.Current.AutoTranslate) return;
+            if (args.Frame.IsMain == false) return;
+            var url = args.Frame.Url ?? "";
+            if (string.IsNullOrEmpty(url)) return;
+            if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return;
+            // Trang tiếng Việt / quạt search engine thì bỏ qua.
+            if (url.Contains("vi.") || url.Contains("duckduckgo.com") || url.Contains("google.com") ||
+                url.Contains("bing.com") || url.Contains("search.brave.com")) return;
+            // Chuyển hướng page sang Google Translate wrapper (giữ URL gốc trong query).
+            var translated = "https://translate.google.com/translate?sl=auto&tl=vi&u=" + System.Uri.EscapeDataString(url);
+            if (url == translated) return;
+            Dispatcher.BeginInvoke(() =>
+            {
+                if (!browser.IsDisposed)
+                {
+                    _suppressAddressUpdate = true;
+                    browser.Load(translated);
+                    _suppressAddressUpdate = false;
+                }
+            });
+        };
+
         // CEF handlers (spec 11.2)
         browser.LifeSpanHandler = new LifeSpanHandler(tab);
         var downloadHandler = new DownloadHandler();
         downloadHandler.DownloadStarted += entry =>
         {
-            Dispatcher.BeginInvoke(() => _vm.Downloads.Insert(0, entry));
+            Dispatcher.BeginInvoke(() =>
+            {
+                _vm.Downloads.Insert(0, entry);
+                // Nếu AppSettings yêu cầu mở thanh Downloads khi bắt đầu tải → mở trang Downloads.
+                if (Models.AppSettings.Current.ShowDownloadBar)
+                    _vm.NavigateCommand.Execute(PageId.Downloads);
+            });
         };
         downloadHandler.DownloadUpdated += entry =>
         {
@@ -447,7 +486,7 @@ public partial class BrowserView : UserControl
         if (url.StartsWith("https://", StringComparison.OrdinalIgnoreCase))
         {
             SecurityIcon.Stroke = (Brush)FindResource("SafeBrush");
-            SecurityIcon.Fill = new SolidColorBrush(Color.FromArgb(0x26, 0x22, 0xC5, 0x5E));
+            SecurityIcon.Fill = WithAlpha(SecurityIcon.Stroke, 0x26);
             SecurityIcon.Data = Geometry.Parse("M8 10 V7 a4 4 0 0 1 8 0 v3 M5 10 H19 V20 H5 Z");
             SecurityIcon.ToolTip = LanguageManager.Instance["Browser_SecureConnHttps"];
         }
@@ -455,7 +494,7 @@ public partial class BrowserView : UserControl
         {
             // HTTP không an toàn — icon "info" cảnh báo
             SecurityIcon.Stroke = (Brush)FindResource("WarnBrush");
-            SecurityIcon.Fill = new SolidColorBrush(Color.FromArgb(0x26, 0xF5, 0x9E, 0x0B));
+            SecurityIcon.Fill = WithAlpha(SecurityIcon.Stroke, 0x26);
             SecurityIcon.Data = Geometry.Parse("M12 2 a10 10 0 1 0 0.01 0 Z M12 8 V12 M12 16 H12.01");
             SecurityIcon.ToolTip = LanguageManager.Instance["Browser_NotSecureHttp"];
         }
@@ -940,8 +979,8 @@ public partial class BrowserView : UserControl
     private void SiteInfo_Cookies_Click(object sender, RoutedEventArgs e)
     {
         SiteInfoPopup.IsOpen = false;
-        MessageBox.Show(LanguageManager.Instance["Browser_CookieWIP"],
-            LanguageManager.Instance["Browser_HecoBrowser"], MessageBoxButton.OK, MessageBoxImage.Information);
+        HecoMessageBox.Show(LanguageManager.Instance["Browser_CookieWIP"],
+            LanguageManager.Instance["Browser_HecoBrowser"], HecoMessageBoxButton.OK, HecoMessageBoxImage.Information, Window.GetWindow(this));
     }
 
     private void SiteInfo_Cert_Click(object sender, RoutedEventArgs e)
@@ -956,7 +995,7 @@ public partial class BrowserView : UserControl
     private void SiteInfo_Settings_Click(object sender, RoutedEventArgs e)
     {
         SiteInfoPopup.IsOpen = false;
-        MessageBox.Show(LanguageManager.Instance["Browser_SiteSettingsWIP"],
-            LanguageManager.Instance["Browser_HecoBrowser"], MessageBoxButton.OK, MessageBoxImage.Information);
+        HecoMessageBox.Show(LanguageManager.Instance["Browser_SiteSettingsWIP"],
+            LanguageManager.Instance["Browser_HecoBrowser"], HecoMessageBoxButton.OK, HecoMessageBoxImage.Information, Window.GetWindow(this));
     }
 }

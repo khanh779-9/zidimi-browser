@@ -1,4 +1,4 @@
-<Application x:Class="Heco.Browser.App"
+﻿<Application x:Class="Heco.Browser.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:Heco.Browser"
@@ -6,8 +6,8 @@
              StartupUri="MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
-            <!-- Converters dùng trong default templates của custom controls.
-                 LƯU Ý: phải khai báo TRƯỚC MergedDictionaries vì templates dùng StaticResource. -->
+            <!-- Converters dÃ¹ng trong default templates cá»§a custom controls.
+                 LÆ¯U Ã: pháº£i khai bÃ¡o TRÆ¯á»šC MergedDictionaries vÃ¬ templates dÃ¹ng StaticResource. -->
             <controls:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
             <controls:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
 
@@ -15,15 +15,15 @@
             <FontFamily x:Key="AppFont">Segoe UI, Inter, system-ui, sans-serif</FontFamily>
             <FontFamily x:Key="AppFontMono">Cascadia Mono, Consolas, ui-monospace, monospace</FontFamily>
 
-        <!-- =====================  HECO THEME (màu Proton đổi tên)  ===================== -->
+        <!-- =====================  HECO THEME (mÃ u Proton Ä‘á»•i tÃªn)  ===================== -->
         <!-- All Colors, Brushes, and CornerRadius definitions have been moved to Themes/Colors.xaml -->
 
         <!-- =====================  BASE STYLES  ===================== -->
         <Style TargetType="{x:Type Window}">
             <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
             <Setter Property="FontSize" Value="14" />
-            <Setter Property="Foreground" Value="{StaticResource Ink100Brush}" />
-            <Setter Property="Background" Value="{StaticResource AppBackgroundBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource Ink100Brush}" />
+            <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}" />
             <Setter Property="UseLayoutRounding" Value="True" />
             <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
             <Setter Property="TextOptions.TextRenderingMode" Value="ClearType" />
@@ -37,13 +37,13 @@
 
         <Style TargetType="{x:Type UserControl}">
             <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
-            <Setter Property="Foreground" Value="{StaticResource Ink100Brush}" />
+            <Setter Property="Foreground" Value="{DynamicResource Ink100Brush}" />
             <Setter Property="Background" Value="Transparent" />
         </Style>
 
         <Style TargetType="{x:Type TextBlock}">
             <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
-            <Setter Property="Foreground" Value="{StaticResource Ink100Brush}" />
+            <Setter Property="Foreground" Value="{DynamicResource Ink100Brush}" />
             <Setter Property="FontWeight" Value="Normal" />
         </Style>
 
@@ -54,28 +54,28 @@
 
         <Style x:Key="SubHeaderText" TargetType="{x:Type TextBlock}">
             <Setter Property="FontSize" Value="13" />
-            <Setter Property="Foreground" Value="{StaticResource Ink400Brush}" />
+            <Setter Property="Foreground" Value="{DynamicResource Ink400Brush}" />
         </Style>
 
         <Style x:Key="SectionLabel" TargetType="{x:Type TextBlock}">
             <Setter Property="FontSize" Value="10" />
             <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="{StaticResource Ink500Brush}" />
+            <Setter Property="Foreground" Value="{DynamicResource Ink500Brush}" />
             <Setter Property="Margin" Value="12,12,12,6" />
         </Style>
 
         <!-- =====================  PANEL / CARD  ===================== -->
         <Style x:Key="CardPanel" TargetType="{x:Type Border}">
-            <Setter Property="Background" Value="{StaticResource HecoBgSurfaceBrush}" />
-            <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}" />
+            <Setter Property="Background" Value="{DynamicResource HecoBgSurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource StrokeBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="{StaticResource CornerRadiusXl}" />
             <Setter Property="Padding" Value="20" />
         </Style>
 
         <Style x:Key="GlassCard" TargetType="{x:Type Border}">
-            <Setter Property="Background" Value="#CC222135" />
-            <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}" />
+            <Setter Property="Background" Value="{DynamicResource GlassCardBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource StrokeBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="{StaticResource CornerRadiusXl}" />
         </Style>
@@ -86,7 +86,7 @@
             <Setter Property="Height" Value="36" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Foreground" Value="{StaticResource Ink300Brush}" />
+            <Setter Property="Foreground" Value="{DynamicResource Ink300Brush}" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
                 <Setter.Value>
@@ -96,8 +96,8 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="{StaticResource HecoBgHoverBrush}" />
-                                <Setter Property="Foreground" Value="{StaticResource Ink100Brush}" />
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource HecoBgHoverBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Ink100Brush}" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Opacity" Value="0.35" />
@@ -118,7 +118,7 @@
         <!-- =====================  CTA BUTTON  ===================== -->
         <Style x:Key="CtaButton" TargetType="{x:Type Button}">
             <Setter Property="Background" Value="{StaticResource CtaBrush}" />
-            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="FontSize" Value="13" />
             <Setter Property="Padding" Value="16,10" />
@@ -154,7 +154,7 @@
         <!-- =====================  SIDEBAR NAV  ===================== -->
         <Style x:Key="SidebarNavButton" TargetType="{x:Type controls:HecoRadioButton}">
             <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="{StaticResource Ink300Brush}" />
+            <Setter Property="Foreground" Value="{DynamicResource Ink300Brush}" />
             <Setter Property="FontSize" Value="13" />
             <Setter Property="FontWeight" Value="Medium" />
             <Setter Property="Padding" Value="12,10" />
@@ -177,14 +177,14 @@
                         </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="{StaticResource HecoBgHoverBrush}" />
-                                <Setter Property="Foreground" Value="{StaticResource Ink100Brush}" />
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource HecoBgHoverBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Ink100Brush}" />
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
                                 <Setter TargetName="bd" Property="Background" Value="{StaticResource SidebarActiveBrush}" />
-                                <Setter TargetName="bd" Property="BorderBrush" Value="#596D4AFF" />
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentBorderBrush}" />
                                 <Setter TargetName="bd" Property="BorderThickness" Value="1" />
-                                <Setter Property="Foreground" Value="White" />
+                                <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
                                 <Setter TargetName="Accent" Property="Fill" Value="{StaticResource HecoPurpleLightBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -195,9 +195,9 @@
 
         <!-- =====================  TEXTBOX (address bar)  ===================== -->
         <Style TargetType="{x:Type TextBox}">
-            <Setter Property="Background" Value="{StaticResource HecoBgSurfaceBrush}" />
-            <Setter Property="Foreground" Value="{StaticResource Ink100Brush}" />
-            <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}" />
+            <Setter Property="Background" Value="{DynamicResource HecoBgSurfaceBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource Ink100Brush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource StrokeBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="10,8" />
             <Setter Property="CaretBrush" Value="{StaticResource HecoPurpleLightBrush}" />
@@ -218,11 +218,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource StrokeLightBrush}" />
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource StrokeLightBrush}" />
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource HecoPurpleBrush}" />
-                                <Setter TargetName="bd" Property="Background" Value="{StaticResource HecoBgElevatedBrush}" />
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource HecoBgElevatedBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -266,11 +266,11 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource StrokeLightBrush}" />
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource StrokeLightBrush}" />
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
                                 <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource HecoPurpleBrush}" />
-                                <Setter TargetName="bd" Property="Background" Value="{StaticResource HecoBgElevatedBrush}" />
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource HecoBgElevatedBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -279,11 +279,8 @@
         </Style>
 
         <!-- =====================  SCROLLBAR  ===================== -->
-        <Color x:Key="ScrollBarThumbColor">#363552</Color>
-        <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="{StaticResource ScrollBarThumbColor}" />
-
         <Style x:Key="ScrollBarThumb" TargetType="{x:Type Thumb}">
-            <Setter Property="Background" Value="{StaticResource ScrollBarThumbBrush}" />
+            <Setter Property="Background" Value="{DynamicResource ScrollBarThumbBrush}" />
             <Setter Property="BorderThickness" Value="0" />
             <Setter Property="Cursor" Value="Hand" />
             <Setter Property="Template">
@@ -376,8 +373,8 @@
         <Style x:Key="BrowserTabItem" TargetType="{x:Type TabItem}" />
         <!-- =====================  LIST ITEM  ===================== -->
         <Style x:Key="ListItemCard" TargetType="{x:Type Border}">
-            <Setter Property="Background" Value="{StaticResource HecoBgSurfaceBrush}" />
-            <Setter Property="BorderBrush" Value="{StaticResource StrokeBrush}" />
+            <Setter Property="Background" Value="{DynamicResource HecoBgSurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource StrokeBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="{StaticResource CornerRadiusLg}" />
             <Setter Property="Padding" Value="14,12" />
@@ -438,9 +435,9 @@
         </Style>
 
         <!-- =====================  MERGED DICTIONARIES  ===================== -->
-        <!-- Templates trong các dictionary này dùng StaticResource tới resource khai báo
-             phía trên (converters, brushes, colors...), nên phải để MergedDictionaries
-             ở CUỐI toàn bộ phần khai báo resource. -->
+        <!-- Templates trong cÃ¡c dictionary nÃ y dÃ¹ng StaticResource tá»›i resource khai bÃ¡o
+             phÃ­a trÃªn (converters, brushes, colors...), nÃªn pháº£i Ä‘á»ƒ MergedDictionaries
+             á»Ÿ CUá»I toÃ n bá»™ pháº§n khai bÃ¡o resource. -->
         <ResourceDictionary.MergedDictionaries>
             <ResourceDictionary Source="Themes/Colors.xaml" />
             <ResourceDictionary Source="Controls/HecoWindow.xaml" />

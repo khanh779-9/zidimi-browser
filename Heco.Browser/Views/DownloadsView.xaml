@@ -3,8 +3,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:infra="clr-namespace:Heco.Browser.Infrastructure"
              xmlns:models="clr-namespace:Heco.Browser.Models"
+             xmlns:ctrl="clr-namespace:Heco.Browser.Controls"
              Background="{DynamicResource ContentBackgroundBrush}">
     <UserControl.Resources>
+        <ctrl:BoolToVisibilityConverter x:Key="Bool2Vis" />
         <CollectionViewSource x:Key="DownloadsSource" Source="{Binding Downloads}" />
     </UserControl.Resources>
     <Grid Margin="32,24,32,24" MinWidth="600" MaxWidth="800" HorizontalAlignment="Center">
@@ -29,7 +31,7 @@
                     Padding="14,8" Visibility="Collapsed">
                 <StackPanel Orientation="Horizontal">
                     <Path Width="14" Height="14" Stretch="Uniform"
-                          Stroke="White" StrokeThickness="1.5"
+                          Stroke="{DynamicResource OnAccentBrush}" StrokeThickness="1.5"
                           StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                           Data="M6,19 c0,1.1 .9,2 2,2 h8 c1.1,0 2,-.9 2,-2 V7 H6 z M19,4 H16 l-1,-1 H9 L8,4 H5 V6 H19 z"
                           Margin="0,0,8,0" VerticalAlignment="Center" />

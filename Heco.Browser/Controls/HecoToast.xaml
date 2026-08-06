@@ -17,7 +17,7 @@
             <Setter.Value>
                 <ControlTemplate TargetType="{x:Type local:HecoToast}">
                     <Border x:Name="Card"
-                            Background="#F2222135"
+                            Background="{DynamicResource GlassCardBrush}"
                             BorderBrush="{DynamicResource StrokeLightBrush}"
                             BorderThickness="1"
                             CornerRadius="10"

@@ -22,7 +22,7 @@
                                     CornerRadius="4">
                                 <Path x:Name="Check"
                                       Data="{DynamicResource HecoCheckGeometry}"
-                                      Stroke="{DynamicResource Ink100Brush}"
+                                      Stroke="{DynamicResource OnAccentBrush}"
                                       StrokeThickness="2"
                                       StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                                       Stretch="Uniform"

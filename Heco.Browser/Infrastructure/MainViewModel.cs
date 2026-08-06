@@ -57,6 +57,10 @@ public sealed class MainViewModel : ViewModelBase
             if (p is Bookmark b) _bookmarks.Remove(b);
         });
         ClearDownloadsCommand = new RelayCommand(_ => Downloads.Clear());
+        RemoveDownloadCommand = new RelayCommand(p =>
+        {
+            if (p is DownloadEntry d) Downloads.Remove(d);
+        });
 
         // Tạo tab mặc định
         var startupBehavior = Heco.Browser.Models.AppSettings.Current.StartupBehavior;
@@ -64,13 +68,31 @@ public sealed class MainViewModel : ViewModelBase
         {
             NewTab("about:newtab");
         }
-        else if (startupBehavior == 1) // Tiếp tục từ nơi đã dừng (stub, just open Home for now)
+        else if (startupBehavior == 1) // Tiếp tục từ nơi đã dừng
         {
-            NewTab(Heco.Browser.Models.AppSettings.Current.HomePageUrl);
+            var urls = Heco.Browser.Models.AppSettings.Current.LastSessionTabs;
+            if (urls.Count > 0)
+            {
+                foreach (var url in urls)
+                    NewTab(string.IsNullOrEmpty(url) ? "about:newtab" : url);
+            }
+            else
+            {
+                NewTab("about:newtab");
+            }
         }
-        else // Mở tập trang cụ thể (stub)
+        else // Mở tập trang cụ thể
         {
-            NewTab(Heco.Browser.Models.AppSettings.Current.HomePageUrl);
+            var pages = Heco.Browser.Models.AppSettings.Current.StartupPages;
+            if (pages.Count > 0)
+            {
+                foreach (var p in pages)
+                    NewTab(string.IsNullOrEmpty(p) ? "about:newtab" : p);
+            }
+            else
+            {
+                NewTab(Heco.Browser.Models.AppSettings.Current.HomePageUrl);
+            }
         }
     }
 
@@ -163,6 +185,7 @@ public sealed class MainViewModel : ViewModelBase
     public ICommand AddBookmarkCommand { get; }
     public ICommand RemoveBookmarkCommand { get; }
     public ICommand ClearDownloadsCommand { get; }
+    public ICommand RemoveDownloadCommand { get; }
 
     /// <summary>Quick helper để thêm bookmark từ code-behind.</summary>
     public void AddBookmark(string url, string title) => _bookmarks.Add(url, title);
@@ -252,7 +275,8 @@ public sealed class MainViewModel : ViewModelBase
 
     public void ToggleTheme()
     {
-        Theme = Theme == Theme.Dark ? Theme.Light : Theme.Dark;
+        var next = Theme == Theme.Dark ? Theme.Light : Theme.Dark;
+        Theme = next;
         ApplyTheme(Theme);
     }
 
@@ -266,7 +290,18 @@ public sealed class MainViewModel : ViewModelBase
 
     public static void ApplyTheme(Theme theme)
     {
-        // Heco Browser hiện chỉ có theme dark; để mở rộng lấy theme từ app resource.
-        // (Placeholder cho light theme sau này)
+        // Áp dụng theme Sáng/Tối thông qua ThemeManager.
+        ThemeManager.Apply(theme == Theme.Light ? ThemeManager.AppTheme.Light : ThemeManager.AppTheme.Dark);
+    }
+
+    /// <summary>Lưu danh sách tab đang mở (dùng cho chế độ "Tiếp tục" khi khởi động lại).</summary>
+    public void SaveSession()
+    {
+        var urls = Tabs
+            .Where(t => t.Kind == TabKind.Web && !string.IsNullOrEmpty(t.Address))
+            .Select(t => t.Address!)
+            .ToList();
+        Heco.Browser.Models.AppSettings.Current.LastSessionTabs = urls;
+        Heco.Browser.Models.AppSettings.Current.Save();
     }
 }

@@ -1,96 +1,38 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- =====================  HECO THEME (màu Proton đổi tên)  ===================== -->
+    <!-- =====================  HECO THEME — màu/brush CỐ ĐỊNH, không đổi theo Light/Dark  ===================== -->
+    <!-- Các brush nền/chữ/viền đổi theo theme nằm trong DarkTheme.xaml & LightTheme.xaml -->
+
     <!-- Accent (Heco Purple) -->
-    <Color x:Key="HecoPurpleColor">#6D4AFF</Color>
-    <Color x:Key="HecoPurpleLightColor">#8B6FFF</Color>
-    <Color x:Key="HecoPurpleDarkColor">#4A32B0</Color>
-    <Color x:Key="HecoPurpleHoverColor">#7C5CFF</Color>
-    <Color x:Key="HecoPurplePressedColor">#5A3DE0</Color>
-    <Color x:Key="HecoPurpleGlowColor">#3D29B0</Color>
+    <SolidColorBrush x:Key="HecoPurpleBrush" Color="#6D4AFF" />
+    <SolidColorBrush x:Key="HecoPurpleLightBrush" Color="#8B6FFF" />
+    <SolidColorBrush x:Key="HecoPurpleDarkBrush" Color="#4A32B0" />
+    <SolidColorBrush x:Key="HecoPurpleHoverBrush" Color="#7C5CFF" />
+    <SolidColorBrush x:Key="HecoPurplePressedBrush" Color="#5A3DE0" />
+    <SolidColorBrush x:Key="HecoPurpleGlowBrush" Color="#3D29B0" />
 
-    <!-- Surfaces -->
-    <Color x:Key="HecoBgDarkestColor">#0F0E1A</Color>
-    <Color x:Key="HecoBgDarkColor">#1A1829</Color>
-    <Color x:Key="HecoBgSurfaceColor">#222135</Color>
-    <Color x:Key="HecoBgElevatedColor">#2C2B40</Color>
-    <Color x:Key="HecoBgHoverColor">#363552</Color>
-    <Color x:Key="HecoBgActiveColor">#6D4AFF</Color>
-    <Color x:Key="HecoBgOverlayColor">#80000000</Color>
+    <!-- Active accent (trạng thái đang chọn) — màu cố định ở cả 2 theme -->
+    <SolidColorBrush x:Key="HecoBgActiveBrush" Color="#6D4AFF" />
 
-    <!-- Special-case surfaces (tab active, omnibox focus, danger hover) -->
-    <Color x:Key="TabActiveBgColor">#2A2840</Color>
-    <Color x:Key="OmniboxFocusBgColor">#34324F</Color>
-    <Color x:Key="DangerBgColor">#3A1A22</Color>
-    <Color x:Key="TabBarBgColor">#16151F</Color>
+    <!-- Nội dung đặt TRÊN nền accent tím (dấu tích, chấm radio) — luôn trắng để tương phản tốt cả 2 theme -->
+    <SolidColorBrush x:Key="OnAccentBrush" Color="#FFFFFF" />
+
+    <!-- Viền ngoài của mục đang active (sidebar/CTA) — tím mờ -->
+    <SolidColorBrush x:Key="AccentBorderBrush" Color="#596D4AFF" />
+
+    <!-- Overlay (modal backdrop) — nửa trong suốt, ghép với nền -->
+    <SolidColorBrush x:Key="HecoBgOverlayBrush" Color="#80000000" />
 
     <!-- Semantic -->
-    <Color x:Key="SafeColor">#22C55E</Color>
-    <Color x:Key="WarnColor">#F59E0B</Color>
-    <Color x:Key="DangerColor">#EF4444</Color>
-    <Color x:Key="InfoColor">#38BDF8</Color>
+    <SolidColorBrush x:Key="SafeBrush" Color="#22C55E" />
+    <SolidColorBrush x:Key="WarnBrush" Color="#F59E0B" />
+    <SolidColorBrush x:Key="DangerBrush" Color="#EF4444" />
+    <SolidColorBrush x:Key="InfoBrush" Color="#38BDF8" />
 
-    <!-- Text -->
-    <Color x:Key="Ink100Color">#F4F2FF</Color>
-    <Color x:Key="Ink200Color">#C8C4E8</Color>
-    <Color x:Key="Ink300Color">#8E89B5</Color>
-    <Color x:Key="Ink400Color">#615C8A</Color>
-    <Color x:Key="Ink500Color">#3D3A5C</Color>
-
-    <!-- Stroke -->
-    <Color x:Key="StrokeColor">#2A2942</Color>
-    <Color x:Key="StrokeLightColor">#3A3960</Color>
-
-    <!-- ===== Brushes: Accent ===== -->
-    <SolidColorBrush x:Key="HecoPurpleBrush" Color="{StaticResource HecoPurpleColor}" />
-    <SolidColorBrush x:Key="HecoPurpleLightBrush" Color="{StaticResource HecoPurpleLightColor}" />
-    <SolidColorBrush x:Key="HecoPurpleDarkBrush" Color="{StaticResource HecoPurpleDarkColor}" />
-    <SolidColorBrush x:Key="HecoPurpleHoverBrush" Color="{StaticResource HecoPurpleHoverColor}" />
-    <SolidColorBrush x:Key="HecoPurplePressedBrush" Color="{StaticResource HecoPurplePressedColor}" />
-    <SolidColorBrush x:Key="HecoPurpleGlowBrush" Color="{StaticResource HecoPurpleGlowColor}" />
-
-    <!-- ===== Brushes: Surfaces ===== -->
-    <SolidColorBrush x:Key="HecoBgDarkestBrush" Color="{StaticResource HecoBgDarkestColor}" />
-    <SolidColorBrush x:Key="HecoBgDarkBrush" Color="{StaticResource HecoBgDarkColor}" />
-    <SolidColorBrush x:Key="HecoBgSurfaceBrush" Color="{StaticResource HecoBgSurfaceColor}" />
-    <SolidColorBrush x:Key="HecoBgElevatedBrush" Color="{StaticResource HecoBgElevatedColor}" />
-    <SolidColorBrush x:Key="HecoBgHoverBrush" Color="{StaticResource HecoBgHoverColor}" />
-    <SolidColorBrush x:Key="HecoBgActiveBrush" Color="{StaticResource HecoBgActiveColor}" />
-    <SolidColorBrush x:Key="HecoBgOverlayBrush" Color="{StaticResource HecoBgOverlayColor}" />
-
-    <!-- Special-case brushes -->
-    <SolidColorBrush x:Key="TabActiveBgBrush" Color="{StaticResource TabActiveBgColor}" />
-    <SolidColorBrush x:Key="OmniboxFocusBgBrush" Color="{StaticResource OmniboxFocusBgColor}" />
-    <SolidColorBrush x:Key="DangerBgBrush" Color="{StaticResource DangerBgColor}" />
-    <SolidColorBrush x:Key="TabBarBgBrush" Color="{StaticResource TabBarBgColor}" />
-
-    <SolidColorBrush x:Key="AppBackgroundBrush" Color="{StaticResource HecoBgDarkestColor}" />
-    <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="{StaticResource HecoBgDarkColor}" />
-    <SolidColorBrush x:Key="TabBarBackgroundBrush" Color="{StaticResource TabBarBgColor}" />
-    <SolidColorBrush x:Key="ToolbarBackgroundBrush" Color="{StaticResource HecoBgDarkColor}" />
-    <SolidColorBrush x:Key="ContentBackgroundBrush" Color="{StaticResource HecoBgSurfaceColor}" />
-
-    <!-- Button specific brushes (moved from HecoButton) -->
+    <!-- Button specific danger states (không đổi theo theme) -->
     <SolidColorBrush x:Key="DangerHoverBgBrush" Color="#4D232D" />
     <SolidColorBrush x:Key="DangerActiveBgBrush" Color="#2E141B" />
-
-    <!-- ===== Brushes: Semantic ===== -->
-    <SolidColorBrush x:Key="SafeBrush" Color="{StaticResource SafeColor}" />
-    <SolidColorBrush x:Key="WarnBrush" Color="{StaticResource WarnColor}" />
-    <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}" />
-    <SolidColorBrush x:Key="InfoBrush" Color="{StaticResource InfoColor}" />
-
-    <!-- ===== Brushes: Text ===== -->
-    <SolidColorBrush x:Key="Ink100Brush" Color="{StaticResource Ink100Color}" />
-    <SolidColorBrush x:Key="Ink200Brush" Color="{StaticResource Ink200Color}" />
-    <SolidColorBrush x:Key="Ink300Brush" Color="{StaticResource Ink300Color}" />
-    <SolidColorBrush x:Key="Ink400Brush" Color="{StaticResource Ink400Color}" />
-    <SolidColorBrush x:Key="Ink500Brush" Color="{StaticResource Ink500Color}" />
-
-    <!-- ===== Brushes: Stroke ===== -->
-    <SolidColorBrush x:Key="StrokeBrush" Color="{StaticResource StrokeColor}" />
-    <SolidColorBrush x:Key="StrokeLightBrush" Color="{StaticResource StrokeLightColor}" />
 
     <!-- ===== Gradients ===== -->
     <LinearGradientBrush x:Key="CtaBrush" StartPoint="0,0" EndPoint="1,0">
@@ -121,9 +63,6 @@
         <GradientStop Offset="0.0" Color="#386D4AFF" />
         <GradientStop Offset="0.6" Color="#006D4AFF" />
     </RadialGradientBrush>
-
-    <!-- ===== Overlay (modal backdrop) ===== -->
-    <SolidColorBrush x:Key="OverlayBackdropBrush" Color="#A60F0E1A" />
 
     <!-- =====================  GEOMETRY  ===================== -->
     <CornerRadius x:Key="CornerRadiusSm">4</CornerRadius>

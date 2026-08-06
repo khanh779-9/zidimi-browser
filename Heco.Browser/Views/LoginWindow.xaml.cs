@@ -1,3 +1,4 @@
+using Heco.Browser.Controls;
 using Heco.Browser.Infrastructure;
 using System;
 using System.Threading.Tasks;
@@ -46,7 +47,7 @@ namespace Heco.Browser.Views
             AppSettings.Current.LoggedInUser = TxtEmail.Text;
             AppSettings.Current.Save();
 
-            MessageBox.Show(string.Format(LanguageManager.Instance["Login_SuccessMsg"], TxtEmail.Text), LanguageManager.Instance["Login_Sync"], MessageBoxButton.OK, MessageBoxImage.Information);
+            HecoMessageBox.Show(string.Format(LanguageManager.Instance["Login_SuccessMsg"], TxtEmail.Text), LanguageManager.Instance["Login_Sync"], HecoMessageBoxButton.OK, HecoMessageBoxImage.Success, this);
             
             DialogResult = true;
             Close();

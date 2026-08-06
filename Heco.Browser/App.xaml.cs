@@ -2,6 +2,7 @@ using System.IO;
 using System.Windows;
 using CefSharp;
 using CefSharp.Wpf;
+using Heco.Browser.Controls;
 using Heco.Browser.Infrastructure;
 
 using Heco.Browser.Models;
@@ -21,8 +22,8 @@ public partial class App : Application
         if (!SingleInstanceMutex.WaitOne(0, false))
         {
             // Đã có instance Heco.Browser đang chạy — CEF không cho 2 instance dùng chung cache.
-            MessageBox.Show("Heco Browser đã đang chạy.\nHãy mở cửa sổ đang chạy hoặc đóng nó rồi thử lại.",
-                "Heco Browser", MessageBoxButton.OK, MessageBoxImage.Information);
+            HecoMessageBox.Show("Heco Browser đã đang chạy.\nHãy mở cửa sổ đang chạy hoặc đóng nó rồi thử lại.",
+                "Heco Browser", HecoMessageBoxButton.OK, HecoMessageBoxImage.Information);
             Shutdown();
             return;
         }
@@ -41,6 +42,11 @@ public partial class App : Application
                 $"[{DateTime.Now:O}] [CefInit] {ex}\n\n");
             throw;
         }
+
+        // Áp dụng theme TRƯỚC khi cửa sổ chính được tạo (StartupUri) để không bị flash sai màu.
+        ThemeManager.EnsureLoaded();
+        ThemeManager.ApplyFromSettings(AppSettings.Current.Theme);
+
         base.OnStartup(e);
 
         var history = new HistoryService();
@@ -53,6 +59,7 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
+        ViewModel?.SaveSession();
         RequestContexts?.Dispose();
         base.OnExit(e);
     }
@@ -77,6 +84,21 @@ public partial class App : Application
         {
             settings.CefCommandLineArgs["disable-gpu"] = "1";
             settings.CefCommandLineArgs["disable-gpu-compositing"] = "1";
+        }
+
+        // Chính sách Cookie 3rd-party (spec 8.3): CefSharp 150 không có RequestContextSettings.AcceptThirdPartyCookies
+        // nên dùng command-line switch của Chromium dưới đây áp dụng cho toàn bộ context.
+        if (AppSettings.Current.BlockThirdPartyCookies)
+        {
+            settings.CefCommandLineArgs["block-3rd-party-cookies"] = "1";
+            // Tắt enums "allow" 3rd-party cookies để ép chặn cứng.
+            settings.CefCommandLineArgs["disable-3rd-party-cookies"] = "1";
+        }
+
+        // Do Not Track: Chromium command-line switch - áp dụng cho mọi request.
+        if (AppSettings.Current.SendDoNotTrack)
+        {
+            settings.CefCommandLineArgs["enable-do-not-track"] = "1";
         }
         var ok = Cef.Initialize(settings, performDependencyCheck: true, browserProcessHandler: null);
         if (!ok)

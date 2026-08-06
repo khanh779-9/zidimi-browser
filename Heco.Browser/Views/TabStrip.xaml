@@ -164,7 +164,7 @@
                                         <Style TargetType="TextBlock">
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                                    <Setter Property="Foreground" Value="White" />
+                                                    <Setter Property="Foreground" Value="{DynamicResource Ink100Brush}" />
                                                     <Setter Property="FontWeight" Value="SemiBold" />
                                                 </DataTrigger>
                                                 <DataTrigger Binding="{Binding IsPinned}" Value="True">
@@ -263,11 +263,11 @@
                                             </Border>
                                             <ControlTemplate.Triggers>
                                                 <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                                    <Setter TargetName="iconPath" Property="Stroke" Value="White" />
+                                                    <Setter TargetName="iconPath" Property="Stroke" Value="{DynamicResource Ink100Brush}" />
                                                 </DataTrigger>
                                                 <Trigger Property="IsMouseOver" Value="True">
                                                     <Setter TargetName="bd" Property="Background" Value="{DynamicResource HecoPurpleBrush}" />
-                                                    <Setter TargetName="iconPath" Property="Stroke" Value="White" />
+                                                    <Setter TargetName="iconPath" Property="Stroke" Value="{DynamicResource OnAccentBrush}" />
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>

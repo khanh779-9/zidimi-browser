@@ -35,7 +35,7 @@
                         Visibility="{Binding ShowCancel, Converter={StaticResource Bool2Vis}}"
                         Click="CancelBtn_Click" />
                 <Button Content="Đồng ý" x:Name="OkBtn" Width="80" Height="32"
-                        Background="{DynamicResource HecoPurpleBrush}" Foreground="White"
+                        Background="{DynamicResource HecoPurpleBrush}" Foreground="{DynamicResource OnAccentBrush}"
                         Click="OkBtn_Click" IsDefault="True" />
             </StackPanel>
         </Grid>

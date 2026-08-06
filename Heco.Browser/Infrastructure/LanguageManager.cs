@@ -9,22 +9,22 @@ namespace Heco.Browser.Infrastructure
 {
     public class LanguageInfo
     {
-        public string Code { get; set; }
-        public string Name { get; set; }
-        public string FilePath { get; set; }
+        public string Code { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string FilePath { get; set; } = string.Empty;
     }
 
     public class LanguageManager : INotifyPropertyChanged
     {
-        private static LanguageManager _instance;
-        public static LanguageManager Instance => _instance ?? (_instance = new LanguageManager());
+        private static LanguageManager? _instance;
+        public static LanguageManager Instance => _instance ??= new LanguageManager();
 
-        private readonly Dictionary<string, string> _currentStrings = new Dictionary<string, string>();
+        private readonly Dictionary<string, string> _currentStrings = new();
         
-        public List<LanguageInfo> AvailableLanguages { get; } = new List<LanguageInfo>();
+        public List<LanguageInfo> AvailableLanguages { get; } = new();
 
-        private LanguageInfo _currentLanguage;
-        public LanguageInfo CurrentLanguage
+        private LanguageInfo? _currentLanguage;
+        public LanguageInfo? CurrentLanguage
         {
             get => _currentLanguage;
             set
@@ -45,7 +45,7 @@ namespace Heco.Browser.Infrastructure
         {
             get
             {
-                if (_currentStrings.TryGetValue(key, out string val))
+                if (_currentStrings.TryGetValue(key, out var val))
                 {
                     return val;
                 }
@@ -196,10 +196,10 @@ namespace Heco.Browser.Infrastructure
             catch { }
         }
 
-        public event PropertyChangedEventHandler PropertyChanged;
-        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
-        {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
+    public event PropertyChangedEventHandler? PropertyChanged;
+    protected virtual void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
+}
 }

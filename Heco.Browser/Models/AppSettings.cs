@@ -20,6 +20,8 @@ public class AppSettings
     public string HomePageUrl { get; set; } = "https://duckduckgo.com";
     public string SearchEngine { get; set; } = "DuckDuckGo"; 
     public int StartupBehavior { get; set; } = 0; // 0: Trang mới, 1: Tiếp tục, 2: Tập trang cụ thể
+    public System.Collections.Generic.List<string> StartupPages { get; set; } = new();
+    public System.Collections.Generic.List<string> LastSessionTabs { get; set; } = new();
     public bool SearchSuggestEnabled { get; set; } = true;
 
     // --- Hồ sơ (Profiles) ---

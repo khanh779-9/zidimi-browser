@@ -47,7 +47,7 @@
            x:Key="HecoButtonPrimary"
            BasedOn="{StaticResource {x:Type local:HecoButton}}">
         <Setter Property="Background" Value="{DynamicResource CtaBrush}" />
-        <Setter Property="Foreground" Value="White" />
+        <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
         <Setter Property="FontWeight" Value="SemiBold" />
         
         <Style.Triggers>
@@ -106,7 +106,7 @@
            BasedOn="{StaticResource {x:Type local:HecoButton}}">
         <Setter Property="Background" Value="{DynamicResource DangerBgBrush}" />
         <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
-        <Setter Property="BorderBrush" Value="#3356EFEF" />
+        <Setter Property="BorderBrush" Value="{DynamicResource StrokeLightBrush}" />
         <Setter Property="BorderThickness" Value="1" />
         
         <Style.Triggers>

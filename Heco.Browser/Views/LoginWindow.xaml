@@ -42,7 +42,7 @@
                      Background="{DynamicResource HecoBgElevatedBrush}" Foreground="{DynamicResource Ink100Brush}"
                      BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1" />
 
-        <TextBlock x:Name="LblError" Grid.Row="6" Foreground="#ef4444" TextWrapping="Wrap" Margin="0,0,0,8" Visibility="Collapsed" />
+        <TextBlock x:Name="LblError" Grid.Row="6" Foreground="{DynamicResource DangerBrush}" TextWrapping="Wrap" Margin="0,0,0,8" Visibility="Collapsed" />
 
         <StackPanel Grid.Row="7" Orientation="Horizontal" HorizontalAlignment="Right">
             <controls:HecoButton Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Login_Close]}" Width="80" Margin="0,0,8,0" Click="Cancel_Click" />

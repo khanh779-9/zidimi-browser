@@ -24,6 +24,24 @@ public partial class MainWindow : HecoWindow
         _vm.PropertyChanged += OnVmPropertyChanged;
 
         SwitchPage(_vm.ActivePage);
+
+        // Áp dụng FontSize mặc định từ AppSettings cho toàn UI khi khởi động.
+        UpdateAppFontSize();
+
+        Closing += OnMainWindowClosing;
+    }
+
+    private void UpdateAppFontSize()
+    {
+        FontSize = Models.AppSettings.Current.FontSize;
+    }
+
+    private void OnMainWindowClosing(object? sender, CancelEventArgs e)
+    {
+        // NOTE: "RunInBackground" sẽ ẩn window thay vì thoát để CEF chạy nền.
+        // Hiện chưa có system tray icon để gọi lại window, nên tạm thời skip để tránh app "mất tích".
+        // Khi nào có tray icon, bỏ comment đoạn dưới.
+        // if (Models.AppSettings.Current.RunInBackground) { e.Cancel = true; Hide(); }
     }
 
     private void BuildPages()

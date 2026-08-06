@@ -1,19 +1,33 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using CefSharp;
 using Heco.Browser.Controls;
 using Heco.Browser.Infrastructure;
 using Heco.Browser.Models;
+using Heco.Browser.Views;
 
 namespace Heco.Browser.Views;
-
 public partial class PreferencesView : UserControl
 {
+    private string _currentSection = "General";
+
     public PreferencesView()
     {
         InitializeComponent();
+        // Rebuild section đang xem khi đổi theme để label dựng bằng code lấy đúng brush mới.
+        ThemeManager.ThemeChanged += OnThemeChanged;
+        Unloaded += (s, e) => ThemeManager.ThemeChanged -= OnThemeChanged;
         if (SettingsContent.Content == null)
             LoadSettingsSection("General");
+    }
+
+    private void OnThemeChanged(ThemeManager.AppTheme theme)
+    {
+        if (Dispatcher.CheckAccess())
+            LoadSettingsSection(_currentSection);
+        else
+            Dispatcher.BeginInvoke(() => LoadSettingsSection(_currentSection));
     }
 
     private void NavItem_Checked(object sender, RoutedEventArgs e)
@@ -25,6 +39,7 @@ public partial class PreferencesView : UserControl
 
     private void LoadSettingsSection(string section)
     {
+        _currentSection = section;
         SettingsContent.Content = section switch
         {
             "General" => BuildGeneralSection(),
@@ -51,10 +66,32 @@ public partial class PreferencesView : UserControl
         {
             if (child is RadioButton rb && rb.Tag is string tag)
             {
-                var label = (rb.Content as string)?.ToLower() ?? "";
+                var label = FindNavLabel(rb)?.ToLower() ?? "";
                 rb.Visibility = string.IsNullOrEmpty(query) || label.Contains(query) || tag.ToLower().Contains(query)
                     ? Visibility.Visible : Visibility.Collapsed;
             }
+        }
+    }
+
+    private static string? FindNavLabel(FrameworkElement element)
+    {
+        // NavItem content là Grid { Path col0, TextBlock col1 } — tìm TextBlock sâu nhất.
+        foreach (var descendant in EnumerateVisuals(element))
+        {
+            if (descendant is TextBlock tb && !string.IsNullOrEmpty(tb.Text))
+                return tb.Text;
+        }
+        return null;
+    }
+
+    private static System.Collections.Generic.IEnumerable<DependencyObject> EnumerateVisuals(DependencyObject root)
+    {
+        int count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(root);
+        for (int i = 0; i < count; i++)
+        {
+            var child = System.Windows.Media.VisualTreeHelper.GetChild(root, i);
+            yield return child;
+            foreach (var d in EnumerateVisuals(child)) yield return d;
         }
     }
 
@@ -83,6 +120,27 @@ public partial class PreferencesView : UserControl
         startupCombo.SelectionChanged += (s, e) => { AppSettings.Current.StartupBehavior = startupCombo.SelectedIndex; AppSettings.Current.Save(); };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_OnStartup"], LanguageManager.Instance["Pref_StartupAction"], startupCombo));
 
+        var tbPages = new TextBox
+        {
+            Width = 380,
+            MinHeight = 80,
+            AcceptsReturn = true,
+            TextWrapping = TextWrapping.Wrap,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto,
+            FontSize = 13,
+            Text = string.Join("\n", AppSettings.Current.StartupPages),
+        };
+        tbPages.TextChanged += (s, e) =>
+        {
+            AppSettings.Current.StartupPages = tbPages.Text
+                .Split(new[] { '\n' }, System.StringSplitOptions.RemoveEmptyEntries)
+                .Select(x => x.Trim())
+                .Where(x => x.Length > 0)
+                .ToList();
+            AppSettings.Current.Save();
+        };
+        panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_SpecificPages"], LanguageManager.Instance["Pref_OnePerLine"], tbPages));
+
         return panel;
     }
 
@@ -98,8 +156,8 @@ public partial class PreferencesView : UserControl
         {
             if (!string.IsNullOrEmpty(AppSettings.Current.LoggedInUser))
             {
-                var res = MessageBox.Show(LanguageManager.Instance["Pref_ConfirmLogout"], "Heco Browser", MessageBoxButton.YesNo, MessageBoxImage.Question);
-                if (res == MessageBoxResult.Yes)
+                var res = HecoMessageBox.Show(LanguageManager.Instance["Pref_ConfirmLogout"], "Heco Browser", HecoMessageBoxButton.YesNo, HecoMessageBoxImage.Question, Window.GetWindow(this));
+                if (res == HecoMessageBoxResult.Yes)
                 {
                     AppSettings.Current.LoggedInUser = null;
                     AppSettings.Current.Save();
@@ -186,7 +244,7 @@ public partial class PreferencesView : UserControl
             }
             catch (Exception ex)
             {
-                MessageBox.Show(LanguageManager.Instance["Pref_WinSettingsError"] + ex.Message, LanguageManager.Instance["Pref_Error"]);
+                HecoMessageBox.Show(LanguageManager.Instance["Pref_WinSettingsError"] + ex.Message, LanguageManager.Instance["Pref_Error"], HecoMessageBoxButton.OK, HecoMessageBoxImage.Error, Window.GetWindow(this));
             }
         };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_DefaultBrowser"], LanguageManager.Instance["Pref_NotDefault"], btnDefault));
@@ -207,7 +265,8 @@ public partial class PreferencesView : UserControl
         { 
             if (themeCombo.SelectedItem is HecoComboBoxItem hcbi)
                 AppSettings.Current.Theme = hcbi.Content?.ToString() ?? LanguageManager.Instance["Pref_SystemTitle"];
-            AppSettings.Current.Save(); 
+            AppSettings.Current.Save();
+            ThemeManager.ApplyFromSettings(AppSettings.Current.Theme);
         };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_Theme"], LanguageManager.Instance["Pref_SelectTheme"], themeCombo));
 
@@ -217,7 +276,10 @@ public partial class PreferencesView : UserControl
         fontCombo.SelectionChanged += (s, e) => 
         { 
             AppSettings.Current.FontSize = fontCombo.SelectedIndex switch { 0 => 12, 1 => 14, 2 => 16, 3 => 18, _ => 14 };
-            AppSettings.Current.Save(); 
+            AppSettings.Current.Save();
+            // Áp dụng real-time cho UI
+            if (Application.Current?.MainWindow is MainWindow mw)
+                mw.FontSize = AppSettings.Current.FontSize;
         };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_FontSize"], LanguageManager.Instance["Pref_DefaultFontSize"], fontCombo));
 
@@ -229,7 +291,14 @@ public partial class PreferencesView : UserControl
         {
             if (zoomCombo.SelectedIndex >= 0 && zoomCombo.SelectedIndex < zoomLevels.Length)
                 AppSettings.Current.ZoomLevel = zoomLevels[zoomCombo.SelectedIndex];
-            AppSettings.Current.Save(); 
+            AppSettings.Current.Save();
+            // Áp dụng ngay cho tab web đang active (nếu có).
+            var activeTab = App.ViewModel?.ActiveTab;
+            if (activeTab != null)
+            {
+                var b = App.ViewModel?.GetBrowser(activeTab) as CefSharp.Wpf.ChromiumWebBrowser;
+                b?.SetZoomLevel(AppSettings.Current.ZoomLevel);
+            }
         };
         panel.Children.Add(CreateSettingRow("Zoom trang", LanguageManager.Instance["Pref_DefaultZoom"], zoomCombo));
 
@@ -304,8 +373,31 @@ public partial class PreferencesView : UserControl
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_Downloads"], FontSize = 20, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("Ink100Brush"), Margin = new Thickness(0, 0, 0, 16) });
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_ManageDownloads"], Foreground = (Brush)FindResource("Ink400Brush"), Margin = new Thickness(0, 0, 0, 24) });
 
-        var tbDownload = new TextBox { Width = 320, Text = AppSettings.Current.DownloadPath, IsReadOnly = true, FontSize = 13 };
-        panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_DefaultDownloadFolder"], AppSettings.Current.DownloadPath, tbDownload));
+        var tbDownload = new TextBox { Width = 380, Text = AppSettings.Current.DownloadPath, IsReadOnly = true, FontSize = 13 };
+
+        var btnBrowse = MakeButton("Chọn thư mục...", 130);
+        btnBrowse.Click += (s, e) => 
+        {
+            var dlg = new Microsoft.Win32.OpenFolderDialog
+            {
+                InitialDirectory = System.IO.Directory.Exists(AppSettings.Current.DownloadPath)
+                    ? AppSettings.Current.DownloadPath
+                    : System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile),
+                Title = "Chọn thư mục tải xuống",
+            };
+            if (dlg.ShowDialog(Window.GetWindow(this)) == true)
+            {
+                AppSettings.Current.DownloadPath = dlg.FolderName;
+                AppSettings.Current.Save();
+                tbDownload.Text = dlg.FolderName;
+            }
+        };
+
+        var dlPanel = new StackPanel { Orientation = Orientation.Horizontal };
+        dlPanel.Children.Add(tbDownload);
+        dlPanel.Children.Add(new Border { Width = 8 });
+        dlPanel.Children.Add(btnBrowse);
+        panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_DefaultDownloadFolder"], LanguageManager.Instance["Pref_ManageDownloads"], dlPanel));
 
         var btnOpen = MakeButton(LanguageManager.Instance["Pref_OpenFolder"], 140);
         btnOpen.Click += (s, e) => 
@@ -395,7 +487,7 @@ public partial class PreferencesView : UserControl
             }
             catch (Exception ex)
             {
-                MessageBox.Show(LanguageManager.Instance["Pref_ProxyError"] + ex.Message, LanguageManager.Instance["Pref_Error"]);
+                HecoMessageBox.Show(LanguageManager.Instance["Pref_ProxyError"] + ex.Message, LanguageManager.Instance["Pref_Error"], HecoMessageBoxButton.OK, HecoMessageBoxImage.Error, Window.GetWindow(this));
             }
         };
         panel.Children.Add(CreateSettingRow("", "", btnProxy));
@@ -437,7 +529,7 @@ public partial class PreferencesView : UserControl
             await System.Threading.Tasks.Task.Delay(2000); // Giả lập kiểm tra mạng
             btnCheck.Content = originalContent;
             btnCheck.IsEnabled = true;
-            MessageBox.Show(LanguageManager.Instance["Pref_UpToDate"], LanguageManager.Instance["Pref_Update"], MessageBoxButton.OK, MessageBoxImage.Information);
+            HecoMessageBox.Show(LanguageManager.Instance["Pref_UpToDate"], LanguageManager.Instance["Pref_Update"], HecoMessageBoxButton.OK, HecoMessageBoxImage.Information, Window.GetWindow(this));
         };
         btnCheck.Margin = new Thickness(0, 16, 0, 0);
         panel.Children.Add(btnCheck);

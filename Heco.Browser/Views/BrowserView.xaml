@@ -246,7 +246,7 @@
                     <Grid Width="22" Height="22">
                         <Ellipse Fill="{DynamicResource HecoPurpleBrush}" />
                         <TextBlock x:Name="AvatarInitial" Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Browser_HecoInitial]}"
-                                  Foreground="White" FontSize="11" FontWeight="SemiBold"
+                                  Foreground="{DynamicResource OnAccentBrush}" FontSize="11" FontWeight="SemiBold"
                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Grid>
                 </Button>
@@ -318,7 +318,7 @@
                             <Grid Width="32" Height="32">
                                 <Ellipse Fill="{DynamicResource HecoPurpleBrush}" />
                                 <TextBlock x:Name="AvatarInitial2" Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Browser_HecoInitial]}"
-                                          Foreground="White" FontSize="14" FontWeight="SemiBold"
+                                          Foreground="{DynamicResource OnAccentBrush}" FontSize="14" FontWeight="SemiBold"
                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
                             </Grid>
                             <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">

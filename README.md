@@ -1,6 +1,7 @@
 # Heco Browser
-
-![Heco Browser Home Page](screenshot/home_page.png)
+| Light Theme | Dark Theme |
+| :---: | :---: |
+| ![Light Theme](screenshot/home_light.png) | ![Dark Theme](screenshot/home_dark.png) |
 
 A fast, modern, and privacy-respecting desktop web browser built on top of the Chromium engine. Designed with a sleek, minimalist user interface and packed with productivity features, Heco Browser provides a seamless browsing experience.
 
@@ -38,17 +39,20 @@ A fast, modern, and privacy-respecting desktop web browser built on top of the C
 
 ### Navigation & Shortcuts
 Heco Browser supports standard browser keyboard shortcuts to keep you productive:
-* **Ctrl + T**: Open a new tab
-* **Ctrl + W**: Close the current tab
-* **Ctrl + Tab** / **Ctrl + Shift + Tab**: Cycle through open tabs
-* **Ctrl + 1-9**: Jump to a specific tab
-* **Ctrl + L**: Focus the address bar
-* **Ctrl + F**: Find in page
-* **Ctrl + D**: Bookmark the current page
-* **F5** or **Ctrl + R**: Reload page
-* **Ctrl + + / - / 0**: Zoom In / Zoom Out / Reset Zoom
-* **F11**: Toggle Fullscreen
-* **F12**: Open Developer Tools
+
+| Shortcut | Action |
+| --- | --- |
+| **Ctrl + T** | Open a new tab |
+| **Ctrl + W** | Close the current tab |
+| **Ctrl + Tab** / **Ctrl + Shift + Tab** | Cycle through open tabs |
+| **Ctrl + 1-9** | Jump to a specific tab |
+| **Ctrl + L** | Focus the address bar |
+| **Ctrl + F** | Find in page |
+| **Ctrl + D** | Bookmark the current page |
+| **F5** or **Ctrl + R** | Reload page |
+| **Ctrl + + / - / 0** | Zoom In / Zoom Out / Reset Zoom |
+| **F11** | Toggle Fullscreen |
+| **F12** | Open Developer Tools |
 
 ### Managing Profiles & Data
 1. Click the Avatar icon on the right side of the address bar.
