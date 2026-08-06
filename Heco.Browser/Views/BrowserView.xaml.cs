@@ -31,9 +31,6 @@ public partial class BrowserView : UserControl
         DataContext = _vm;
         _vm.PropertyChanged += OnVmPropertyChanged;
 
-        // Initialize language menu
-        PopulateLanguageMenu();
-
         foreach (var t in _vm.Tabs) SubscribeTab(t);
         _vm.Tabs.CollectionChanged += OnTabsChanged;
 
@@ -221,6 +218,11 @@ public partial class BrowserView : UserControl
         {
             Address = NormalizeUrl(tab.Address),
             RequestContext = _vm.GetRequestContext(),
+            BrowserSettings = new CefSharp.BrowserSettings
+            {
+                DefaultFontSize = (int)Models.AppSettings.Current.FontSize,
+                DefaultFixedFontSize = (int)Models.AppSettings.Current.FontSize
+            }
         };
 
         // Áp dụng zoom level mặc định từ AppSettings khi trang bắt đầu load.
@@ -845,39 +847,6 @@ public partial class BrowserView : UserControl
         MenuPopup.IsOpen = false;
     }
 
-    private void PopulateLanguageMenu()
-    {
-        if (LanguageMenu == null) return;
-        
-        LanguageMenu.Items.Clear();
-        foreach (var lang in LanguageManager.Instance.AvailableLanguages)
-        {
-            var item = new MenuItem
-            {
-                Header = lang.Name,
-                Tag = lang,
-                IsChecked = LanguageManager.Instance.CurrentLanguage?.Code == lang.Code,
-                Foreground = (Brush)FindResource("Ink100Brush")
-            };
-            item.Click += LanguageMenuItem_Click;
-            LanguageMenu.Items.Add(item);
-        }
-    }
-
-    private void LanguageMenuItem_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is MenuItem item && item.Tag is LanguageInfo lang)
-        {
-            LanguageManager.Instance.CurrentLanguage = lang;
-            
-            // Update checked state
-            foreach (MenuItem mi in LanguageMenu.Items)
-            {
-                mi.IsChecked = ReferenceEquals(mi, item);
-            }
-            MenuPopup.IsOpen = false;
-        }
-    }
 
     // ===== Profile / Guest mode =====
     private void Avatar_Click(object sender, RoutedEventArgs e)

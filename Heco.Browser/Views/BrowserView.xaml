@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="Heco.Browser.Views.BrowserView"
+<UserControl x:Class="Heco.Browser.Views.BrowserView"
              
     
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -302,10 +302,6 @@
                         </StackPanel>
                         <Border Height="1" Background="{DynamicResource StrokeBrush}" Margin="6,4" />
                         <ctrl:HecoMenuItem Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Menu_Preferences]}" Click="Menu_Preferences" />
-                        
-                        
-                        <MenuItem Header="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Menu_Language]}" x:Name="LanguageMenu" 
-                                  Foreground="{DynamicResource Ink100Brush}" />
                     </StackPanel>
                 </ctrl:HecoPopup>
                 

@@ -272,7 +272,7 @@ public partial class PreferencesView : UserControl
 
         var fontSizes = new[] { LanguageManager.Instance["Pref_SizeSmall"], LanguageManager.Instance["Pref_SizeMedium"], LanguageManager.Instance["Pref_SizeLarge"], LanguageManager.Instance["Pref_SizeExtraLarge"] };
         var idxFont = AppSettings.Current.FontSize switch { 12 => 0, 14 => 1, 16 => 2, 18 => 3, _ => 1 };
-        var fontCombo = MakeCombo(120, idxFont, fontSizes);
+        var fontCombo = MakeCombo(180, idxFont, fontSizes);
         fontCombo.SelectionChanged += (s, e) => 
         { 
             AppSettings.Current.FontSize = fontCombo.SelectedIndex switch { 0 => 12, 1 => 14, 2 => 16, 3 => 18, _ => 14 };
@@ -286,7 +286,7 @@ public partial class PreferencesView : UserControl
         var zooms = new[] { "25%", "50%", "75%", "90%", "100%", "110%", "125%", "150%", "200%" };
         var zoomLevels = new[] { -1.5, -1.0, -0.5, -0.2, 0.0, 0.5, 1.0, 1.5, 2.0 }; // CefSharp ZoomLevels are approx these values
         var idxZoom = Array.IndexOf(zoomLevels, AppSettings.Current.ZoomLevel);
-        var zoomCombo = MakeCombo(120, Math.Max(0, idxZoom), zooms);
+        var zoomCombo = MakeCombo(140, Math.Max(0, idxZoom), zooms);
         zoomCombo.SelectionChanged += (s, e) => 
         {
             if (zoomCombo.SelectedIndex >= 0 && zoomCombo.SelectedIndex < zoomLevels.Length)

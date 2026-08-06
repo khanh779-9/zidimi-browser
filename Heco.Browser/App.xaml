@@ -1,4 +1,4 @@
-﻿<Application x:Class="Heco.Browser.App"
+<Application x:Class="Heco.Browser.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:Heco.Browser"
@@ -183,7 +183,7 @@
                                 <Setter TargetName="bd" Property="Background" Value="{StaticResource SidebarActiveBrush}" />
                                 <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentBorderBrush}" />
                                 <Setter TargetName="bd" Property="BorderThickness" Value="1" />
-                                <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+                                <Setter Property="Foreground" Value="{StaticResource HecoPurpleBrush}" />
                                 <Setter TargetName="Accent" Property="Fill" Value="{StaticResource HecoPurpleLightBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>

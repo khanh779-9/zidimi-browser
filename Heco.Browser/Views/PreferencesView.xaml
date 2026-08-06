@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="Heco.Browser.Views.PreferencesView"
+<UserControl x:Class="Heco.Browser.Views.PreferencesView"
              
     
     
@@ -64,6 +64,11 @@
                     </Border>
                     
                     <StackPanel x:Name="NavPanel">
+                        <StackPanel.Resources>
+                            <Style TargetType="{x:Type TextBlock}" BasedOn="{StaticResource {x:Type TextBlock}}">
+                                <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ctrl:HecoRadioButton}}" />
+                            </Style>
+                        </StackPanel.Resources>
                         <ctrl:HecoRadioButton Style="{DynamicResource SidebarNavButton}" GroupName="SettingsNav"
                                      Tag="General" IsChecked="True" Checked="NavItem_Checked">
                             <ctrl:HecoRadioButton.Content>
