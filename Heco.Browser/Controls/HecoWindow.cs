@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Shell;
+using Heco.Browser.Infrastructure;
 
 namespace Heco.Browser.Controls;
 
@@ -158,6 +159,8 @@ public class HecoWindow : Window
         if (_restorePath != null)
             _restorePath.Visibility = IsMaximized ? Visibility.Visible : Visibility.Collapsed;
         if (_maximizeBtn != null)
-            _maximizeBtn.ToolTip = IsMaximized ? "Khôi phục" : "Phóng to";
+            _maximizeBtn.ToolTip = IsMaximized
+                ? LanguageManager.Instance["Win_Restore"]
+                : LanguageManager.Instance["Win_Maximize"];
     }
 }

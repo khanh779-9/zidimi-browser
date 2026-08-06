@@ -151,7 +151,7 @@ public partial class PreferencesView : UserControl
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_ProfileDesc"], Foreground = (Brush)FindResource("Ink400Brush"), Margin = new Thickness(0, 0, 0, 24) });
 
         var isLoggedIn = !string.IsNullOrEmpty(AppSettings.Current.LoggedInUser);
-        var btnLogin = new HecoButton { Content = isLoggedIn ? "Đăng xuất" : LanguageManager.Instance["Login_SignIn"], Style = (Style)FindResource("HecoButtonPrimary"), Padding = new Thickness(16,8,16,8) };
+        var btnLogin = new HecoButton { Content = isLoggedIn ? LanguageManager.Instance["Pref_Logout"] : LanguageManager.Instance["Login_SignIn"], Style = (Style)FindResource("HecoButtonPrimary"), Padding = new Thickness(16,8,16,8) };
         btnLogin.Click += (s, e) => 
         {
             if (!string.IsNullOrEmpty(AppSettings.Current.LoggedInUser))
@@ -173,8 +173,8 @@ public partial class PreferencesView : UserControl
                 }
             }
         };
-        var syncTitle = isLoggedIn ? $"Đồng bộ dữ liệu ({AppSettings.Current.LoggedInUser})" : "Đồng bộ dữ liệu";
-        panel.Children.Add(CreateSettingRow(syncTitle, LanguageManager.Instance["Pref_SyncDesc"], btnLogin));
+        var syncTitle = isLoggedIn ? $"{LanguageManager.Instance["Pref_SyncTitle"]} ({AppSettings.Current.LoggedInUser})" : LanguageManager.Instance["Pref_SyncTitle"];
+        panel.Children.Add(CreateSettingRow(syncTitle, LanguageManager.Instance["Pref_SyncDataBeta"], btnLogin));
 
         var profiles = AppSettings.Current.Profiles.ToArray();
         var idxProfile = Array.IndexOf(profiles, AppSettings.Current.CurrentProfile);
@@ -183,8 +183,13 @@ public partial class PreferencesView : UserControl
         {
             if (profileCombo.SelectedItem is HecoComboBoxItem hcbi)
             {
-                AppSettings.Current.CurrentProfile = hcbi.Content?.ToString() ?? LanguageManager.Instance["Pref_PersonalProfile"];
-                AppSettings.Current.Save();
+                var name = hcbi.Content?.ToString() ?? LanguageManager.Instance["Pref_PersonalProfile"];
+                if (AppSettings.Current.CurrentProfile != name)
+                {
+                    AppSettings.Current.CurrentProfile = name;
+                    AppSettings.Current.Save();
+                    App.ViewModel?.SwitchProfile(name);
+                }
             }
         };
 
@@ -195,6 +200,9 @@ public partial class PreferencesView : UserControl
             AppSettings.Current.Profiles.Add(newProfile);
             AppSettings.Current.CurrentProfile = newProfile;
             AppSettings.Current.Save();
+            Infrastructure.UserDataPaths.EnsureProfileDir(newProfile);
+            Infrastructure.UserDataPaths.RegisterProfile(newProfile);
+            App.ViewModel?.SwitchProfile(newProfile);
             LoadSettingsSection("Profiles"); // Reload UI
         };
 
@@ -258,15 +266,23 @@ public partial class PreferencesView : UserControl
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_Appearance"], FontSize = 20, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("Ink100Brush"), Margin = new Thickness(0, 0, 0, 16) });
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_CustomizeAppearance"], Foreground = (Brush)FindResource("Ink400Brush"), Margin = new Thickness(0, 0, 0, 24) });
 
-        var themes = new[] { LanguageManager.Instance["Pref_ThemeLight"], LanguageManager.Instance["Pref_ThemeDark"], LanguageManager.Instance["Pref_System"] };
-        var idxTheme = Array.IndexOf(themes, AppSettings.Current.Theme);
-        var themeCombo = MakeCombo(180, Math.Max(0, idxTheme), themes);
+        var themeOptions = new[]
+        {
+            (Key: "light", Label: LanguageManager.Instance["Pref_ThemeLight"]),
+            (Key: "dark", Label: LanguageManager.Instance["Pref_ThemeDark"]),
+            (Key: "system", Label: LanguageManager.Instance["Pref_SystemTitle"]),
+        };
+        var currentTheme = Infrastructure.ThemeManager.NormalizeThemeKey(AppSettings.Current.Theme);
+        var idxTheme = Array.FindIndex(themeOptions, o => o.Key == currentTheme);
+        var themeCombo = MakeCombo(180, Math.Max(0, idxTheme), themeOptions.Select(o => o.Label).ToArray());
         themeCombo.SelectionChanged += (s, e) => 
-        { 
-            if (themeCombo.SelectedItem is HecoComboBoxItem hcbi)
-                AppSettings.Current.Theme = hcbi.Content?.ToString() ?? LanguageManager.Instance["Pref_SystemTitle"];
-            AppSettings.Current.Save();
-            ThemeManager.ApplyFromSettings(AppSettings.Current.Theme);
+        {
+            if (themeCombo.SelectedIndex >= 0 && themeCombo.SelectedIndex < themeOptions.Length)
+            {
+                AppSettings.Current.Theme = themeOptions[themeCombo.SelectedIndex].Key;
+                AppSettings.Current.Save();
+                Infrastructure.ThemeManager.ApplyFromSettings(AppSettings.Current.Theme);
+            }
         };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_Theme"], LanguageManager.Instance["Pref_SelectTheme"], themeCombo));
 
@@ -300,7 +316,7 @@ public partial class PreferencesView : UserControl
                 b?.SetZoomLevel(AppSettings.Current.ZoomLevel);
             }
         };
-        panel.Children.Add(CreateSettingRow("Zoom trang", LanguageManager.Instance["Pref_DefaultZoom"], zoomCombo));
+        panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_ZoomPage"], LanguageManager.Instance["Pref_DefaultZoom"], zoomCombo));
 
         return panel;
     }
@@ -375,7 +391,7 @@ public partial class PreferencesView : UserControl
 
         var tbDownload = new TextBox { Width = 380, Text = AppSettings.Current.DownloadPath, IsReadOnly = true, FontSize = 13 };
 
-        var btnBrowse = MakeButton("Chọn thư mục...", 130);
+        var btnBrowse = MakeButton(LanguageManager.Instance["Pref_ChooseFolder"], 130);
         btnBrowse.Click += (s, e) => 
         {
             var dlg = new Microsoft.Win32.OpenFolderDialog
@@ -383,7 +399,7 @@ public partial class PreferencesView : UserControl
                 InitialDirectory = System.IO.Directory.Exists(AppSettings.Current.DownloadPath)
                     ? AppSettings.Current.DownloadPath
                     : System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile),
-                Title = "Chọn thư mục tải xuống",
+                Title = LanguageManager.Instance["Pref_ChooseDownloadFolder"],
             };
             if (dlg.ShowDialog(Window.GetWindow(this)) == true)
             {
@@ -509,10 +525,10 @@ public partial class PreferencesView : UserControl
         var info = new[]
         {
             (LanguageManager.Instance["Pref_Version"], "Heco Browser 1.0.0"),
-            ("Engine", "Chromium (CefSharp 150)"),
-            (".NET Runtime", "8.0 (WPF, x64)"),
-            (LanguageManager.Instance["Pref_SourceCode"], "CefSharp / Chromium Embedded Framework"),
-            (LanguageManager.Instance["Pref_License"], "BSD-3 (CEF/CefSharp)"),
+            (LanguageManager.Instance["Pref_EngineLabel"], "Chromium (CefSharp 150)"),
+            (LanguageManager.Instance["Pref_Runtime"], ".NET 8 (WPF, x86)"),
+            (LanguageManager.Instance["Pref_SourceCode"], LanguageManager.Instance["Pref_AboutSourceCode"]),
+            (LanguageManager.Instance["Pref_License"], LanguageManager.Instance["Pref_AboutLicense"]),
         };
         foreach (var (label, value) in info)
         {

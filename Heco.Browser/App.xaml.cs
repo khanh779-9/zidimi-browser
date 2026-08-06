@@ -13,6 +13,7 @@ public partial class App : Application
 {
     public static MainViewModel ViewModel { get; private set; } = null!;
     public static RequestContextFactory RequestContexts { get; private set; } = null!;
+    public static TrayIconManager? TrayIcon { get; private set; }
 
     private static readonly System.Threading.Mutex SingleInstanceMutex =
         new(false, @"Local\Heco.Browser.SingleInstance");
@@ -21,13 +22,16 @@ public partial class App : Application
     {
         // Phải nạp cấu hình và theme trước để nếu gọi HecoMessageBox (do lỗi hay mutex) thì không bị trong suốt
         AppSettings.Load();
+        UserDataPaths.MigrateLegacyData();
+        foreach (var p in AppSettings.Current.Profiles)
+            UserDataPaths.RegisterProfile(p);
         ThemeManager.EnsureLoaded();
         ThemeManager.ApplyFromSettings(AppSettings.Current.Theme);
 
         if (!SingleInstanceMutex.WaitOne(0, false))
         {
             // Đã có instance Heco.Browser đang chạy — CEF không cho 2 instance dùng chung cache.
-            HecoMessageBox.Show("Heco Browser đã đang chạy.\nHãy mở cửa sổ đang chạy hoặc đóng nó rồi thử lại.",
+            HecoMessageBox.Show(LanguageManager.Instance["App_AlreadyRunning"],
                 "Heco Browser", HecoMessageBoxButton.OK, HecoMessageBoxImage.Information);
             Shutdown();
             return;
@@ -51,26 +55,24 @@ public partial class App : Application
 
         var history = new HistoryService();
         var bookmarks = new BookmarkService();
-        RequestContexts = new RequestContextFactory(Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "HecoBrowser", "Cache"));
+        RequestContexts = new RequestContextFactory(UserDataPaths.CacheDir(UserDataPaths.DefaultProfileName));
         ViewModel = new MainViewModel(history, bookmarks);
+
+        TrayIcon = new TrayIconManager();
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
         ViewModel?.SaveSession();
         RequestContexts?.Dispose();
+        TrayIcon?.Dispose();
         base.OnExit(e);
     }
 
     private static void InitializeCef()
     {
         // CefSharp phải được khởi tạo trước khi dùng bất kỳ control ChromiumWebBrowser nào.
-        var appData = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-            "HecoBrowser");
-        var cachePath = Path.Combine(appData, "Cache");
+        var cachePath = UserDataPaths.CacheDir(UserDataPaths.DefaultProfileName);
         Directory.CreateDirectory(cachePath);
 
         var settings = new CefSettings

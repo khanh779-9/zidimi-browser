@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using Heco.Browser.Infrastructure;
 
 namespace Heco.Browser.Controls;
 
@@ -143,17 +144,17 @@ public sealed partial class HecoMessageBox : Window
                 Add("OK", HecoMessageBoxResult.OK, isPrimary: true, isDanger: false, isDefault: true, isCancel: true);
                 break;
             case HecoMessageBoxButton.OKCancel:
-                Add("Huỷ", HecoMessageBoxResult.Cancel, isPrimary: false, isDanger: false, isDefault: false, isCancel: true);
+                Add(LanguageManager.Instance["MsgBox_Cancel"], HecoMessageBoxResult.Cancel, isPrimary: false, isDanger: false, isDefault: false, isCancel: true);
                 Add("OK", HecoMessageBoxResult.OK, isPrimary: true, isDanger: false, isDefault: true, isCancel: false);
                 break;
             case HecoMessageBoxButton.YesNo:
-                Add("Không", HecoMessageBoxResult.No, isPrimary: false, isDanger: false, isDefault: false, isCancel: true);
-                Add("Có", HecoMessageBoxResult.Yes, isPrimary: true, isDanger: false, isDefault: true, isCancel: false);
+                Add(LanguageManager.Instance["MsgBox_No"], HecoMessageBoxResult.No, isPrimary: false, isDanger: false, isDefault: false, isCancel: true);
+                Add(LanguageManager.Instance["MsgBox_Yes"], HecoMessageBoxResult.Yes, isPrimary: true, isDanger: false, isDefault: true, isCancel: false);
                 break;
             case HecoMessageBoxButton.YesNoCancel:
-                Add("Huỷ", HecoMessageBoxResult.Cancel, isPrimary: false, isDanger: false, isDefault: false, isCancel: true);
-                Add("Không", HecoMessageBoxResult.No, isPrimary: false, isDanger: false, isDefault: false, isCancel: false);
-                Add("Có", HecoMessageBoxResult.Yes, isPrimary: true, isDanger: false, isDefault: true, isCancel: false);
+                Add(LanguageManager.Instance["MsgBox_Cancel"], HecoMessageBoxResult.Cancel, isPrimary: false, isDanger: false, isDefault: false, isCancel: true);
+                Add(LanguageManager.Instance["MsgBox_No"], HecoMessageBoxResult.No, isPrimary: false, isDanger: false, isDefault: false, isCancel: false);
+                Add(LanguageManager.Instance["MsgBox_Yes"], HecoMessageBoxResult.Yes, isPrimary: true, isDanger: false, isDefault: true, isCancel: false);
                 break;
         }
     }

@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using Heco.Browser.Infrastructure;
 
 namespace Heco.Browser.Controls;
 
@@ -15,13 +16,21 @@ public class HecoComboBox : ComboBox
             new FrameworkPropertyMetadata(typeof(HecoComboBox)));
     }
 
+    public HecoComboBox()
+    {
+        // Default placeholder chỉ lấy ở runtime (sau khi LanguageManager đã nạp),
+        // tránh gọi LanguageManager trong static metadata (nạp XAML trước OnStartup).
+        if (GetValue(PlaceholderProperty) == null)
+            SetValue(PlaceholderProperty, LanguageManager.Instance["Combo_Placeholder"]);
+    }
+
     public static readonly DependencyProperty PlaceholderProperty = DependencyProperty.Register(
         nameof(Placeholder), typeof(string), typeof(HecoComboBox),
-        new PropertyMetadata("Chọn..."));
+        new PropertyMetadata(null));
 
-    public string Placeholder
+    public string? Placeholder
     {
-        get => (string)GetValue(PlaceholderProperty);
+        get => GetValue(PlaceholderProperty) as string;
         set => SetValue(PlaceholderProperty, value);
     }
 }

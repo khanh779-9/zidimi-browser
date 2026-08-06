@@ -6,18 +6,26 @@ using System.Windows;
 
 namespace Heco.Browser.Infrastructure;
 
-/// <summary>Bookmark service có persistence JSON.</summary>
+/// <summary>Bookmark service có persistence JSON theo profile (User Data\&lt;profile&gt;\Bookmarks.json).</summary>
 public sealed class BookmarkService
 {
-    private static readonly string DataDir = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-        "HecoBrowser");
-    private static readonly string DataFile = Path.Combine(DataDir, "bookmarks.json");
+    private string _profileName = AppSettings.Current.CurrentProfile;
 
     public ObservableCollection<Bookmark> Items { get; } = new();
 
+    private string DataFile => UserDataPaths.BookmarksFile(_profileName);
+
     public BookmarkService()
     {
+        Load();
+    }
+
+    /// <summary>Chuyển sang profile khác — tải lại bookmarks của profile đó.</summary>
+    public void SwitchProfile(string profileName)
+    {
+        if (string.IsNullOrWhiteSpace(profileName) || profileName == _profileName) return;
+        _profileName = profileName;
+        Application.Current?.Dispatcher.Invoke(Items.Clear);
         Load();
     }
 
@@ -57,7 +65,7 @@ public sealed class BookmarkService
     {
         try
         {
-            Directory.CreateDirectory(DataDir);
+            UserDataPaths.EnsureProfileDir(_profileName);
             var json = JsonSerializer.Serialize(Items.ToList());
             File.WriteAllText(DataFile, json);
         }

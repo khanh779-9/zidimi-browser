@@ -24,17 +24,37 @@ public static class ThemeManager
     private static ResourceDictionary? _darkDict;
     private static ResourceDictionary? _lightDict;
 
-    /// <summary>Áp dụng theme theo chuỗi "Tối" / "Sáng" / "Hệ thống" (giống AppSettings.Theme).</summary>
+    /// <summary>
+    /// Áp dụng theme theo key ổn định "system" / "dark" / "light".
+    /// Hỗ trợ cả giá trị legacy là label theo ngôn ngữ (ví dụ "Hệ thống", "Tối", "Light")
+    /// để migrate từ các phiên bản cũ.
+    /// </summary>
     public static void ApplyFromSettings(string? themeName)
     {
-        if (string.IsNullOrEmpty(themeName) || themeName == LanguageManager.Instance["Pref_System"])
-            Apply(AppTheme.System);
-        else if (themeName == LanguageManager.Instance["Pref_ThemeDark"])
-            Apply(AppTheme.Dark);
-        else if (themeName == LanguageManager.Instance["Pref_ThemeLight"])
-            Apply(AppTheme.Light);
-        else
-            Apply(AppTheme.System);
+        Apply(ToAppTheme(NormalizeThemeKey(themeName)));
+    }
+
+    private static AppTheme ToAppTheme(string key) => key switch
+    {
+        "dark" => AppTheme.Dark,
+        "light" => AppTheme.Light,
+        _ => AppTheme.System,
+    };
+
+    /// <summary>Chuẩn hoá giá trị Theme trong AppSettings về key ổn định (system/dark/light).</summary>
+    public static string NormalizeThemeKey(string? themeName)
+    {
+        if (string.IsNullOrEmpty(themeName)) return "system";
+        var t = themeName.Trim();
+        if (t is "system" or "dark" or "light") return t;
+
+        // Legacy: label theo ngôn ngữ đang hiển thị.
+        var lm = LanguageManager.Instance;
+        if (t == lm["Pref_ThemeDark"] || t == "Dark" || t == "Tối" || t == "Scuro" || t == "Sombre" || t == "Темная" || t == "深色" || t == "dunkel")
+            return "dark";
+        if (t == lm["Pref_ThemeLight"] || t == "Light" || t == "Sáng" || t == "Chiaro" || t == "Clair" || t == "Светлая" || t == "浅色" || t == "hell")
+            return "light";
+        return "system";
     }
 
     public static void Apply(AppTheme theme)

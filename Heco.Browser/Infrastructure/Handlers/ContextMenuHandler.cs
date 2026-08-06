@@ -1,5 +1,6 @@
 using System.Windows;
 using CefSharp;
+using Heco.Browser.Infrastructure;
 
 namespace Heco.Browser.Infrastructure.Handlers;
 
@@ -24,40 +25,42 @@ public sealed class ContextMenuHandler : IContextMenuHandler
         // Xoá menu mặc định CEF
         model.Clear();
 
+        var l = LanguageManager.Instance;
+
         // Link context
         if (!string.IsNullOrEmpty(parameters.LinkUrl))
         {
-            Add(model, CustomOpenLinkNewTab, "Mở liên kết trong tab mới");
-            Add(model, CustomCopyLinkAddress, "Sao chép địa chỉ liên kết");
-            Add(model, CustomSaveLinkAs, "Lưu liên kết thành...");
+            Add(model, CustomOpenLinkNewTab, l["Ctx_OpenLinkNewTab"]);
+            Add(model, CustomCopyLinkAddress, l["Ctx_CopyLinkAddress"]);
+            Add(model, CustomSaveLinkAs, l["Ctx_SaveLinkAs"]);
             model.AddSeparator();
         }
 
         // Image context
         if (parameters.HasImageContents)
         {
-            Add(model, CustomSaveImageAs, "Lưu ảnh thành...");
-            Add(model, CustomCopyImageAddress, "Sao chép địa chỉ ảnh");
+            Add(model, CustomSaveImageAs, l["Ctx_SaveImageAs"]);
+            Add(model, CustomCopyImageAddress, l["Ctx_CopyImageAddress"]);
             model.AddSeparator();
         }
 
         // Text selection
         if (parameters.SelectionText?.Length > 0)
         {
-            Add(model, CefMenuCommand.Copy, "Sao chép");
+            Add(model, CefMenuCommand.Copy, l["Ctx_Copy"]);
             model.AddSeparator();
         }
 
-        Add(model, CefMenuCommand.Back, "Quay lại");
-        Add(model, CefMenuCommand.Forward, "Tiến tới");
-        Add(model, CefMenuCommand.Reload, "Tải lại trang");
+        Add(model, CefMenuCommand.Back, l["Ctx_Back"]);
+        Add(model, CefMenuCommand.Forward, l["Ctx_Forward"]);
+        Add(model, CefMenuCommand.Reload, l["Ctx_Reload"]);
         model.AddSeparator();
 
-        Add(model, CefMenuCommand.Print, "In trang...");
-        Add(model, CefMenuCommand.ViewSource, "Xem nguồn trang");
+        Add(model, CefMenuCommand.Print, l["Ctx_Print"]);
+        Add(model, CefMenuCommand.ViewSource, l["Ctx_ViewSource"]);
         model.AddSeparator();
 
-        Add(model, CustomInspectElement, "Kiểm tra phần tử (DevTools)");
+        Add(model, CustomInspectElement, l["Ctx_InspectElement"]);
     }
 
     public bool OnContextMenuCommand(IWebBrowser browserControl, IBrowser browser, IFrame frame,

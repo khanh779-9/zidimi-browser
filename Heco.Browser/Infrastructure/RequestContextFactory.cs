@@ -9,6 +9,7 @@ namespace Heco.Browser.Infrastructure;
 /// - Profile mặc định: cache bản trên đĩa.
 /// - Guest mode: CachePath rỗng = in-memory, không ghi gì xuống đĩa.
 /// - Dynamic Profile: Tạo RequestContext theo tên Profile.
+/// Cache đặt theo User Data\&lt;profile&gt;\Cache (giống CocCoc/Chromium).
 /// Chia sẻ cùng 1 context cho các tab trong cùng profile để tiết kiệm RAM.
 /// </summary>
 public sealed class RequestContextFactory : System.IDisposable
@@ -47,9 +48,9 @@ public sealed class RequestContextFactory : System.IDisposable
     /// <summary>Context cho Profile chỉ định.</summary>
     public IRequestContext? GetProfileContext(string profileName)
     {
-        // Trả về null để sử dụng global context (đã khai báo ở CefSettings.CachePath), 
+        // Profile mặc định dùng global context (đã khai báo ở CefSettings.CachePath),
         // tránh lỗi tạo RequestContext trùng cache path gây crash ứng dụng.
-        if (string.IsNullOrEmpty(profileName) || profileName == "Cá nhân")
+        if (string.IsNullOrEmpty(profileName) || profileName == UserDataPaths.DefaultProfileName)
             return null;
 
         if (_profileContexts.TryGetValue(profileName, out var context) && !context.IsDisposed)
@@ -57,11 +58,10 @@ public sealed class RequestContextFactory : System.IDisposable
             return context;
         }
 
-        var safeName = string.Join("_", profileName.Split(Path.GetInvalidFileNameChars()));
-        var path = Path.Combine(Directory.GetParent(_defaultCachePath)?.FullName ?? _defaultCachePath, "Profiles", safeName);
-        Directory.CreateDirectory(path);
+        var cachePath = UserDataPaths.CacheDir(profileName);
+        Directory.CreateDirectory(cachePath);
 
-        var newContext = Create(path, persist: true);
+        var newContext = Create(cachePath, persist: true);
         _profileContexts[profileName] = newContext;
         return newContext;
     }

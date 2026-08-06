@@ -22,8 +22,9 @@ namespace Heco.Browser.Views
             if (_mode == "passwords")
             {
                 LblTitle.Text = LanguageManager.Instance["DataMgr_ManagePasswords"];
-                TxtF1.Tag = "Trang web (VD: facebook.com)";
-                TxtF1.ToolTip = "Trang web (VD: facebook.com)";
+                var sitePlaceholder = LanguageManager.Instance["DataMgr_WebsitePlaceholder"];
+                TxtF1.Tag = sitePlaceholder;
+                TxtF1.ToolTip = sitePlaceholder;
                 TxtF2.Tag = LanguageManager.Instance["DataMgr_Username"];
                 TxtF2.ToolTip = LanguageManager.Instance["DataMgr_Username"];
                 TxtF3.Tag = LanguageManager.Instance["DataMgr_Password"];

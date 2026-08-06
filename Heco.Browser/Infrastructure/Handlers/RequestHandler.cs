@@ -3,6 +3,7 @@ using CefSharp.Handler;
 using System.Security.Cryptography.X509Certificates;
 using System.Windows;
 using Heco.Browser.Controls;
+using Heco.Browser.Infrastructure;
 using Heco.Browser.Models;
 
 namespace Heco.Browser.Infrastructure.Handlers;
@@ -34,9 +35,11 @@ public class RequestHandler : CefSharp.Handler.RequestHandler
 
         Application.Current.Dispatcher.BeginInvoke(() =>
         {
+            var msg = string.Format(LanguageManager.Instance["Security_CertWarning"],
+                requestUrl, errorCode);
             var result = HecoMessageBox.Show(
-                $"Trang web {requestUrl} có chứng chỉ bảo mật không hợp lệ ({errorCode}).\n\nBạn có muốn tiếp tục truy cập không? (Không khuyến nghị)",
-                "Cảnh báo bảo mật",
+                msg,
+                LanguageManager.Instance["Security_CertTitle"],
                 HecoMessageBoxButton.YesNo,
                 HecoMessageBoxImage.Warning);
 

@@ -38,26 +38,24 @@ namespace Heco.Browser.Models
 
     public static class AutofillManager
     {
-        private static readonly string FilePath;
         public static AutofillData Data { get; private set; } = new AutofillData();
+
+        private static string FilePath => Heco.Browser.Infrastructure.UserDataPaths.AutofillFile(
+            Heco.Browser.Models.AppSettings.Current.CurrentProfile);
 
         static AutofillManager()
         {
-            var appData = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "HecoBrowser");
-            Directory.CreateDirectory(appData);
-            FilePath = Path.Combine(appData, "autofill.json");
             Load();
         }
 
         public static void Load()
         {
-            if (File.Exists(FilePath))
+            var file = FilePath;
+            if (File.Exists(file))
             {
                 try
                 {
-                    var json = File.ReadAllText(FilePath);
+                    var json = File.ReadAllText(file);
                     Data = JsonSerializer.Deserialize<AutofillData>(json) ?? new AutofillData();
                 }
                 catch
@@ -71,8 +69,10 @@ namespace Heco.Browser.Models
         {
             try
             {
+                var file = FilePath;
+                Directory.CreateDirectory(System.IO.Path.GetDirectoryName(file)!);
                 var json = JsonSerializer.Serialize(Data, new JsonSerializerOptions { WriteIndented = true });
-                File.WriteAllText(FilePath, json);
+                File.WriteAllText(file, json);
             }
             catch { }
         }

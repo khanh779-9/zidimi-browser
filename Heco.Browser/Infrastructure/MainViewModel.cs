@@ -130,6 +130,14 @@ public sealed class MainViewModel : ViewModelBase
     /// <summary>Thêm một entry vào lịch sử duyệt web.</summary>
     public void AddHistory(string url, string title) => _history.Add(url, title);
 
+    /// <summary>Chuyển profile hiện tại — tải lại lịch sử & bookmarks theo profile mới.</summary>
+    public void SwitchProfile(string profileName)
+    {
+        _history.SwitchProfile(profileName);
+        _bookmarks.SwitchProfile(profileName);
+        AutofillManager.Load();
+    }
+
     public PageId ActivePage
     {
         get => _activePage;
@@ -210,10 +218,10 @@ public sealed class MainViewModel : ViewModelBase
         }
         var tab = new TabViewModel { Kind = kind, Title = kind switch
         {
-            TabKind.Settings => "Cài đặt",
-            TabKind.History => "Lịch sử",
-            TabKind.Bookmarks => "Bookmark",
-            TabKind.Downloads => "Tải xuống",
+            TabKind.Settings => LanguageManager.Instance["Tab_SettingsTitle"],
+            TabKind.History => LanguageManager.Instance["Tab_HistoryTitle"],
+            TabKind.Bookmarks => LanguageManager.Instance["Tab_BookmarksTitle"],
+            TabKind.Downloads => LanguageManager.Instance["Tab_DownloadsTitle"],
             _ => "New Tab",
         } };
         Tabs.Add(tab);

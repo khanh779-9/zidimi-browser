@@ -38,10 +38,14 @@ public partial class MainWindow : HecoWindow
 
     private void OnMainWindowClosing(object? sender, CancelEventArgs e)
     {
-        // NOTE: "RunInBackground" sẽ ẩn window thay vì thoát để CEF chạy nền.
-        // Hiện chưa có system tray icon để gọi lại window, nên tạm thời skip để tránh app "mất tích".
-        // Khi nào có tray icon, bỏ comment đoạn dưới.
-        // if (Models.AppSettings.Current.RunInBackground) { e.Cancel = true; Hide(); }
+        // "RunInBackground": ẩn window thay vì thoát để CEF chạy nền,
+        // hiện system tray icon để user mở lại hoặc thoát hẳn.
+        if (Models.AppSettings.Current.RunInBackground)
+        {
+            e.Cancel = true;
+            Hide();
+            App.TrayIcon?.Show();
+        }
     }
 
     private void BuildPages()

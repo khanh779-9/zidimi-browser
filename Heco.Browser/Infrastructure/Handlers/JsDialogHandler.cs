@@ -1,5 +1,6 @@
 using CefSharp;
 using Heco.Browser.Controls;
+using Heco.Browser.Infrastructure;
 using System.Windows;
 
 namespace Heco.Browser.Infrastructure.Handlers;
@@ -21,17 +22,17 @@ public class JsDialogHandler : IJsDialogHandler
             switch (dialogType)
             {
                 case CefJsDialogType.Alert:
-                    dialog.DialogTitle = "Cảnh báo";
+                    dialog.DialogTitle = LanguageManager.Instance["JsDialog_Alert"];
                     dialog.ShowCancel = false;
                     dialog.IsPrompt = false;
                     break;
                 case CefJsDialogType.Confirm:
-                    dialog.DialogTitle = "Xác nhận";
+                    dialog.DialogTitle = LanguageManager.Instance["JsDialog_Confirm"];
                     dialog.ShowCancel = true;
                     dialog.IsPrompt = false;
                     break;
                 case CefJsDialogType.Prompt:
-                    dialog.DialogTitle = "Trang web yêu cầu nhập thông tin";
+                    dialog.DialogTitle = LanguageManager.Instance["JsDialog_Prompt"];
                     dialog.ShowCancel = true;
                     dialog.IsPrompt = true;
                     dialog.InputText = defaultPromptText ?? "";
@@ -63,8 +64,10 @@ public class JsDialogHandler : IJsDialogHandler
         {
             var dialog = new HecoJsDialog
             {
-                DialogTitle = "Rời khỏi trang web?",
-                MessageText = string.IsNullOrEmpty(messageText) ? "Bạn có thay đổi chưa lưu. Bạn có chắc chắn muốn rời khỏi trang này?" : messageText,
+                DialogTitle = LanguageManager.Instance["JsDialog_LeaveSite"],
+                MessageText = string.IsNullOrEmpty(messageText)
+                    ? LanguageManager.Instance["JsDialog_UnsavedChanges"]
+                    : messageText,
                 ShowCancel = true,
                 IsPrompt = false,
                 Owner = Application.Current.MainWindow,

@@ -1,12 +1,13 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Windows;
+using Heco.Browser.Infrastructure;
 
 namespace Heco.Browser.Controls;
 
 public partial class HecoJsDialog : Window, INotifyPropertyChanged
 {
-    private string _dialogTitle = "Thông báo từ trang web";
+    private string _dialogTitle = LanguageManager.Instance["JsDialog_DefaultTitle"];
     private string _messageText = "";
     private string _inputText = "";
     private bool _isPrompt = false;

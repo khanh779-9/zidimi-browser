@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using CefSharp;
+using Heco.Browser.Infrastructure;
 using Heco.Browser.Models;
 
 namespace Heco.Browser.Infrastructure.Handlers;
@@ -45,7 +46,7 @@ public sealed class DownloadHandler : IDownloadHandler
                 var dlg = new Microsoft.Win32.SaveFileDialog
                 {
                     FileName = entry.SuggestedFileName,
-                    Title = "Chọn nơi lưu file",
+                    Title = LanguageManager.Instance["Download_ChooseLocation"],
                     InitialDirectory = AppSettings.Current.DownloadPath,
                 };
                 var ok = dlg.ShowDialog() == true;
