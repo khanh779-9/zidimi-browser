@@ -36,6 +36,26 @@ public sealed class HistoryEntry : INotifyPropertyChanged
     public long Id { get; set; }
     public DateTime VisitedAt { get; set; } = DateTime.Now;
 
+    public string GroupDateText
+    {
+        get
+        {
+            try
+            {
+                var code = Heco.Browser.Infrastructure.LanguageManager.Instance.CurrentLanguage?.Code ?? "vi-VN";
+                var culture = new System.Globalization.CultureInfo(code);
+                var text = VisitedAt.ToString("dddd, dd/MM/yyyy", culture);
+                if (!string.IsNullOrEmpty(text))
+                    return char.ToUpper(text[0]) + text.Substring(1);
+                return text;
+            }
+            catch
+            {
+                return VisitedAt.ToString("dddd, dd/MM/yyyy");
+            }
+        }
+    }
+
     public string Title
     {
         get => _title;

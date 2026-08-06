@@ -91,11 +91,14 @@ namespace Heco.Browser.Views
             if (sender is Button btn && btn.Tag is string id)
             {
                 if (_mode == "passwords")
-                    AutofillManager.Data.Passwords.RemoveAll(x => x.Id == id);
+                {
+                    if (long.TryParse(id, out var idLong))
+                        AutofillManager.Data.Passwords.RemoveAll(x => x.Id == idLong);
+                }
                 else if (_mode == "cards")
-                    AutofillManager.Data.Cards.RemoveAll(x => x.Id == id);
+                    AutofillManager.Data.Cards.RemoveAll(x => x.Guid == id);
                 else if (_mode == "addresses")
-                    AutofillManager.Data.Addresses.RemoveAll(x => x.Id == id);
+                    AutofillManager.Data.Addresses.RemoveAll(x => x.Guid == id);
 
                 AutofillManager.Save();
 

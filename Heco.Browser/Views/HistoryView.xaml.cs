@@ -5,6 +5,7 @@ using System.Windows.Data;
 using System.Windows.Input;
 using Heco.Browser.Infrastructure;
 using Heco.Browser.Models;
+using Heco.Browser.Controls;
 using ICollectionView = System.ComponentModel.ICollectionView;
 
 namespace Heco.Browser.Views;
@@ -55,5 +56,30 @@ public partial class HistoryView : UserControl
     {
         if (string.IsNullOrEmpty(url)) return;
         _vm.NewTab(url);
+    }
+
+    private void ClearAll_Click(object sender, RoutedEventArgs e)
+    {
+        var msg = LanguageManager.Instance["History_ConfirmDeleteAllMsg"];
+        var title = LanguageManager.Instance["History_ConfirmDeleteAllTitle"];
+        var res = HecoMessageBox.Show(msg, title, HecoMessageBoxButton.YesNo, HecoMessageBoxImage.Question, Window.GetWindow(this));
+        if (res == HecoMessageBoxResult.Yes)
+        {
+            _vm.ClearHistoryCommand.Execute(null);
+        }
+    }
+
+    private void Delete_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button b && b.Tag is HistoryEntry h)
+        {
+            var msg = LanguageManager.Instance["History_ConfirmDeleteMsg"];
+            var title = LanguageManager.Instance["History_ConfirmDeleteTitle"];
+            var res = HecoMessageBox.Show(msg, title, HecoMessageBoxButton.YesNo, HecoMessageBoxImage.Question, Window.GetWindow(this));
+            if (res == HecoMessageBoxResult.Yes)
+            {
+                _vm.RemoveHistoryCommand.Execute(h);
+            }
+        }
     }
 }

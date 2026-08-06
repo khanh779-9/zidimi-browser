@@ -26,7 +26,7 @@
 - **Privacy controls** — block third-party cookies, send Do Not Track requests, enable Safe Browsing, and warn before visiting sites with invalid certificates.
 
 ### Profiles & Guest Mode
-- **Multi-profile** — create and switch between independent profiles; each profile keeps its own history, bookmarks, autofill, cache and cookies under `%LOCALAPPDATA%\HecoBrowser\User Data\<profile>`. (CocCoc/Chromium-style layout.)
+- **Multi-profile** — create and switch between independent profiles; each profile keeps its own history, bookmarks and autofill under `%LOCALAPPDATA%\HecoBrowser\Browser\User Data\<profile>`, while the browser **cache is shared** at `User Data\Cache`. (CocCoc-style layout.)
 - **Guest mode** — one click for a temporary, fully in-memory session. No history, cookies, or site data are ever written to disk.
 
 ### Smart Omnibox & Search
@@ -95,26 +95,27 @@
 - **Native JS dialogs** — `alert`, `confirm`, and `prompt` are rendered with Heco's own window, so malicious sites can't spam native dialogs.
 - **Guest mode** — an in-memory session that records nothing to disk.
 - **1-click data wipe** — clear history, cookies, cache, and saved data from *Settings → Privacy*.
-- **Local data** — everything is stored on your machine (see below). Note: autofill entries are saved locally in a JSON file (not encrypted), so treat it like a regular app password store.
+- **Local data** — everything is stored on your machine (see below). Note: passwords are saved locally in a SQLite `Login Data` file as plaintext (not DPAPI-encrypted like Chrome), so treat it like a regular app password store.
 
 ### Where your data lives
 
-Data follows a Chromium/CocCoc-style layout: a `User Data` folder with a `Local State` metadata file and one sub-folder per profile.
+Data follows a CocCoc/Chromium-style layout: a `Browser\User Data` folder with a `Local State` metadata file, a **shared `Cache` folder**, and one sub-folder per profile. History, autofill and passwords are stored as **SQLite databases** using Chrome's schema, so they can be inspected with any SQLite browser.
 
-| Data | Location |
-| --- | --- |
-| Settings | `%APPDATA%\HecoBrowser\settings.json` |
-| `User Data` root (per-profile data) | `%LOCALAPPDATA%\HecoBrowser\User Data\` |
-| Profile metadata (`Local State`) | `%LOCALAPPDATA%\HecoBrowser\User Data\Local State` |
-| Default profile folder | `%LOCALAPPDATA%\HecoBrowser\User Data\Default\` |
-| Additional profiles | `%LOCALAPPDATA%\HecoBrowser\User Data\<ProfileName>\` |
-| Browsing history (per profile) | `User Data\<profile>\History.json` |
-| Bookmarks (per profile) | `User Data\<profile>\Bookmarks.json` |
-| Autofill — passwords/cards/addresses (per profile) | `User Data\<profile>\Login Data.json` |
-| Browser cache & cookies (per profile) | `User Data\<profile>\Cache` |
-| Crash log | `heco-browser-crash.log` (next to the exe) |
+| Data | Location | Format |
+| --- | --- | --- |
+| Settings | `%APPDATA%\HecoBrowser\settings.json` | JSON |
+| `User Data` root (cache + profiles) | `%LOCALAPPDATA%\HecoBrowser\Browser\User Data\` | folder |
+| Profile metadata (`Local State`) | `%LOCALAPPDATA%\HecoBrowser\Browser\User Data\Local State` | JSON |
+| Shared browser cache & cookies | `%LOCALAPPDATA%\HecoBrowser\Browser\User Data\Cache\` | CEF |
+| Default profile folder | `%LOCALAPPDATA%\HecoBrowser\Browser\User Data\Default\` | folder |
+| Additional profiles | `%LOCALAPPDATA%\HecoBrowser\Browser\User Data\<ProfileName>\` | folder |
+| Browsing history (per profile) | `User Data\<profile>\History` | SQLite (`urls`/`visits`) |
+| Bookmarks (per profile) | `User Data\<profile>\Bookmarks` | JSON |
+| Autofill — addresses & cards (per profile) | `User Data\<profile>\Web Data` | SQLite (`autofill_profiles`/`credit_cards`) |
+| Passwords (per profile) | `User Data\<profile>\Login Data` | SQLite (`logins`) |
+| Crash log | `heco-browser-crash.log` (next to the exe) | text |
 
-*Note: autofill entries are saved locally in a plain JSON file (not encrypted), so treat it like a regular app password store. History is stored as JSON (CocCoc/Chromium use SQLite; Heco keeps the same folder layout but a simpler JSON format for now).*
+*Note: the cache (including cookies and site data) is shared across profiles — like CocCoc. Passwords are stored in `Login Data` as plaintext (not DPAPI-encrypted like Chrome), so treat it like a regular app password store.*
 
 ---
 
@@ -125,7 +126,7 @@ Data follows a Chromium/CocCoc-style layout: a `User Data` folder with a `Local 
 | Language | C# (.NET 8) |
 | UI framework | WPF (MVVM pattern) |
 | Rendering engine | Chromium via **CefSharp.Wpf.NETCore 150** |
-| Persistence | Local JSON files |
+| Persistence | SQLite (history/autofill/passwords) + local JSON files |
 | Target platform | Windows 10 / 11, **x86** (32-bit, for max CefSharp compatibility) |
 
 The app follows **MVVM** (`MainViewModel`, `ViewModelBase`, `RelayCommand`) with a custom control suite (`HecoButton`, `HecoWindow`, `HecoMessageBox`, `HecoPopup`, `HecoToast`, `HecoJsDialog`, …) and theme switching by swapping merged `ResourceDictionary`s — everything binds with `DynamicResource` so the UI re-themes live.

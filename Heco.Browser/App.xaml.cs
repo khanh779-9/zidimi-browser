@@ -55,7 +55,7 @@ public partial class App : Application
 
         var history = new HistoryService();
         var bookmarks = new BookmarkService();
-        RequestContexts = new RequestContextFactory(UserDataPaths.CacheDir(UserDataPaths.DefaultProfileName));
+        RequestContexts = new RequestContextFactory();
         ViewModel = new MainViewModel(history, bookmarks);
 
         TrayIcon = new TrayIconManager();
@@ -72,7 +72,7 @@ public partial class App : Application
     private static void InitializeCef()
     {
         // CefSharp phải được khởi tạo trước khi dùng bất kỳ control ChromiumWebBrowser nào.
-        var cachePath = UserDataPaths.CacheDir(UserDataPaths.DefaultProfileName);
+        var cachePath = UserDataPaths.SharedCacheDir;
         Directory.CreateDirectory(cachePath);
 
         var settings = new CefSettings

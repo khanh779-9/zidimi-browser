@@ -43,7 +43,7 @@
                             <TextBlock Text="{Binding CardNumber}" Foreground="{DynamicResource Ink400Brush}" Margin="0,4,0,0" />
                             <TextBlock Text="{Binding Expiry}" Foreground="{DynamicResource Ink400Brush}" />
                         </StackPanel>
-                        <controls:HecoButton Grid.Column="1" Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[History_Delete]}" Padding="12,6" Tag="{Binding Id}" Click="Delete_Click" VerticalAlignment="Center" />
+                        <controls:HecoButton Grid.Column="1" Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[History_Delete]}" Padding="12,6" Tag="{Binding Guid}" Click="Delete_Click" VerticalAlignment="Center" />
                     </Grid>
                 </Border>
             </DataTemplate>
@@ -60,7 +60,7 @@
                             <TextBlock Text="{Binding Phone}" Foreground="{DynamicResource Ink400Brush}" Margin="0,4,0,0" />
                             <TextBlock Text="{Binding Address}" Foreground="{DynamicResource Ink400Brush}" TextWrapping="Wrap" />
                         </StackPanel>
-                        <controls:HecoButton Grid.Column="1" Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[History_Delete]}" Padding="12,6" Tag="{Binding Id}" Click="Delete_Click" VerticalAlignment="Center" />
+                        <controls:HecoButton Grid.Column="1" Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[History_Delete]}" Padding="12,6" Tag="{Binding Guid}" Click="Delete_Click" VerticalAlignment="Center" />
                     </Grid>
                 </Border>
             </DataTemplate>

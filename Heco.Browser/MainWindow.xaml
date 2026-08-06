@@ -7,7 +7,7 @@
                  
                  BrandText="Heco Browser"
                  Icon="/Heco_Browser.ico"
-                 MinHeight="640" MinWidth="960">
+                 Height="481" Width="683">
 
     <ctrl:HecoWindow.TabStripContent>
         <views:TabStrip Margin="0,3,0,0" />

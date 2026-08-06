@@ -47,23 +47,7 @@
                     Height="44"
                     MouseLeftButtonDown="TitleBar_MouseLeftButtonDown">
                 <Grid Margin="18,0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Path x:Name="TitleIcon"
-                          Grid.Column="0"
-                          Width="18" Height="18"
-                          Stretch="Uniform"
-                          Stroke="{DynamicResource HecoPurpleLightBrush}"
-                          StrokeThickness="1.6"
-                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
-                          StrokeLineJoin="Round"
-                          VerticalAlignment="Center"
-                          Margin="0,0,10,0"
-                          Data="M12 2 a10 10 0 1 0 0.01 0 Z M12 8 V12 M12 16 H12.01" />
                     <TextBlock x:Name="TitleText"
-                               Grid.Column="1"
                                FontSize="13"
                                FontWeight="SemiBold"
                                Foreground="{DynamicResource Ink100Brush}"

@@ -100,12 +100,9 @@ public sealed partial class HecoMessageBox : Window
 
         BodyIcon.Data = Geometry.Parse(geometry);
         BodyIcon.Stroke = (Brush)Application.Current.FindResource(stroke);
-        TitleIcon.Data = BodyIcon.Data;
-        TitleIcon.Stroke = BodyIcon.Stroke;
         if (image == HecoMessageBoxImage.None)
         {
             BodyIcon.Visibility = Visibility.Collapsed;
-            TitleIcon.Visibility = Visibility.Collapsed;
         }
     }
 

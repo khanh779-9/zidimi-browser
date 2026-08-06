@@ -1,4 +1,4 @@
-[Info]
+﻿[Info]
 LanguageName=Tiếng Việt
 
 [Menu]
@@ -46,6 +46,10 @@ History=Lịch sử
 
 [History]
 Desc=Trang web bạn đã ghé thăm gần đây
+ConfirmDeleteTitle=Xác nhận xoá
+ConfirmDeleteMsg=Bạn có chắc chắn muốn xoá lịch sử này không?
+ConfirmDeleteAllTitle=Xác nhận xoá tất cả
+ConfirmDeleteAllMsg=Bạn có chắc chắn muốn xoá toàn bộ lịch sử duyệt web không?
 
 [Common]
 ClearAll=Xoá tất cả
@@ -326,3 +330,4 @@ Pref_Runtime=.NET Runtime
 Pref_EngineLabel=Engine
 Pref_AboutLicense=MIT (Heco) / BSD-3 (CEF/CefSharp)
 Pref_AboutSourceCode=CefSharp / Chromium Embedded Framework
+

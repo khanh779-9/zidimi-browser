@@ -100,11 +100,11 @@ public partial class BrowserView : UserControl
                 e.Handled = true;
                 break;
             case Key.H when mods == ModifierKeys.Control:
-                _vm.NavigateCommand.Execute(PageId.History);
+                _vm.OpenAppTab(TabKind.History);
                 e.Handled = true;
                 break;
             case Key.J when mods == ModifierKeys.Control:
-                _vm.NavigateCommand.Execute(PageId.Downloads);
+                _vm.OpenAppTab(TabKind.Downloads);
                 e.Handled = true;
                 break;
             case Key.F when mods == ModifierKeys.Control:
@@ -267,7 +267,7 @@ public partial class BrowserView : UserControl
                 _vm.Downloads.Insert(0, entry);
                 // Nếu AppSettings yêu cầu mở thanh Downloads khi bắt đầu tải → mở trang Downloads.
                 if (Models.AppSettings.Current.ShowDownloadBar)
-                    _vm.NavigateCommand.Execute(PageId.Downloads);
+                    _vm.OpenAppTab(TabKind.Downloads);
             });
         };
         downloadHandler.DownloadUpdated += entry =>
@@ -740,12 +740,12 @@ public partial class BrowserView : UserControl
     }
     private void Menu_History(object sender, RoutedEventArgs e)
     {
-        _vm.NavigateCommand.Execute(PageId.History);
+        _vm.OpenAppTab(TabKind.History);
         MenuPopup.IsOpen = false;
     }
     private void Menu_Bookmarks(object sender, RoutedEventArgs e)
     {
-        _vm.NavigateCommand.Execute(PageId.Bookmarks);
+        _vm.OpenAppTab(TabKind.Bookmarks);
         MenuPopup.IsOpen = false;
     }
     private void Menu_FindInPage(object sender, RoutedEventArgs e)

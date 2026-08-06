@@ -32,11 +32,25 @@
     </Style>
 
     <Style x:Key="WindowCloseButton" TargetType="Button" BasedOn="{StaticResource WindowButtonBase}">
-        <Style.Triggers>
-            <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="{DynamicResource DangerBgBrush}" />
-            </Trigger>
-        </Style.Triggers>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <Border x:Name="Bd"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="0">
+                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource DangerBrush}" />
+                        </Trigger>
+                        <Trigger Property="IsPressed" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource DangerActiveBgBrush}" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
     </Style>
 
     
@@ -84,7 +98,7 @@
                                                 VerticalAlignment="Center"
                                                 Margin="12,0,4,0"
                                                 WindowChrome.IsHitTestVisibleInChrome="True">
-                                        <Border Width="22" Height="22" CornerRadius="6"
+                                        <!--<Border Width="22" Height="22" CornerRadius="6"
                                                 Background="{DynamicResource BrandBadgeBrush}">
                                             <Path Width="13" Height="13" Stretch="Uniform"
                                                   Stroke="{DynamicResource OnAccentBrush}" StrokeThickness="1.8"
@@ -92,7 +106,10 @@
                                                   Data="M9,4 L15,12 L9,20 L7.5,18.5 L12,12 L7.5,5.5 z"
                                                   HorizontalAlignment="Center"
                                                   VerticalAlignment="Center" />
-                                        </Border>
+                                        </Border>-->
+                                        
+                                        <Image Source="{TemplateBinding Icon}" Width="22" Height="22" Margin="0,0,4,0" />
+
                                         <TextBlock Text="{TemplateBinding BrandText}"
                                                    FontSize="13" FontWeight="SemiBold"
                                                    Foreground="{DynamicResource Ink100Brush}"
@@ -113,7 +130,7 @@
                                                 Style="{StaticResource WindowButtonBase}"
                                                 WindowChrome.IsHitTestVisibleInChrome="True"
                                                 ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Win_Minimize]}">
-                                            <Path Width="10" Height="10" Stretch="Uniform"
+                                            <Path x:Name="PART_MinimizePath" Width="10" Height="10" Stretch="Uniform"
                                                   Stroke="{DynamicResource Ink300Brush}"
                                                   StrokeThickness="1.2"
                                                   StrokeStartLineCap="Round" StrokeEndLineCap="Round"
@@ -166,8 +183,27 @@
                             <Setter TargetName="PART_CaptionButtons" Property="Visibility" Value="Collapsed" />
                             <Setter TargetName="PART_TabStripSlot" Property="Margin" Value="0,0,138,0" />
                         </Trigger>
-                        
+
+                        <Trigger SourceName="PART_MinimizeBtn" Property="IsMouseOver" Value="True">
+                            <Setter TargetName="PART_MinimizePath" Property="Stroke" Value="{DynamicResource Ink100Brush}" />
+                        </Trigger>
+                        <Trigger SourceName="PART_MinimizeBtn" Property="IsPressed" Value="True">
+                            <Setter TargetName="PART_MinimizePath" Property="Stroke" Value="{DynamicResource OnAccentBrush}" />
+                        </Trigger>
+
+                        <Trigger SourceName="PART_MaximizeBtn" Property="IsMouseOver" Value="True">
+                            <Setter TargetName="PART_MaximizePath" Property="Stroke" Value="{DynamicResource Ink100Brush}" />
+                            <Setter TargetName="PART_RestorePath" Property="Stroke" Value="{DynamicResource Ink100Brush}" />
+                        </Trigger>
+                        <Trigger SourceName="PART_MaximizeBtn" Property="IsPressed" Value="True">
+                            <Setter TargetName="PART_MaximizePath" Property="Stroke" Value="{DynamicResource OnAccentBrush}" />
+                            <Setter TargetName="PART_RestorePath" Property="Stroke" Value="{DynamicResource OnAccentBrush}" />
+                        </Trigger>
+
                         <Trigger SourceName="PART_CloseBtn" Property="IsMouseOver" Value="True">
+                            <Setter TargetName="CloseGlyph" Property="Stroke" Value="{DynamicResource OnAccentBrush}" />
+                        </Trigger>
+                        <Trigger SourceName="PART_CloseBtn" Property="IsPressed" Value="True">
                             <Setter TargetName="CloseGlyph" Property="Stroke" Value="{DynamicResource OnAccentBrush}" />
                         </Trigger>
                     </ControlTemplate.Triggers>

@@ -6,7 +6,7 @@ using System.Windows;
 
 namespace Heco.Browser.Infrastructure;
 
-/// <summary>Bookmark service có persistence JSON theo profile (User Data\&lt;profile&gt;\Bookmarks.json).</summary>
+/// <summary>Bookmark service có persistence JSON theo profile (User Data\&lt;profile&gt;\Bookmarks — giống Chrome).</summary>
 public sealed class BookmarkService
 {
     private string _profileName = AppSettings.Current.CurrentProfile;
@@ -53,6 +53,7 @@ public sealed class BookmarkService
     {
         try
         {
+            MigrateLegacyJson();
             if (!File.Exists(DataFile)) return;
             var json = File.ReadAllText(DataFile);
             var list = JsonSerializer.Deserialize<List<Bookmark>>(json) ?? new();
@@ -70,5 +71,18 @@ public sealed class BookmarkService
             File.WriteAllText(DataFile, json);
         }
         catch { /* ignore write errors */ }
+    }
+
+    /// <summary>Di chuyển bookmarks JSON cũ (nếu migration chưa rename kịp) sang file mới.</summary>
+    private void MigrateLegacyJson()
+    {
+        try
+        {
+            var dir = UserDataPaths.ProfileDir(_profileName);
+            var oldFile = System.IO.Path.Combine(dir, "Bookmarks.migrate");
+            if (File.Exists(oldFile) && !File.Exists(DataFile))
+                File.Move(oldFile, DataFile);
+        }
+        catch { }
     }
 }
