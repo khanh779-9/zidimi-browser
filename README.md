@@ -41,8 +41,9 @@
 
 ### Productivity Tools
 - **Tabs** — open, close, reorder by drag-and-drop, pin (mini icon tabs at the front), duplicate, mute, and reload. Audio-playing tabs show a speaker indicator.
+- **Internal App Tabs** — built-in pages like Settings, History, Bookmarks, and Downloads open seamlessly as regular browser tabs for a unified experience.
 - **Bookmarks** — save pages with the star button (`Ctrl + D`) or manage them in the Bookmarks view; persisted to JSON.
-- **History** — every visited page is listed in the History view with search filtering.
+- **History** — every visited page is grouped intuitively by date and listed in the History view with search filtering. Built-in confirmation dialogues prevent accidental deletions.
 - **Download manager** — track progress, open files, and reveal them in Explorer from the Downloads view. Choose a custom download folder or be asked before each save.
 - **Data Manager (autofill)** — store and manage passwords, payment cards, and addresses for auto-filling forms.
 - **Startup behavior** — start on a fresh tab, restore your last session, or open a fixed set of pages.
@@ -141,24 +142,6 @@ Browser events are wired through dedicated CEF handlers in `Infrastructure/Handl
 - `KeyboardHandler` — browser-level shortcuts
 - `DisplayHandler` (`FaviconHandler`) — per-tab favicons
 - `AudioHandler` — per-tab audio indicators & muting
-
-### Project structure
-```
-Heco_Browser/
-├── Heco_Browser.slnx              # Solution (Visual Studio / dotnet)
-├── Heco.Browser/
-│   ├── App.xaml(.cs)              # Entry point, CEF init, single-instance guard
-│   ├── MainWindow.xaml(.cs)       # Main window shell
-│   ├── Models/                    # AppSettings, autofill, history/bookmark types
-│   ├── Infrastructure/            # MVVM core + services + CEF handlers
-│   │   └── Handlers/              # Request/LifeSpan/ContextMenu/Download/JS/... handlers
-│   ├── Controls/                  # Heco* custom controls (button, window, toast, ...)
-│   ├── Themes/                    # Colors.xaml, DarkTheme.xaml, LightTheme.xaml
-│   ├── Views/                     # Browser, TabStrip, History, Bookmarks, Downloads,
-│   │                              # Preferences, Login, ClearData, DataManager
-│   └── language/                  # *.lng localization files (7 languages)
-└── screenshot/                    # README screenshots
-```
 
 ---
 
