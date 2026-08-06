@@ -492,7 +492,7 @@ public partial class BrowserView : UserControl
     private static string NormalizeUrl(string raw)
     {
         raw = (raw ?? "").Trim();
-        if (string.IsNullOrEmpty(raw) || raw == "about:newtab") return Heco.Browser.Models.AppSettings.Profile.HomePageUrl;
+        if (string.IsNullOrEmpty(raw) || raw == "about:newtab") return  SearchEngines.GetEngineUrl(Heco.Browser.Models.AppSettings.Profile.SearchEngine);
         if (Uri.IsWellFormedUriString(raw, UriKind.Absolute)) return raw;
         if (raw.Contains('.') && !raw.Contains(' ')) return "https://" + raw;
         

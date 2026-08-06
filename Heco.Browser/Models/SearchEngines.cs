@@ -43,4 +43,24 @@ public static class SearchEngines
             "Ask.com" => "https://www.ask.com/web?q=" + escapedQuery,
             _ => "https://duckduckgo.com/?q=" + escapedQuery,
         };
+
+
+    public static string GetEngineUrl(string engine)
+    {
+        return Normalize(engine) switch
+        {
+            "DuckDuckGo" => "https://duckduckgo.com/",
+            "Google" => "https://www.google.com/",
+            "Bing" => "https://www.bing.com/",
+            "Brave Search" => "https://search.brave.com/",
+            "Yahoo" => "https://search.yahoo.com/",
+            "Yandex" => "https://yandex.com/",
+            "Baidu" => "https://www.baidu.com/",
+            "Ecosia" => "https://www.ecosia.org/",
+            "Startpage" => "https://www.startpage.com/",
+            "Qwant" => "https://www.qwant.com/",
+            "Ask.com" => "https://www.ask.com/",
+            _ => "https://duckduckgo.com/",
+        };
+    }
 }
