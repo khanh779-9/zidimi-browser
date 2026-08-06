@@ -23,6 +23,7 @@ public partial class BrowserView : UserControl
     private readonly System.Collections.Generic.Dictionary<TabViewModel, FrameworkElement> _appViews = new();
     private bool _suppressAddressUpdate;
     private readonly System.Collections.Generic.List<Models.AutocompleteSuggestion> _allSuggestions = new();
+    private readonly LoadingSpinner _loadingSpinner = new();
 
     public BrowserView()
     {
@@ -33,10 +34,18 @@ public partial class BrowserView : UserControl
 
         foreach (var t in _vm.Tabs) SubscribeTab(t);
         _vm.Tabs.CollectionChanged += OnTabsChanged;
+        App.CefReadyChanged += OnCefReady;
 
         SwitchToTab(_vm.ActiveTab);
         Loaded += OnLoaded;
         Unloaded += OnUnloaded;
+    }
+
+    /// <summary>CEF vừa init xong — tạo browser cho tab đang hiển thị nếu trước đó đang đợi.</summary>
+    private void OnCefReady()
+    {
+        if (_currentTab != null && _currentTab.Kind == TabKind.Web)
+            SwitchToTab(_currentTab);
     }
 
     private void OnLoaded(object sender, RoutedEventArgs e)
@@ -214,6 +223,24 @@ public partial class BrowserView : UserControl
             _appViews[tab] = CreateAppView(tab.Kind);
             return;
         }
+        // Browser CEF được tạo LAZY khi tab được hiển thị (xem EnsureBrowser) —
+        // tránh khởi tạo đồng loạt mọi tab ngay lúc mở cửa sổ (nguyên nhân chậm khởi động).
+        _browsers[tab] = null!;
+    }
+
+    /// <summary>Tạo ChromiumWebBrowser cho tab nếu chưa có. Chỉ được gọi khi CEF đã sẵn sàng.</summary>
+    private void EnsureBrowser(TabViewModel tab)
+    {
+        if (tab.Kind != TabKind.Web) return;
+        if (_browsers.TryGetValue(tab, out var existing) && existing != null && !existing.IsDisposed) return;
+        if (!App.CefReady) return; // CEF chưa init xong — sẽ được tạo khi app báo ready
+        var browser = CreateBrowser(tab);
+        _browsers[tab] = browser;
+        _vm.RegisterBrowser(tab, browser);
+    }
+
+    private ChromiumWebBrowser CreateBrowser(TabViewModel tab)
+    {
         var browser = new ChromiumWebBrowser
         {
             Address = NormalizeUrl(tab.Address),
@@ -348,8 +375,7 @@ public partial class BrowserView : UserControl
             });
         };
 
-        _browsers[tab] = browser;
-        _vm.RegisterBrowser(tab, browser);
+        return browser;
     }
 
     private static void AddToHistory(string address, string title)
@@ -364,7 +390,7 @@ public partial class BrowserView : UserControl
     {
         if (_browsers.TryGetValue(tab, out var b))
         {
-            b.Dispose();
+            b?.Dispose();
             _browsers.Remove(tab);
         }
         _appViews.Remove(tab);
@@ -443,18 +469,24 @@ public partial class BrowserView : UserControl
         }
         ToolbarRow.Visibility = Visibility.Visible;
 
-        if (_browsers.TryGetValue(tab, out var browser))
+        EnsureBrowser(tab);
+        if (!_browsers.TryGetValue(tab, out var browser) || browser == null)
         {
-            _currentBrowser = browser;
-            BrowserHost.Content = browser;
-            _suppressAddressUpdate = true;
-            AddressBox.Text = browser.Address ?? "";
-            _suppressAddressUpdate = false;
-            UpdateSecurityIcon(browser.Address ?? "");
-            UpdateReloadIcon(tab.IsLoading);
-            UpdateLoadingProgress(tab.IsLoading);
-            UpdateStarState(tab);
+            // CEF chưa ready — hiện spinner, sẽ tự tạo browser và hiển thị khi ready.
+            _currentBrowser = null;
+            BrowserHost.Content = _loadingSpinner;
+            return;
         }
+
+        _currentBrowser = browser;
+        BrowserHost.Content = browser;
+        _suppressAddressUpdate = true;
+        AddressBox.Text = browser.Address ?? "";
+        _suppressAddressUpdate = false;
+        UpdateSecurityIcon(browser.Address ?? "");
+        UpdateReloadIcon(tab.IsLoading);
+        UpdateLoadingProgress(tab.IsLoading);
+        UpdateStarState(tab);
     }
 
     private static string NormalizeUrl(string raw)
@@ -465,21 +497,7 @@ public partial class BrowserView : UserControl
         if (raw.Contains('.') && !raw.Contains(' ')) return "https://" + raw;
         
         var engine = Heco.Browser.Models.AppSettings.Profile.SearchEngine;
-        var query = Uri.EscapeDataString(raw);
-        return engine switch
-        {
-            "DuckDuckGo" => "https://duckduckgo.com/?q=" + query,
-            "Bing" => "https://www.bing.com/search?q=" + query,
-            "Brave Search" => "https://search.brave.com/search?q=" + query,
-            "Yahoo" => "https://search.yahoo.com/search?p=" + query,
-            "Yandex" => "https://yandex.com/search/?text=" + query,
-            "Baidu" => "https://www.baidu.com/s?wd=" + query,
-            "Ecosia" => "https://www.ecosia.org/search?q=" + query,
-            "Startpage" => "https://www.startpage.com/sp/search?query=" + query,
-            "Qwant" => "https://www.qwant.com/?q=" + query,
-            "Ask.com" => "https://www.ask.com/web?q=" + query,
-            _ => "https://www.google.com/search?q=" + query
-        };
+        return Heco.Browser.Models.SearchEngines.BuildUrl(engine, Uri.EscapeDataString(raw));
     }
 
     private static Brush WithAlpha(Brush source, byte alpha)
@@ -680,20 +698,7 @@ public partial class BrowserView : UserControl
         if (!string.IsNullOrWhiteSpace(query))
         {
             var engine = Heco.Browser.Models.AppSettings.Profile.SearchEngine;
-            var engineUrl = engine switch
-            {
-                "DuckDuckGo" => "https://duckduckgo.com/?q=",
-                "Bing" => "https://www.bing.com/search?q=",
-                "Brave Search" => "https://search.brave.com/search?q=",
-                "Yahoo" => "https://search.yahoo.com/search?p=",
-                "Yandex" => "https://yandex.com/search/?text=",
-                "Baidu" => "https://www.baidu.com/s?wd=",
-                "Ecosia" => "https://www.ecosia.org/search?q=",
-                "Startpage" => "https://www.startpage.com/sp/search?query=",
-                "Qwant" => "https://www.qwant.com/?q=",
-                "Ask.com" => "https://www.ask.com/web?q=",
-                _ => "https://www.google.com/search?q="
-            };
+            var engineUrl = Heco.Browser.Models.SearchEngines.BuildUrl(engine, "");
             _allSuggestions.Add(new Models.AutocompleteSuggestion
             {
                 Title = LanguageManager.Instance["Browser_SearchQuery"].Replace("{query}", query),

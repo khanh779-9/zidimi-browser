@@ -89,6 +89,7 @@ public static class AppSettings
                 var json = File.ReadAllText(path);
                 Profile = JsonSerializer.Deserialize<ProfileSettings>(json) ?? new ProfileSettings();
                 Profile.Theme = Infrastructure.ThemeManager.NormalizeThemeKey(Profile.Theme);
+                Profile.SearchEngine = SearchEngines.Normalize(Profile.SearchEngine);
             }
             else
             {

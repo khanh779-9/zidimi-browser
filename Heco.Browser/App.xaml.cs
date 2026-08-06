@@ -15,16 +15,21 @@ public partial class App : Application
     public static RequestContextFactory RequestContexts { get; private set; } = null!;
     public static TrayIconManager? TrayIcon { get; private set; }
 
+    /// <summary>true khi CEF đã init xong — trước đó không được tạo ChromiumWebBrowser nào.</summary>
+    public static bool CefReady { get; private set; }
+    public static event Action? CefReadyChanged;
+
     private static readonly System.Threading.Mutex SingleInstanceMutex =
         new(false, @"Local\Heco.Browser.SingleInstance");
 
     protected override void OnStartup(StartupEventArgs e)
     {
         // Phải nạp cấu hình và theme trước để nếu gọi HecoMessageBox (do lỗi hay mutex) thì không bị trong suốt
-        AppSettings.Load();
+        // Migration trước khi Load để dữ liệu app còn chiếm tên file Chromium
+        // được chuyển sang heco_* trước khi AppSettings.Load đọc (và trước khi CEF mở profile).
         UserDataPaths.MigrateLegacyData();
-        foreach (var p in AppSettings.Global.Profiles)
-            UserDataPaths.RegisterProfile(p);
+        AppSettings.Load();
+        UserDataPaths.RegisterProfiles(AppSettings.Global.Profiles);
         ThemeManager.EnsureLoaded();
         ThemeManager.ApplyFromSettings(AppSettings.Profile.Theme);
 
@@ -39,18 +44,10 @@ public partial class App : Application
 
         DispatcherUnhandledException += OnUnhandled;
         AppDomain.CurrentDomain.UnhandledException += OnDomainException;
-        try
-        {
-            var dummy = LanguageManager.Instance; // Initialize LanguageManager
-            InitializeCef();
-        }
-        catch (Exception ex)
-        {
-            File.AppendAllText("heco-browser-crash.log",
-                $"[{DateTime.Now:O}] [CefInit] {ex}\n\n");
-            throw;
-        }
+        var dummy = LanguageManager.Instance; // Initialize LanguageManager
 
+        // Cho WPF tạo & hiện MainWindow trước (giờ đây nhẹ vì browser tạo lazy),
+        // rồi mới khởi tạo CEF ở độ ưu tiên thấp để cửa sổ không bị "treo trắng" lâu.
         base.OnStartup(e);
 
         var history = new HistoryService();
@@ -59,6 +56,25 @@ public partial class App : Application
         ViewModel = new MainViewModel(history, bookmarks);
 
         TrayIcon = new TrayIconManager();
+
+        Dispatcher.BeginInvoke(InitializeCefAfterStart,
+            System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+    }
+
+    private static void InitializeCefAfterStart()
+    {
+        try
+        {
+            InitializeCef();
+            CefReady = true;
+            CefReadyChanged?.Invoke();
+        }
+        catch (Exception ex)
+        {
+            File.AppendAllText("heco-browser-crash.log",
+                $"[{DateTime.Now:O}] [CefInit] {ex}\n\n");
+            throw;
+        }
     }
 
     protected override void OnExit(ExitEventArgs e)

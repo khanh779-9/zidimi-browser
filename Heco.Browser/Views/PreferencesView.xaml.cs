@@ -105,14 +105,15 @@ public partial class PreferencesView : UserControl
         tbHome.TextChanged += (s, e) => { AppSettings.Profile.HomePageUrl = tbHome.Text; AppSettings.SaveAll(); };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_StartupPage"], LanguageManager.Instance["Pref_HomeUrl"], tbHome));
 
-        var engines = new[] { "DuckDuckGo", "Google", "Bing", "Brave Search", "Yahoo", "Yandex", "Baidu", "Ecosia", "Startpage", "Qwant", "Ask.com" };
-        var idxEngine = Array.IndexOf(engines, AppSettings.Profile.SearchEngine);
-        var searchCombo = MakeCombo(200, Math.Max(0, idxEngine), engines);
-        searchCombo.SelectionChanged += (s, e) => 
-        { 
-            if (searchCombo.SelectedItem is HecoComboBoxItem hcbi)
-                AppSettings.Profile.SearchEngine = hcbi.Content?.ToString() ?? "Google";
-            AppSettings.SaveAll(); 
+        var engines = SearchEngines.All;
+        var idxEngine = SearchEngines.IndexOf(AppSettings.Profile.SearchEngine);
+        var searchCombo = MakeCombo(200, idxEngine, engines);
+        searchCombo.SelectionChanged += (s, e) =>
+        {
+            AppSettings.Profile.SearchEngine = searchCombo.SelectedItem is HecoComboBoxItem hcbi
+                ? SearchEngines.Normalize(hcbi.Content?.ToString())
+                : SearchEngines.Default;
+            AppSettings.SaveAll();
         };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_DefaultEngine"], LanguageManager.Instance["Pref_SelectEngine"], searchCombo));
 
@@ -327,13 +328,14 @@ public partial class PreferencesView : UserControl
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_Search"], FontSize = 20, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("Ink100Brush"), Margin = new Thickness(0, 0, 0, 16) });
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_SearchSettings"], Foreground = (Brush)FindResource("Ink400Brush"), Margin = new Thickness(0, 0, 0, 24) });
 
-        var engines = new[] { "DuckDuckGo", "Google", "Bing", "Brave Search", "Yahoo", "Yandex", "Baidu", "Ecosia", "Startpage", "Qwant", "Ask.com" };
-        var idxEngine = Array.IndexOf(engines, AppSettings.Profile.SearchEngine);
-        var searchCombo = MakeCombo(200, Math.Max(0, idxEngine), engines);
-        searchCombo.SelectionChanged += (s, e) => 
+        var engines = SearchEngines.All;
+        var idxEngine = SearchEngines.IndexOf(AppSettings.Profile.SearchEngine);
+        var searchCombo = MakeCombo(200, idxEngine, engines);
+        searchCombo.SelectionChanged += (s, e) =>
         {
-            if (searchCombo.SelectedItem is HecoComboBoxItem hcbi)
-                AppSettings.Profile.SearchEngine = hcbi.Content?.ToString() ?? "Google";
+            AppSettings.Profile.SearchEngine = searchCombo.SelectedItem is HecoComboBoxItem hcbi
+                ? SearchEngines.Normalize(hcbi.Content?.ToString())
+                : SearchEngines.Default;
             AppSettings.SaveAll();
         };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_DefaultEngine"], LanguageManager.Instance["Pref_SearchEngineTitle"], searchCombo));
