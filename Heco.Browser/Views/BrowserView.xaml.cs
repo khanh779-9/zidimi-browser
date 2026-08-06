@@ -473,6 +473,13 @@ public partial class BrowserView : UserControl
         };
     }
 
+    private static Brush WithAlpha(Brush source, byte alpha)
+    {
+        if (source is SolidColorBrush scc)
+            return new SolidColorBrush(Color.FromArgb(alpha, scc.Color.R, scc.Color.G, scc.Color.B));
+        return source;
+    }
+
     private void UpdateSecurityIcon(string? url)
     {
         if (string.IsNullOrEmpty(url) || url == "about:blank" || url == "about:newtab")

@@ -1,8 +1,8 @@
-<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:local="clr-namespace:Heco.Browser.Controls">
 
-    <!-- =====================  WINDOW CAPTION BUTTONS  ===================== -->
+    
     <Style x:Key="WindowButtonBase" TargetType="Button">
         <Setter Property="Background" Value="Transparent" />
         <Setter Property="BorderThickness" Value="0" />
@@ -38,7 +38,7 @@
         </Style.Triggers>
     </Style>
 
-    <!-- =====================  HECO WINDOW TEMPLATE (Chrome-style)  ===================== -->
+    
     <Style x:Key="HecoWindowStyle" TargetType="local:HecoWindow">
         <Setter Property="Background" Value="{DynamicResource AppBackgroundBrush}" />
         <Setter Property="Foreground" Value="{DynamicResource Ink100Brush}" />
@@ -47,8 +47,7 @@
         <Setter Property="UseLayoutRounding" Value="True" />
         <Setter Property="TextOptions.TextFormattingMode" Value="Display" />
         <Setter Property="TextOptions.TextRenderingMode" Value="ClearType" />
-        <!-- KHÔNG set WindowStyle=None: giữ frame native để Windows animate minimize/maximize/snap.
-             WindowChrome vẫn chiếm caption area để custom title bar + kéo window. -->
+        
         <Setter Property="ResizeMode" Value="CanResize" />
         <Setter Property="AllowsTransparency" Value="False" />
         <Setter Property="ShowInTaskbar" Value="True" />
@@ -67,7 +66,7 @@
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
 
-                            <!-- Title bar = logo + tab strip slot + caption buttons (Chrome-style) -->
+                            
                             <Border Grid.Row="0"
                                     Background="{DynamicResource TabBarBackgroundBrush}"
                                     BorderBrush="{DynamicResource StrokeBrush}"
@@ -79,7 +78,7 @@
                                         <ColumnDefinition Width="Auto" />
                                     </Grid.ColumnDefinitions>
 
-                                    <!-- Brand logo (ngoài tab strip) -->
+                                    
                                     <StackPanel Grid.Column="0" Orientation="Horizontal"
                                                 VerticalAlignment="Center"
                                                 Margin="12,0,4,0"
@@ -100,12 +99,12 @@
                                                    VerticalAlignment="Center" />
                                     </StackPanel>
 
-                                    <!-- Tab strip slot (inject từ MainWindow) -->
+                                    
                                     <ContentControl Grid.Column="1" x:Name="PART_TabStripSlot"
                                                     HorizontalAlignment="Stretch"
                                                     VerticalAlignment="Stretch" />
 
-                                    <!-- Caption buttons -->
+                                    
                                     <StackPanel Grid.Column="2" x:Name="PART_CaptionButtons"
                                                 Orientation="Horizontal"
                                                 HorizontalAlignment="Right">
@@ -153,20 +152,20 @@
                                 </Grid>
                             </Border>
 
-                            <!-- Content -->
+                            
                             <Border x:Name="PART_ContentBorder" Grid.Row="1">
                                 <ContentPresenter Content="{TemplateBinding Content}" />
                             </Border>
                         </Grid>
                     </Border>
 
-                    <!-- Dạng native WindowChrome: ẩn custom buttons, chừa chỗ cho aero buttons của Windows -->
+                    
                     <ControlTemplate.Triggers>
                         <Trigger Property="UseNativeCaption" Value="True">
                             <Setter TargetName="PART_CaptionButtons" Property="Visibility" Value="Collapsed" />
                             <Setter TargetName="PART_TabStripSlot" Property="Margin" Value="0,0,138,0" />
                         </Trigger>
-                        <!-- Close button: icon trắng khi hover (nền danger tối) -->
+                        
                         <Trigger SourceName="PART_CloseBtn" Property="IsMouseOver" Value="True">
                             <Setter TargetName="CloseGlyph" Property="Stroke" Value="{DynamicResource OnAccentBrush}" />
                         </Trigger>

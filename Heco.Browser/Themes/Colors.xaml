@@ -1,10 +1,10 @@
-<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- =====================  HECO THEME — màu/brush CỐ ĐỊNH, không đổi theo Light/Dark  ===================== -->
-    <!-- Các brush nền/chữ/viền đổi theo theme nằm trong DarkTheme.xaml & LightTheme.xaml -->
+    
+    
 
-    <!-- Accent (Heco Purple) -->
+    
     <SolidColorBrush x:Key="HecoPurpleBrush" Color="#6D4AFF" />
     <SolidColorBrush x:Key="HecoPurpleLightBrush" Color="#8B6FFF" />
     <SolidColorBrush x:Key="HecoPurpleDarkBrush" Color="#4A32B0" />
@@ -12,29 +12,29 @@
     <SolidColorBrush x:Key="HecoPurplePressedBrush" Color="#5A3DE0" />
     <SolidColorBrush x:Key="HecoPurpleGlowBrush" Color="#3D29B0" />
 
-    <!-- Active accent (trạng thái đang chọn) — màu cố định ở cả 2 theme -->
+    
     <SolidColorBrush x:Key="HecoBgActiveBrush" Color="#6D4AFF" />
 
-    <!-- Nội dung đặt TRÊN nền accent tím (dấu tích, chấm radio) — luôn trắng để tương phản tốt cả 2 theme -->
+    
     <SolidColorBrush x:Key="OnAccentBrush" Color="#FFFFFF" />
 
-    <!-- Viền ngoài của mục đang active (sidebar/CTA) — tím mờ -->
+    
     <SolidColorBrush x:Key="AccentBorderBrush" Color="#596D4AFF" />
 
-    <!-- Overlay (modal backdrop) — nửa trong suốt, ghép với nền -->
+    
     <SolidColorBrush x:Key="HecoBgOverlayBrush" Color="#80000000" />
 
-    <!-- Semantic -->
+    
     <SolidColorBrush x:Key="SafeBrush" Color="#22C55E" />
     <SolidColorBrush x:Key="WarnBrush" Color="#F59E0B" />
     <SolidColorBrush x:Key="DangerBrush" Color="#EF4444" />
     <SolidColorBrush x:Key="InfoBrush" Color="#38BDF8" />
 
-    <!-- Button specific danger states (không đổi theo theme) -->
+    
     <SolidColorBrush x:Key="DangerHoverBgBrush" Color="#4D232D" />
     <SolidColorBrush x:Key="DangerActiveBgBrush" Color="#2E141B" />
 
-    <!-- ===== Gradients ===== -->
+    
     <LinearGradientBrush x:Key="CtaBrush" StartPoint="0,0" EndPoint="1,0">
         <GradientStop Offset="0" Color="#8B6FFF" />
         <GradientStop Offset="1" Color="#6D4AFF" />
@@ -64,7 +64,7 @@
         <GradientStop Offset="0.6" Color="#006D4AFF" />
     </RadialGradientBrush>
 
-    <!-- =====================  GEOMETRY  ===================== -->
+    
     <CornerRadius x:Key="CornerRadiusSm">4</CornerRadius>
     <CornerRadius x:Key="CornerRadiusMd">6</CornerRadius>
     <CornerRadius x:Key="CornerRadiusLg">8</CornerRadius>

@@ -1,8 +1,8 @@
-<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:local="clr-namespace:Heco.Browser.Controls">
 
-    <!-- =====================  HECO PROGRESS BAR  ===================== -->
+    
     <Style TargetType="{x:Type local:HecoProgressBar}">
         <Setter Property="Height" Value="2" />
         <Setter Property="Foreground" Value="{DynamicResource HecoPurpleBrush}" />

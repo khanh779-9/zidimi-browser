@@ -468,6 +468,11 @@ public partial class PreferencesView : UserControl
         gpuCheck.Unchecked += (s, e) => { AppSettings.Current.EnableGpu = false; AppSettings.Current.Save(); };
         panel.Children.Add(CreateSettingRow("", "", gpuCheck));
 
+        var enhanceCheck = MakeCheck(LanguageManager.Instance["Pref_EnhanceVideos"], AppSettings.Current.EnhanceVideos);
+        enhanceCheck.Checked += (s, e) => { AppSettings.Current.EnhanceVideos = true; AppSettings.Current.Save(); };
+        enhanceCheck.Unchecked += (s, e) => { AppSettings.Current.EnhanceVideos = false; AppSettings.Current.Save(); };
+        panel.Children.Add(CreateSettingRow("", "", enhanceCheck));
+
         var bgCheck = MakeCheck(LanguageManager.Instance["Pref_RunInBackground"], AppSettings.Current.RunInBackground);
         bgCheck.Checked += (s, e) => { AppSettings.Current.RunInBackground = true; AppSettings.Current.Save(); };
         bgCheck.Unchecked += (s, e) => { AppSettings.Current.RunInBackground = false; AppSettings.Current.Save(); };

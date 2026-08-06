@@ -1,4 +1,4 @@
-<UserControl x:Class="Heco.Browser.Views.BrowserView"
+﻿<UserControl x:Class="Heco.Browser.Views.BrowserView"
              
     
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -19,11 +19,11 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
-            <!-- toolbar -->
+            
             <RowDefinition Height="*" />
-            <!-- browser host -->
+            
         </Grid.RowDefinitions>
-        <!-- ====================== NAVIGATION TOOLBAR ====================== -->
+        
         <Border Grid.Row="0" x:Name="ToolbarRow"
                 Background="{DynamicResource ToolbarBackgroundBrush}"
                 BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="0,0,0,1"
@@ -31,19 +31,19 @@
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
-                    <!-- back/fwd -->
+                    
                     <ColumnDefinition Width="Auto" />
-                    <!-- reload/home -->
+                    
                     <ColumnDefinition Width="*" />
-                    <!-- address bar -->
+                    
                     <ColumnDefinition Width="Auto" />
-                    <!-- bookmark -->
+                    
                     <ColumnDefinition Width="Auto" />
-                    <!-- avatar -->
+                    
                     <ColumnDefinition Width="Auto" />
-                    <!-- menu -->
+                    
                 </Grid.ColumnDefinitions>
-                <!-- back/forward group -->
+                
                 <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,0">
                     <Button x:Name="BackBtn" Style="{DynamicResource ToolIconButton}"
                             Click="Back_Click" ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_BackTooltip]}"
@@ -66,7 +66,7 @@
                               Data="M13.5 4.5 L21 12 L13.5 19.5 M21 12 H3" />
                     </Button>
                 </StackPanel>
-                <!-- reload/home -->
+                
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,8,0">
                     <Button x:Name="ReloadBtn" Style="{DynamicResource ToolIconButton}"
                               Click="Reload_Click" ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_ReloadTooltip]}">
@@ -87,7 +87,7 @@
                               Data="M3 12 L12 3 L21 12 M5 10 V20 H19 V10" />
                     </Button>
                 </StackPanel>
-                <!-- ===== address bar (omnibox, pill shape) + loading progress ===== -->
+                
                 <Grid Grid.Column="2" Margin="8,0,16,0" ClipToBounds="True">
                     <Border Background="{DynamicResource HecoBgSurfaceBrush}"
                             BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1"
@@ -109,7 +109,7 @@
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <!-- security icon (HTTPS lock / HTTP not-secure info) - click mở site info popup -->
+                            
                             <Button Grid.Column="0" x:Name="SecurityBtn"
                                     Width="36" Height="36" Margin="5,0,0,0"
                                     Style="{DynamicResource ToolIconButton}"
@@ -122,14 +122,14 @@
                                       StrokeLineJoin="Round"
                                       Data="M8 10 V7 a4 4 0 0 1 8 0 v3 M5 10 H19 V20 H5 Z" />
                             </Button>
-                            <!-- Site info popup -->
+                            
                             <ctrl:HecoPopup x:Name="SiteInfoPopup"
                                    StaysOpen="False" Placement="Bottom"
                                    PlacementTarget="{Binding ElementName=SecurityBtn}"
                                    CornerRadius="8"
                                    MaxWidth="240">
                                 <StackPanel Margin="16,12">
-                                    <!-- Connection status -->
+                                    
                                     <StackPanel x:Name="ConnectionStatus" Orientation="Horizontal" Margin="0,0,0,12">
                                         <Path x:Name="ConnIcon" Width="18" Height="18" Stretch="Uniform"
                                               Stroke="{DynamicResource SafeBrush}" StrokeThickness="1.5"
@@ -144,12 +144,12 @@
                                         </StackPanel>
                                     </StackPanel>
                                     <Border Height="1" Background="{DynamicResource StrokeBrush}" Margin="0,0,0,8" />
-                                    <!-- Permissions -->
+                                    
                                     <TextBlock Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Security_Perm]}" FontSize="11" FontWeight="SemiBold"
                                                Foreground="{DynamicResource Ink300Brush}" Margin="0,0,0,6" />
                                     <StackPanel x:Name="PermissionsPanel" />
                                     <Border Height="1" Background="{DynamicResource StrokeBrush}" Margin="0,8,0,8" />
-                                    <!-- Cookies & Site Data -->
+                                    
                                     <ctrl:HecoMenuItem Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Security_Cookies]}"
                                                        Click="SiteInfo_Cookies_Click" />
                                     <ctrl:HecoMenuItem Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Security_Cert]}"
@@ -174,7 +174,7 @@
                          GotKeyboardFocus="Address_GotFocus"
                          LostKeyboardFocus="Address_LostFocus"
                          TextChanged="AddressBox_TextChanged" />
-                            <!-- right actions -->
+                            
                             <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,6,0">
                                 <Button Style="{DynamicResource ToolIconButton}" Width="28" Height="28"
                                         x:Name="StarBtn" Click="Star_Click" ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_BookmarkTooltip]}">
@@ -190,7 +190,7 @@
                             </StackPanel>
                         </Grid>
                     </Border>
-                    <!-- Autocomplete dropdown (spec 5.1) -->
+                    
                     <ctrl:HecoPopup x:Name="AutocompletePopup"
                            StaysOpen="False" Placement="Bottom"
                            PlacementTarget="{Binding ElementName=AddressBarBorder}"
@@ -208,7 +208,7 @@
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
-                                            <!-- Icon: history / bookmark / search -->
+                                            
                                             <Path Grid.Column="0" Width="16" Height="16" Margin="0,0,8,0"
                                                   Stretch="Uniform" VerticalAlignment="Center"
                                                   Stroke="{DynamicResource Ink400Brush}" StrokeThickness="1.5"
@@ -231,7 +231,7 @@
                             </ctrl:HecoListBox.ItemTemplate>
                         </ctrl:HecoListBox>
                     </ctrl:HecoPopup>
-                    <!-- Loading progress bar mảnh (2px) ở cạnh dưới omnibox (spec 5.1) -->
+                    
                     <ctrl:HecoProgressBar x:Name="LoadingProgress"
                                  VerticalAlignment="Bottom"
                                  HorizontalAlignment="Stretch"
@@ -239,7 +239,7 @@
                                  IsIndeterminate="True"
                                  Visibility="Collapsed" />
                 </Grid>
-                <!-- avatar / profile button -->
+                
                 <Button Grid.Column="4" Style="{DynamicResource ToolIconButton}"
                         x:Name="AvatarBtn" Click="Avatar_Click"
                         ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_AvatarTooltip]}">
@@ -250,7 +250,7 @@
                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Grid>
                 </Button>
-                <!-- menu button -->
+                
                 <Button Grid.Column="5" Style="{DynamicResource ToolIconButton}"
                         x:Name="MenuBtn" Click="Menu_Click" ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_MenuTooltip]}">
                     <Path Width="18" Height="18" Stretch="Uniform"
@@ -259,7 +259,7 @@
                           StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                           Data="M3 6 H21 M3 12 H21 M3 18 H21" />
                 </Button>
-                <!-- menu popup -->
+                
                 <ctrl:HecoPopup x:Name="MenuPopup" StaysOpen="False" Placement="Bottom"
                        PlacementTarget="{Binding ElementName=MenuBtn}"
                        CornerRadius="8"
@@ -274,7 +274,7 @@
                         <ctrl:HecoMenuItem Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Menu_FindInPage]}" Click="Menu_FindInPage" />
                         <ctrl:HecoMenuItem Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Menu_DevTools]}" Click="Menu_DevTools" />
                         <Border Height="1" Background="{DynamicResource StrokeBrush}" Margin="6,4" />
-                        <!-- Zoom controls -->
+                        
                         <StackPanel Orientation="Horizontal" Margin="12,4,12,0">
                             <Button Width="28" Height="28" Style="{DynamicResource ToolIconButton}"
                                     Click="ZoomOut_Click" ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Menu_ZoomOut]}">
@@ -303,12 +303,12 @@
                         <Border Height="1" Background="{DynamicResource StrokeBrush}" Margin="6,4" />
                         <ctrl:HecoMenuItem Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Menu_Preferences]}" Click="Menu_Preferences" />
                         
-                        <!-- Language sub-menu placeholder -->
+                        
                         <MenuItem Header="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Menu_Language]}" x:Name="LanguageMenu" 
                                   Foreground="{DynamicResource Ink100Brush}" />
                     </StackPanel>
                 </ctrl:HecoPopup>
-                <!-- profile/avatar popup -->
+                
                 <ctrl:HecoPopup x:Name="AvatarPopup" StaysOpen="False" Placement="Bottom"
                        PlacementTarget="{Binding ElementName=AvatarBtn}"
                        CornerRadius="8"
@@ -340,7 +340,7 @@
                 </ctrl:HecoPopup>
             </Grid>
         </Border>
-        <!-- ====================== BROWSER HOST ====================== -->
+        
         <Grid Grid.Row="1" Background="{DynamicResource HecoBgDarkestBrush}">
             <ContentControl x:Name="BrowserHost" />
             <TextBlock x:Name="EmptyHint"
@@ -350,7 +350,7 @@
                        Margin="10"
                        Foreground="{DynamicResource Ink400Brush}"
                        HorizontalAlignment="Center" VerticalAlignment="Center" />
-            <!-- Find bar overlay (ẩn mặc định, hiện khi Ctrl+F) -->
+            
             <Border x:Name="FindBar"
                     HorizontalAlignment="Right" VerticalAlignment="Top"
                     Margin="0,8,8,0" Padding="8"

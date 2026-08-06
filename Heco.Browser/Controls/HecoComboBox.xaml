@@ -1,17 +1,17 @@
-<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:local="clr-namespace:Heco.Browser.Controls">
 
     <Geometry x:Key="HecoChevronDownGeometry">M3,5 L9,5 L6,8.5 Z</Geometry>
 
-    <!-- HecoComboBoxItem implicit data template remains for backward compatibility in case they added HecoComboBoxItem directly to Items -->
+    
     <DataTemplate DataType="{x:Type local:HecoComboBoxItem}">
         <TextBlock Text="{Binding Content}"
                    Foreground="{DynamicResource Ink200Brush}"
                    FontSize="13" />
     </DataTemplate>
 
-    <!-- =====================  HECO COMBO BOX  ===================== -->
+    
     <Style TargetType="{x:Type local:HecoComboBox}">
         <Setter Property="Foreground" Value="{DynamicResource Ink100Brush}" />
         <Setter Property="FontSize" Value="13" />
@@ -19,7 +19,7 @@
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="SnapsToDevicePixels" Value="True" />
         
-        <!-- Define style for items inside the dropdown -->
+        
         <Setter Property="ItemContainerStyle">
             <Setter.Value>
                 <Style TargetType="{x:Type ComboBoxItem}">
@@ -157,7 +157,7 @@
                         </Popup>
                     </Grid>
                     <ControlTemplate.Triggers>
-                        <!-- Hide placeholder when there is a selection -->
+                        
                         <Trigger Property="HasItems" Value="False">
                             <Setter TargetName="PART_Popup" Property="MinHeight" Value="95" />
                         </Trigger>

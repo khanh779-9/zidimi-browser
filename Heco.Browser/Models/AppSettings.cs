@@ -34,6 +34,7 @@ public class AppSettings
 
     // --- Cài đặt Hệ thống ---
     public bool EnableGpu { get; set; } = true;
+    public bool EnhanceVideos { get; set; } = true;
     public bool RunInBackground { get; set; } = false;
     public bool UseSystemProxy { get; set; } = true;
 

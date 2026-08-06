@@ -1,5 +1,5 @@
-[Info]
-LanguageName=English
+﻿[Info]
+LanguageName=Italiano
 
 [Menu]
 NewTab=New Tab (Ctrl+T)
@@ -15,8 +15,8 @@ Preferences=Preferences (Ctrl+,)
 Language=Language
 
 [Toolbar]
-BackTooltip=Go Back (Alt+←)
-ForwardTooltip=Go Forward (Alt+→)
+BackTooltip=Go Back (Alt+â†)
+ForwardTooltip=Go Forward (Alt+â†’)
 ReloadTooltip=Reload (F5)
 HomeTooltip=Home
 SecurityTooltip=Site Information
@@ -137,21 +137,21 @@ Bookmarks_Delete=Delete bookmark
 Browser_Next=Next (Enter)
 Browser_Prev=Previous (Shift+Enter)
 Browser_RemoveBookmark=Remove bookmark
-Browser_SiteSettingsWIP=Site settings — to be implemented in a future release.
+Browser_SiteSettingsWIP=Site settings â€” to be implemented in a future release.
 Browser_StopLoad=Stop loading (Esc)
 Browser_AskDefault=Ask (default)
 Browser_DefaultProfile=Default profile
 Browser_Guest=Guest
 Browser_NotSecure=Not secure
-Browser_NotSecureHttp=Not secure — unencrypted HTTP page
+Browser_NotSecureHttp=Not secure â€” unencrypted HTTP page
 Browser_NoDataSaved=No data saved
 Browser_SecureConn=Secure connection
 Browser_SecureConnHttps=Secure connection (HTTPS)
 Browser_EncryptedConn=Your connection to this site is encrypted
-Browser_UnencryptedConn=Unencrypted connection — attackers might be able to see or change information
+Browser_UnencryptedConn=Unencrypted connection â€” attackers might be able to see or change information
 Browser_SavePage=Save page
 Browser_History=History
-Browser_CookieWIP=Cookie & site data management — to be implemented later.
+Browser_CookieWIP=Cookie & site data management â€” to be implemented later.
 Browser_SiteInfo=Site information
 Browser_InternalPage=Internal page
 Browser_LocalBrowserPage=Local browser page
@@ -270,3 +270,4 @@ Perm_Notifications=Notifications
 Perm_Popups=Popups
 Perm_JavaScript=JavaScript
 Pref_EnhanceVideos=Enhance videos (improve color and lighting)
+

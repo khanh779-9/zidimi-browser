@@ -23,12 +23,13 @@
     </Window.Resources>
 
     <Border x:Name="RootCard"
-            Background="{DynamicResource HecoBgDarkBrush}"
+            Margin="20"
+            Background="{DynamicResource HecoBgElevatedBrush}"
             BorderBrush="{DynamicResource StrokeLightBrush}"
             BorderThickness="1"
             CornerRadius="10">
         <Border.Effect>
-            <DropShadowEffect Color="#000000" BlurRadius="28" ShadowDepth="0" Opacity="0.55" />
+            <DropShadowEffect Color="#000000" BlurRadius="20" ShadowDepth="0" Opacity="0.4" />
         </Border.Effect>
         <Grid>
             <Grid.RowDefinitions>
@@ -37,7 +38,7 @@
                 <RowDefinition Height="Auto" />
             </Grid.RowDefinitions>
 
-            <!-- Title bar: draggable -->
+            
             <Border Grid.Row="0"
                     Background="{DynamicResource HecoBgSurfaceBrush}"
                     BorderBrush="{DynamicResource StrokeBrush}"
@@ -70,7 +71,7 @@
                 </Grid>
             </Border>
 
-            <!-- Body -->
+            
             <Grid Grid.Row="1" Margin="24,18,24,16">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto" />
@@ -95,7 +96,7 @@
                            LineHeight="20" />
             </Grid>
 
-            <!-- Button bar -->
+            
             <Border Grid.Row="2"
                     Background="{DynamicResource HecoBgSurfaceBrush}"
                     BorderBrush="{DynamicResource StrokeBrush}"

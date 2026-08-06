@@ -1,22 +1,22 @@
-<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- ===== DARK THEME — brush nền / chữ / viền, đổi theo theme ===== -->
+    
 
-    <!-- Surfaces -->
+    
     <SolidColorBrush x:Key="HecoBgDarkestBrush" Color="#0F0E1A" />
     <SolidColorBrush x:Key="HecoBgDarkBrush" Color="#1A1829" />
     <SolidColorBrush x:Key="HecoBgSurfaceBrush" Color="#222135" />
     <SolidColorBrush x:Key="HecoBgElevatedBrush" Color="#2C2B40" />
     <SolidColorBrush x:Key="HecoBgHoverBrush" Color="#363552" />
 
-    <!-- Special-case surfaces -->
+    
     <SolidColorBrush x:Key="TabActiveBgBrush" Color="#2A2840" />
     <SolidColorBrush x:Key="OmniboxFocusBgBrush" Color="#34324F" />
     <SolidColorBrush x:Key="DangerBgBrush" Color="#3A1A22" />
     <SolidColorBrush x:Key="TabBarBgBrush" Color="#16151F" />
 
-    <!-- Layout surfaces -->
+    
     <SolidColorBrush x:Key="AppBackgroundBrush" Color="#0F0E1A" />
     <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#1A1829" />
     <SolidColorBrush x:Key="TabBarBackgroundBrush" Color="#16151F" />
@@ -24,21 +24,21 @@
     <SolidColorBrush x:Key="ContentBackgroundBrush" Color="#222135" />
     <SolidColorBrush x:Key="GlassCardBrush" Color="#CC222135" />
 
-    <!-- Text -->
+    
     <SolidColorBrush x:Key="Ink100Brush" Color="#F4F2FF" />
     <SolidColorBrush x:Key="Ink200Brush" Color="#C8C4E8" />
     <SolidColorBrush x:Key="Ink300Brush" Color="#8E89B5" />
     <SolidColorBrush x:Key="Ink400Brush" Color="#615C8A" />
     <SolidColorBrush x:Key="Ink500Brush" Color="#3D3A5C" />
 
-    <!-- Stroke -->
+    
     <SolidColorBrush x:Key="StrokeBrush" Color="#2A2942" />
     <SolidColorBrush x:Key="StrokeLightBrush" Color="#3A3960" />
 
-    <!-- Scrollbar thumb -->
+    
     <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#363552" />
 
-    <!-- Overlay backdrop -->
+    
     <SolidColorBrush x:Key="OverlayBackdropBrush" Color="#A60F0E1A" />
 
 </ResourceDictionary>

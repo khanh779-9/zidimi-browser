@@ -6,19 +6,18 @@
              StartupUri="MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
-            <!-- Converters dÃ¹ng trong default templates cá»§a custom controls.
-                 LÆ¯U Ã: pháº£i khai bÃ¡o TRÆ¯á»šC MergedDictionaries vÃ¬ templates dÃ¹ng StaticResource. -->
+            
             <controls:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter" />
             <controls:NullToVisibilityConverter x:Key="NullToVisibilityConverter" />
 
-            <!-- =====================  FONTS  ===================== -->
+            
             <FontFamily x:Key="AppFont">Segoe UI, Inter, system-ui, sans-serif</FontFamily>
             <FontFamily x:Key="AppFontMono">Cascadia Mono, Consolas, ui-monospace, monospace</FontFamily>
 
-        <!-- =====================  HECO THEME (mÃ u Proton Ä‘á»•i tÃªn)  ===================== -->
-        <!-- All Colors, Brushes, and CornerRadius definitions have been moved to Themes/Colors.xaml -->
+        
+        
 
-        <!-- =====================  BASE STYLES  ===================== -->
+        
         <Style TargetType="{x:Type Window}">
             <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
             <Setter Property="FontSize" Value="14" />
@@ -64,7 +63,7 @@
             <Setter Property="Margin" Value="12,12,12,6" />
         </Style>
 
-        <!-- =====================  PANEL / CARD  ===================== -->
+        
         <Style x:Key="CardPanel" TargetType="{x:Type Border}">
             <Setter Property="Background" Value="{DynamicResource HecoBgSurfaceBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource StrokeBrush}" />
@@ -80,7 +79,7 @@
             <Setter Property="CornerRadius" Value="{StaticResource CornerRadiusXl}" />
         </Style>
 
-        <!-- =====================  ICON BUTTON  ===================== -->
+        
         <Style x:Key="IconButton" TargetType="{x:Type Button}">
             <Setter Property="Width" Value="36" />
             <Setter Property="Height" Value="36" />
@@ -109,13 +108,13 @@
             </Setter>
         </Style>
 
-        <!-- =====================  ROUND ICON BUTTON (toolbar)  ===================== -->
+        
         <Style x:Key="ToolIconButton" TargetType="{x:Type Button}" BasedOn="{StaticResource IconButton}">
             <Setter Property="Width" Value="34" />
             <Setter Property="Height" Value="34" />
         </Style>
 
-        <!-- =====================  CTA BUTTON  ===================== -->
+        
         <Style x:Key="CtaButton" TargetType="{x:Type Button}">
             <Setter Property="Background" Value="{StaticResource CtaBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
@@ -151,7 +150,7 @@
             </Setter>
         </Style>
 
-        <!-- =====================  SIDEBAR NAV  ===================== -->
+        
         <Style x:Key="SidebarNavButton" TargetType="{x:Type controls:HecoRadioButton}">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="Foreground" Value="{DynamicResource Ink300Brush}" />
@@ -193,7 +192,7 @@
             </Setter>
         </Style>
 
-        <!-- =====================  TEXTBOX (address bar)  ===================== -->
+        
         <Style TargetType="{x:Type TextBox}">
             <Setter Property="Background" Value="{DynamicResource HecoBgSurfaceBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource Ink100Brush}" />
@@ -230,7 +229,7 @@
             </Setter>
         </Style>
 
-        <!-- Address bar (pill shape, taller) -->
+        
         <Style x:Key="AddressTextBox" TargetType="{x:Type TextBox}" BasedOn="{StaticResource {x:Type TextBox}}">
             <Setter Property="Height" Value="38" />
             <Setter Property="Padding" Value="14,0" />
@@ -250,7 +249,7 @@
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <!-- left icon hint -->
+                                
                                 <ContentControl Grid.Column="0" x:Name="LeftIcon"
                                                 Margin="12,0,0,0"
                                                 VerticalAlignment="Center"
@@ -278,7 +277,7 @@
             </Setter>
         </Style>
 
-        <!-- =====================  SCROLLBAR  ===================== -->
+        
         <Style x:Key="ScrollBarThumb" TargetType="{x:Type Thumb}">
             <Setter Property="Background" Value="{DynamicResource ScrollBarThumbBrush}" />
             <Setter Property="BorderThickness" Value="0" />
@@ -369,9 +368,9 @@
             </Setter>
         </Style>
 
-        <!-- =====================  TAB ITEM (browser tab strip)  ===================== -->
+        
         <Style x:Key="BrowserTabItem" TargetType="{x:Type TabItem}" />
-        <!-- =====================  LIST ITEM  ===================== -->
+        
         <Style x:Key="ListItemCard" TargetType="{x:Type Border}">
             <Setter Property="Background" Value="{DynamicResource HecoBgSurfaceBrush}" />
             <Setter Property="BorderBrush" Value="{DynamicResource StrokeBrush}" />
@@ -397,7 +396,7 @@
             </Style.Triggers>
         </Style>
 
-        <!-- =====================  TOOLTIP  ===================== -->
+        
         <Style TargetType="{x:Type ToolTip}">
             <Setter Property="Background" Value="{DynamicResource HecoBgElevatedBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource Ink100Brush}" />
@@ -421,7 +420,7 @@
                             <Border.Effect>
                                 <DropShadowEffect Color="#000000" BlurRadius="12" ShadowDepth="4" Opacity="0.15" />
                             </Border.Effect>
-                            <!-- Use inner border for background to avoid shadow bleeding -->
+                            
                             <Grid>
                                 <Border Background="{TemplateBinding Background}" CornerRadius="7" />
                                 <ContentPresenter Margin="{TemplateBinding Padding}"
@@ -434,10 +433,8 @@
             </Setter>
         </Style>
 
-        <!-- =====================  MERGED DICTIONARIES  ===================== -->
-        <!-- Templates trong cÃ¡c dictionary nÃ y dÃ¹ng StaticResource tá»›i resource khai bÃ¡o
-             phÃ­a trÃªn (converters, brushes, colors...), nÃªn pháº£i Ä‘á»ƒ MergedDictionaries
-             á»Ÿ CUá»I toÃ n bá»™ pháº§n khai bÃ¡o resource. -->
+        
+        
         <ResourceDictionary.MergedDictionaries>
             <ResourceDictionary Source="Themes/Colors.xaml" />
             <ResourceDictionary Source="Controls/HecoWindow.xaml" />

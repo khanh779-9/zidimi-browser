@@ -19,6 +19,11 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        // Phải nạp cấu hình và theme trước để nếu gọi HecoMessageBox (do lỗi hay mutex) thì không bị trong suốt
+        AppSettings.Load();
+        ThemeManager.EnsureLoaded();
+        ThemeManager.ApplyFromSettings(AppSettings.Current.Theme);
+
         if (!SingleInstanceMutex.WaitOne(0, false))
         {
             // Đã có instance Heco.Browser đang chạy — CEF không cho 2 instance dùng chung cache.
@@ -32,7 +37,6 @@ public partial class App : Application
         AppDomain.CurrentDomain.UnhandledException += OnDomainException;
         try
         {
-            AppSettings.Load();
             var dummy = LanguageManager.Instance; // Initialize LanguageManager
             InitializeCef();
         }
@@ -42,10 +46,6 @@ public partial class App : Application
                 $"[{DateTime.Now:O}] [CefInit] {ex}\n\n");
             throw;
         }
-
-        // Áp dụng theme TRƯỚC khi cửa sổ chính được tạo (StartupUri) để không bị flash sai màu.
-        ThemeManager.EnsureLoaded();
-        ThemeManager.ApplyFromSettings(AppSettings.Current.Theme);
 
         base.OnStartup(e);
 
@@ -84,6 +84,17 @@ public partial class App : Application
         {
             settings.CefCommandLineArgs["disable-gpu"] = "1";
             settings.CefCommandLineArgs["disable-gpu-compositing"] = "1";
+        }
+        
+        if (AppSettings.Current.EnhanceVideos)
+        {
+            // Bật cờ tối ưu hóa giải mã video của Chromium
+            settings.CefCommandLineArgs["enable-features"] = "HardwareSecureDecryption,Vulkan";
+        }
+
+        if (!AppSettings.Current.UseSystemProxy)
+        {
+            settings.CefCommandLineArgs["no-proxy-server"] = "1";
         }
 
         // Chính sách Cookie 3rd-party (spec 8.3): CefSharp 150 không có RequestContextSettings.AcceptThirdPartyCookies

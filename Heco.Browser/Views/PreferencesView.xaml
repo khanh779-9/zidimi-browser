@@ -1,4 +1,4 @@
-<UserControl x:Class="Heco.Browser.Views.PreferencesView"
+﻿<UserControl x:Class="Heco.Browser.Views.PreferencesView"
              
     
     
@@ -17,7 +17,7 @@
     xmlns:ctrl="clr-namespace:Heco.Browser.Controls"
              Background="{DynamicResource ContentBackgroundBrush}">
     <UserControl.Resources>
-        <!-- Icon definitions cho sidebar items -->
+        
         <PathGeometry x:Key="IconGeneral">M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z</PathGeometry>
         <PathGeometry x:Key="IconProfiles">M12 2a10 10 0 1 0 0 20 10 10 0 1 0 0-20z M12 14a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2</PathGeometry>
         <PathGeometry x:Key="IconAutofill">M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4</PathGeometry>
@@ -35,12 +35,12 @@
             <ColumnDefinition Width="232" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
-        <!-- Sidebar navigation (sticky) - Chrome style -->
+        
         <Border Grid.Column="0" Background="{DynamicResource HecoBgSurfaceBrush}"
                 BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="0,0,1,0">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel Margin="0,16,0,24">
-                    <!-- Search filter (spec 7.2) -->
+                    
                     <Border Background="{DynamicResource HecoBgElevatedBrush}"
                             BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1"
                             CornerRadius="8" Margin="12,0,12,16" Padding="1">
@@ -62,7 +62,7 @@
                                      ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Pref_SearchPlaceholder]}" />
                         </Grid>
                     </Border>
-                    <!-- Nav items vá»›i group headers & icons (Chrome style) -->
+                    
                     <StackPanel x:Name="NavPanel">
                         <ctrl:HecoRadioButton Style="{DynamicResource SidebarNavButton}" GroupName="SettingsNav"
                                      Tag="General" IsChecked="True" Checked="NavItem_Checked">
@@ -255,7 +255,7 @@
                 </StackPanel>
             </ScrollViewer>
         </Border>
-        <!-- Content area -->
+        
         <Border Grid.Column="1" Background="{DynamicResource ContentBackgroundBrush}">
             <ScrollViewer x:Name="ContentScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
                 <Grid>
