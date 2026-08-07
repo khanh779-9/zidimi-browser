@@ -25,4 +25,6 @@ public class ProfileSettings
     public string DownloadPath { get; set; } = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
     public bool AskBeforeSave { get; set; } = true;
     public bool ShowDownloadBar { get; set; } = true;
+
+    public SitePermissions SitePermissions { get; set; } = new();
 }

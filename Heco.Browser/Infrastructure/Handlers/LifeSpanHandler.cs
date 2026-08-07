@@ -31,6 +31,10 @@ public sealed class LifeSpanHandler : ILifeSpanHandler
         if (string.IsNullOrEmpty(targetUrl))
             return false;
 
+        // When pop-ups are blocked entirely by the profile's site settings, drop the request.
+        if (Models.AppSettings.Profile.SitePermissions.BlockPopups)
+            return true;
+
         Application.Current?.Dispatcher.BeginInvoke(() =>
         {
             App.ViewModel.NewTab(targetUrl);

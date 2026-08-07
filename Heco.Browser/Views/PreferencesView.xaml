@@ -29,6 +29,7 @@
         <PathGeometry x:Key="IconLanguages">M5 8l6 6 M4 14l6-6 2-3 M2 5h12 M7 2h1 M22 22l-5-10-5 10 M14 18h6</PathGeometry>
         <PathGeometry x:Key="IconSystem">M4 21v-7 M4 10V3 M12 21v-9 M12 8V3 M20 21v-5 M20 12V3 M1 14h6 M9 8h6 M17 16h6</PathGeometry>
         <PathGeometry x:Key="IconAbout">M12 2a10 10 0 1 0 0 20 10 10 0 1 0 0-20z M12 16v-4 M12 8h.01</PathGeometry>
+        <PathGeometry x:Key="IconSitePerms">M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z M9 12l2 2 4-4 M12 7v5 M9 17h6</PathGeometry>
     </UserControl.Resources>
     <Grid>
         <Grid.ColumnDefinitions>
@@ -150,6 +151,23 @@
                                           StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Data="{StaticResource IconPrivacy}"
                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
                                     <TextBlock Grid.Column="1" Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Pref_Privacy]}" Margin="10,0,0,0"
+                                               VerticalAlignment="Center" FontSize="13" />
+                                </Grid>
+                            </ctrl:HecoRadioButton.Content>
+                        </ctrl:HecoRadioButton>
+                        <ctrl:HecoRadioButton Style="{DynamicResource SidebarNavButton}" GroupName="SettingsNav"
+                                     Tag="SitePermissions" Checked="NavItem_Checked">
+                            <ctrl:HecoRadioButton.Content>
+                                <Grid Margin="4,2,0,2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="20" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Path Grid.Column="0" Width="18" Height="18" Stretch="Uniform"
+                                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ctrl:HecoRadioButton}}"
+                                          StrokeThickness="1.5" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Data="{StaticResource IconSitePerms}"
+                                          HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Pref_SitePermissions]}" Margin="10,0,0,0"
                                                VerticalAlignment="Center" FontSize="13" />
                                 </Grid>
                             </ctrl:HecoRadioButton.Content>

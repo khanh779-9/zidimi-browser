@@ -7,15 +7,15 @@ using CefSharp;
 using CefSharp.Handler;
 using Heco.Browser.Controls;
 using Heco.Browser.Infrastructure;
+using Heco.Browser.Models;
 
 namespace Heco.Browser.Infrastructure.Handlers;
 
 /// <summary>
-/// Handles permission requests from the page (shows a real prompt when a site asks for permission):
-///   - GetUserMedia (camera/mic) → OnRequestMediaAccessPermission
-///   - Geolocation, Notifications, Clipboard, PointerLock... → OnShowPermissionPrompt
-/// Shows an Allow/Deny confirmation dialog using the app's own UI (HecoMessageBox),
-/// instead of letting CEF show its own hidden default prompt.
+/// Handles permission requests from the page. First the profile's default content
+/// permission policy (SitePermissions) for each requested capability is checked; only
+/// when the policy is "Ask" (the default) is a user Allow/Deny prompt shown, using the
+/// app's own UI (HecoMessageBox) rather than CEF's hidden default prompt.
 /// </summary>
 public sealed class HecoPermissionHandler : CefSharp.Handler.PermissionHandler
 {
@@ -23,6 +23,37 @@ public sealed class HecoPermissionHandler : CefSharp.Handler.PermissionHandler
         IFrame frame, string requestingOrigin, MediaAccessPermissionType requestedPermissions,
         IMediaAccessCallback callback)
     {
+        var policy = AppSettings.Profile.SitePermissions;
+
+        bool allow = false;
+        bool block = false;
+        bool unresolved = false;
+
+        if ((requestedPermissions & MediaAccessPermissionType.AudioCapture) != 0)
+        {
+            if (policy.Microphone == ContentPermission.Allow) allow = true;
+            else if (policy.Microphone == ContentPermission.Block) block = true;
+            else unresolved = true;
+        }
+        if ((requestedPermissions & MediaAccessPermissionType.VideoCapture) != 0)
+        {
+            if (policy.Camera == ContentPermission.Allow) allow = true;
+            else if (policy.Camera == ContentPermission.Block) block = true;
+            else unresolved = true;
+        }
+
+        if (block)
+        {
+            using (callback) callback.Cancel();
+            return true;
+        }
+
+        if (allow && !unresolved)
+        {
+            using (callback) callback.Continue(requestedPermissions);
+            return true;
+        }
+
         var name = DescribeMedia(requestedPermissions);
         var question = Localize("Perm_Dialog_Media", requestingOrigin, name);
         var allowed = AskUser(requestingOrigin, question, Localize("Perm_MediaTitle"));
@@ -41,6 +72,51 @@ public sealed class HecoPermissionHandler : CefSharp.Handler.PermissionHandler
         ulong promptId, string requestingOrigin, PermissionRequestType requestedPermissions,
         IPermissionPromptCallback callback)
     {
+        var policy = AppSettings.Profile.SitePermissions;
+
+        bool block = false;
+        bool allow = false;
+        bool unresolved = false;
+
+        Action<PermissionRequestType, ContentPermission> check = (flag, p) =>
+        {
+            if ((requestedPermissions & flag) == 0) return;
+            if (p == ContentPermission.Block) block = true;
+            else if (p == ContentPermission.Allow) allow = true;
+            else unresolved = true;
+        };
+
+        check(PermissionRequestType.Geolocation, policy.Geolocation);
+        check(PermissionRequestType.Notifications, policy.Notifications);
+        check(PermissionRequestType.CameraStream, policy.Camera);
+        check(PermissionRequestType.MicStream, policy.Microphone);
+        check(PermissionRequestType.Clipboard, policy.Clipboard);
+        check(PermissionRequestType.PointerLock, policy.PointerLock);
+        check(PermissionRequestType.MidiSysex, policy.MidiSysex);
+        check(PermissionRequestType.FileSystemAccess, policy.FileSystemAccess);
+        check(PermissionRequestType.IdleDetection, policy.IdleDetection);
+        check(PermissionRequestType.LocalFonts, policy.LocalFonts);
+        check(PermissionRequestType.MultipleDownloads, policy.MultipleDownloads);
+        check(PermissionRequestType.WindowManagement, policy.WindowManagement);
+        check(PermissionRequestType.KeyboardLock, policy.KeyboardLock);
+        check(PermissionRequestType.ProtectedMediaIdentifier, policy.ProtectedMedia);
+        check(PermissionRequestType.HandTracking, policy.HandTracking);
+
+        // If any requested capability is set to Block, deny the whole request.
+        if (block)
+        {
+            using (callback) callback.Continue(PermissionRequestResult.Deny);
+            return true;
+        }
+
+        // If every requested capability is explicitly Allow, grant without prompting.
+        // If any requested capability is still Ask (unresolved), fall through to the prompt.
+        if (allow && !unresolved)
+        {
+            using (callback) callback.Continue(PermissionRequestResult.Accept);
+            return true;
+        }
+
         var names = DescribeRequestedTypes(requestedPermissions);
         var question = Localize("Perm_Dialog_Prompt", requestingOrigin, names);
         var allowed = AskUser(requestingOrigin, question, Localize("Perm_GenericTitle"));

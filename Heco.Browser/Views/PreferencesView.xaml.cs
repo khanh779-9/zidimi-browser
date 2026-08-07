@@ -49,6 +49,7 @@ public partial class PreferencesView : UserControl
             "Appearance" => BuildAppearanceSection(),
             "Search" => BuildSearchSection(),
             "Privacy" => BuildPrivacySection(),
+            "SitePermissions" => BuildSitePermissionsSection(),
             "Downloads" => BuildDownloadsSection(),
             "Languages" => BuildLanguagesSection(),
             "System" => BuildSystemSection(),
@@ -381,6 +382,54 @@ public partial class PreferencesView : UserControl
             window.ShowDialog();
         };
         panel.Children.Add(CreateSettingRow("", "", btnClear));
+
+        return panel;
+    }
+
+    private UIElement BuildSitePermissionsSection()
+    {
+        var panel = new StackPanel { MinWidth = 600, HorizontalAlignment = HorizontalAlignment.Stretch };
+        panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_SitePermissions"], FontSize = 20, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("Ink100Brush"), Margin = new Thickness(0, 0, 0, 16) });
+        panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_SitePermissionsDesc"], Foreground = (Brush)FindResource("Ink400Brush"), Margin = new Thickness(0, 0, 0, 24) });
+
+        var perms = AppSettings.Profile.SitePermissions;
+        var ask = LanguageManager.Instance["Perm_Ask"];
+        var allow = LanguageManager.Instance["Perm_Allow"];
+        var block = LanguageManager.Instance["Perm_Block"];
+
+        void Row(string label, string key)
+        {
+            var value = (ContentPermission)typeof(SitePermissions).GetProperty(key)!.GetValue(perms)!;
+            var combo = MakeCombo(160, (int)value, ask, allow, block);
+            combo.SelectionChanged += (s, e) =>
+            {
+                if (combo.SelectedIndex < 0) return;
+                typeof(SitePermissions).GetProperty(key)!.SetValue(perms, (ContentPermission)combo.SelectedIndex);
+                AppSettings.SaveAll();
+            };
+            panel.Children.Add(CreateSettingRow(label, "", combo));
+        }
+
+        Row(LanguageManager.Instance["Perm_Camera"], nameof(SitePermissions.Camera));
+        Row(LanguageManager.Instance["Perm_Microphone"], nameof(SitePermissions.Microphone));
+        Row(LanguageManager.Instance["Perm_Location"], nameof(SitePermissions.Geolocation));
+        Row(LanguageManager.Instance["Perm_Notifications"], nameof(SitePermissions.Notifications));
+        Row(LanguageManager.Instance["Perm_Clipboard"], nameof(SitePermissions.Clipboard));
+        Row(LanguageManager.Instance["Perm_PointerLock"], nameof(SitePermissions.PointerLock));
+        Row(LanguageManager.Instance["Perm_Midi"], nameof(SitePermissions.MidiSysex));
+        Row(LanguageManager.Instance["Perm_FileSystem"], nameof(SitePermissions.FileSystemAccess));
+        Row(LanguageManager.Instance["Perm_IdleDetection"], nameof(SitePermissions.IdleDetection));
+        Row(LanguageManager.Instance["Perm_LocalFonts"], nameof(SitePermissions.LocalFonts));
+        Row(LanguageManager.Instance["Perm_MultipleDownloads"], nameof(SitePermissions.MultipleDownloads));
+        Row(LanguageManager.Instance["Perm_WindowManagement"], nameof(SitePermissions.WindowManagement));
+        Row(LanguageManager.Instance["Perm_KeyboardLock"], nameof(SitePermissions.KeyboardLock));
+        Row(LanguageManager.Instance["Perm_ProtectedMedia"], nameof(SitePermissions.ProtectedMedia));
+        Row(LanguageManager.Instance["Perm_HandTracking"], nameof(SitePermissions.HandTracking));
+
+        var chkPopups = MakeCheck(LanguageManager.Instance["Pref_BlockPopups"], AppSettings.Profile.SitePermissions.BlockPopups);
+        chkPopups.Checked += (s, e) => { AppSettings.Profile.SitePermissions.BlockPopups = true; AppSettings.SaveAll(); };
+        chkPopups.Unchecked += (s, e) => { AppSettings.Profile.SitePermissions.BlockPopups = false; AppSettings.SaveAll(); };
+        panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_Popups"], "", chkPopups));
 
         return panel;
     }
