@@ -255,11 +255,7 @@ public partial class BrowserView : UserControl
             BrowserSettings = BuildBrowserSettings()
         };
 
-        // Apply the default zoom level from AppSettings when a page starts loading.
-        browser.FrameLoadStart += (s, args) =>
-        {
-            Dispatcher.BeginInvoke(() => browser.SetZoomLevel(Models.AppSettings.Profile.ZoomLevel));
-        };
+        // Zoom level is handled automatically by CEF's partition.default_zoom_level
 
         // CEF handlers (spec 11.2)
         browser.LifeSpanHandler = new LifeSpanHandler(tab);
@@ -390,7 +386,6 @@ public partial class BrowserView : UserControl
     private static CefSharp.BrowserSettings BuildBrowserSettings()
     {
         var profile = Models.AppSettings.Profile;
-        var fontSize = Math.Max(6, Math.Min(72, (int)profile.FontSize));
 
         // BackgroundColor follows the active theme (dark → dark, light → white).
         var themeKey = Infrastructure.ThemeManager.NormalizeThemeKey(profile.Theme);
@@ -403,9 +398,6 @@ public partial class BrowserView : UserControl
 
         return new CefSharp.BrowserSettings
         {
-            DefaultFontSize = fontSize,
-            DefaultFixedFontSize = fontSize,
-            MinimumFontSize = Math.Min(fontSize, 12),
             WindowlessFrameRate = 60,
             BackgroundColor = bg,
         };
@@ -976,7 +968,7 @@ public partial class BrowserView : UserControl
     private void Avatar_ManageProfiles(object sender, RoutedEventArgs e)
     {
         AvatarPopup.IsOpen = false;
-        new ProfileManagerWindow { Owner = Window.GetWindow(this) }.ShowDialog();
+        new ProfileSelectorWindow { Owner = Window.GetWindow(this) }.ShowDialog();
     }
 
     private void OpenDevTools()

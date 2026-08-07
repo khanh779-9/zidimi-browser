@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using CefSharp;
 using Heco.Browser.Infrastructure;
 using Heco.Browser.Models;
@@ -38,8 +38,18 @@ public sealed class DownloadHandler : IDownloadHandler
 
         string finalPath = entry.FullPath;
 
+        bool askBeforeSave = true;
+        string defaultDir = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+
+        var ctx = browserControl?.GetBrowserHost()?.RequestContext;
+        if (ctx != null)
+        {
+            if (ctx.GetPreference("download.prompt_for_download") is bool ask) askBeforeSave = ask;
+            if (ctx.GetPreference("download.default_directory") is string dir && !string.IsNullOrEmpty(dir)) defaultDir = dir;
+        }
+
         // If AppSettings asks where to save, show a SaveFileDialog (on the UI thread).
-        if (AppSettings.Profile.AskBeforeSave)
+        if (askBeforeSave)
         {
             System.Windows.Application.Current?.Dispatcher.Invoke(() =>
             {
@@ -47,7 +57,7 @@ public sealed class DownloadHandler : IDownloadHandler
                 {
                     FileName = entry.SuggestedFileName,
                     Title = LanguageManager.Instance["Download_ChooseLocation"],
-                    InitialDirectory = AppSettings.Profile.DownloadPath,
+                    InitialDirectory = defaultDir,
                 };
                 var ok = dlg.ShowDialog() == true;
                 if (ok)
@@ -67,8 +77,8 @@ public sealed class DownloadHandler : IDownloadHandler
             // Save straight into DownloadPath using the suggested file name.
             try
             {
-                System.IO.Directory.CreateDirectory(AppSettings.Profile.DownloadPath);
-                finalPath = System.IO.Path.Combine(AppSettings.Profile.DownloadPath, entry.SuggestedFileName);
+                System.IO.Directory.CreateDirectory(defaultDir);
+                finalPath = System.IO.Path.Combine(defaultDir, entry.SuggestedFileName);
             }
             catch { }
         }

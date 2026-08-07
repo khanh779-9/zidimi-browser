@@ -1,4 +1,4 @@
-﻿using CefSharp;
+using CefSharp;
 using CefSharp.Handler;
 using System.Security.Cryptography.X509Certificates;
 using System.Windows;
@@ -13,21 +13,21 @@ public class RequestHandler : CefSharp.Handler.RequestHandler
     protected override bool OnBeforeBrowse(IWebBrowser chromiumWebBrowser, IBrowser browser, IFrame frame,
         IRequest request, bool userGesture, bool isRedirect)
     {
-        if (AppSettings.Profile.SendDoNotTrack && !request.IsReadOnly)
-        {
-// request.Headers is a read-only NameValueCollection in OnBeforeBrowse —
-            // so use SetHeaderByName (native, not through the collection).
-            var existing = request.GetHeaderByName("DNT");
-            if (string.IsNullOrEmpty(existing))
-                request.SetHeaderByName("DNT", "1", overwrite: true);
-        }
+        // DNT is handled natively by CefSharp via enable_do_not_track preference.
         return false;
     }
 
     protected override bool OnCertificateError(IWebBrowser chromiumWebBrowser, IBrowser browser, CefErrorCode errorCode, string requestUrl, ISslInfo sslInfo, IRequestCallback callback)
     {
+        bool warn = true;
+        var ctx = chromiumWebBrowser?.GetBrowserHost()?.RequestContext;
+        if (ctx != null)
+        {
+            if (ctx.GetPreference("safebrowsing.enabled") is bool sb) warn = sb;
+        }
+
         // Safe Browsing: if the user disabled dangerous-site warnings, don't show a dialog and just block.
-        if (!AppSettings.Profile.WarnDangerousSites)
+        if (!warn)
         {
             callback.Continue(false);
             return true;

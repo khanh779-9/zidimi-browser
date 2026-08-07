@@ -23,12 +23,10 @@ public partial class App : Application
     private static readonly System.Threading.Mutex SingleInstanceMutex =
         new(false, @"Local\Heco.Browser.SingleInstance");
 
+    public static bool ShowPickerOnStartupPreference { get; set; } = true;
+
     protected override void OnStartup(StartupEventArgs e)
     {
-// Config and theme must be loaded first so that if HecoMessageBox is shown (due to an error or the mutex), it isn't transparent.
-        // Migrate before Load so that app data still holding the Chromium file names is
-        // moved to heco_* before AppSettings.Load reads it (and before CEF opens the profile).
-        UserDataPaths.MigrateLegacyData();
         AppSettings.Load();
         UserDataPaths.RegisterProfiles(AppSettings.Global.Profiles);
         ThemeManager.EnsureLoaded();
@@ -47,15 +45,9 @@ public partial class App : Application
         AppDomain.CurrentDomain.UnhandledException += OnDomainException;
         var dummy = LanguageManager.Instance; // Initialize LanguageManager
 
-        // Let WPF create and show MainWindow first (now light because the browser is created lazily),
-        // then initialize CEF at low priority so the window doesn't stay "frozen white" for long.
         base.OnStartup(e);
 
-        // Read the show-picker flag from app-owned settings (the source of truth).
-        // A stale legacy key may still live inside Chromium's Local State "profile" node from before
-        // this setting moved to app settings — remove it on sight without ever reading it back, so
-        // Chromium's own bookkeeping can't clobber the app-owned value.
-        bool showPicker = AppSettings.Global.ShowPickerOnStartup;
+        bool showPicker = true;
         try
         {
             if (File.Exists(UserDataPaths.LocalStatePath))
@@ -64,14 +56,15 @@ public partial class App : Application
                 if (System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.Nodes.JsonNode>(json) is System.Text.Json.Nodes.JsonObject root &&
                     root.TryGetPropertyValue("profile", out var profileNode) &&
                     profileNode is System.Text.Json.Nodes.JsonObject profileObj &&
-                    profileObj.TryGetPropertyValue("show_picker_on_startup", out _))
+                    profileObj.TryGetPropertyValue("show_picker_on_startup", out var showPickerNode) && showPickerNode != null)
                 {
-                    profileObj.Remove("show_picker_on_startup");
-                    UserDataPaths.WriteLocalState(root);
+                    showPicker = showPickerNode.GetValue<bool>();
                 }
             }
         }
         catch { }
+
+        ShowPickerOnStartupPreference = showPicker;
 
         if (showPicker)
         {
@@ -108,6 +101,26 @@ public partial class App : Application
         {
             InitializeCef();
             CefReady = true;
+
+            try
+            {
+                bool showPicker = true;
+                if (File.Exists(UserDataPaths.LocalStatePath))
+                {
+                    var json = File.ReadAllText(UserDataPaths.LocalStatePath);
+                    if (System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.Nodes.JsonNode>(json) is System.Text.Json.Nodes.JsonObject root &&
+                        root.TryGetPropertyValue("profile", out var profileNode) &&
+                        profileNode is System.Text.Json.Nodes.JsonObject profileObj &&
+                        profileObj.TryGetPropertyValue("show_picker_on_startup", out var showPickerNode) && showPickerNode != null)
+                    {
+                        showPicker = showPickerNode.GetValue<bool>();
+                    }
+                }
+                var ctx = RequestContexts?.GetProfileContext(AppSettings.Global.CurrentProfile) ?? Cef.GetGlobalRequestContext();
+                ctx?.SetPreference("profile.show_picker_on_startup", showPicker, out _);
+            }
+            catch { }
+
             CefReadyChanged?.Invoke();
         }
         catch (Exception ex)
@@ -120,9 +133,28 @@ public partial class App : Application
 
     protected override void OnExit(ExitEventArgs e)
     {
-        ViewModel?.SaveSession();
         RequestContexts?.Dispose();
         TrayIcon?.Dispose();
+
+        if (Cef.IsInitialized == true)
+        {
+            try
+            {
+                Cef.Shutdown();
+            }
+            catch { }
+        }
+
+        // Save all session tabs, app settings, and Local State metadata strictly AFTER CEF shuts down,
+        // so CEF's file locks and exit flushes can never overwrite or corrupt any data.
+        try
+        {
+            ViewModel?.SaveSession();
+            AppSettings.SaveAll();
+            UserDataPaths.SaveLocalStateOnExit();
+        }
+        catch { }
+
         base.OnExit(e);
     }
 
@@ -166,20 +198,9 @@ var settings = new CefSettings
             settings.CefCommandLineArgs["no-proxy-server"] = "1";
         }
 
-// 3rd-party cookie policy (spec 8.3): CefSharp 150 has no RequestContextSettings.AcceptThirdPartyCookies,
-        // so use the Chromium command-line switch below, applied to the whole context.
-        if (AppSettings.Profile.BlockThirdPartyCookies)
-        {
-            settings.CefCommandLineArgs["block-3rd-party-cookies"] = "1";
-            // Turn off the "allow" 3rd-party cookies enum to force a hard block.
-            settings.CefCommandLineArgs["disable-3rd-party-cookies"] = "1";
-        }
+        // Profile-specific settings like cookies and Do-Not-Track are now managed dynamically 
+        // via CefSharp RequestContext preferences in PreferencesView.xaml.cs.
 
-        // Do Not Track: Chromium command-line switch — applies to every request.
-        if (AppSettings.Profile.SendDoNotTrack)
-        {
-            settings.CefCommandLineArgs["enable-do-not-track"] = "1";
-        }
         var ok = Cef.Initialize(settings, performDependencyCheck: true, browserProcessHandler: null);
         if (!ok)
             throw new InvalidOperationException(

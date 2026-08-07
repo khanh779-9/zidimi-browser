@@ -11,7 +11,7 @@ public static class AppSettings
     public static ProfileSettings Profile { get; private set; } = new ProfileSettings();
 
     private static readonly string GlobalSettingsFilePath = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), 
+        Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), 
         "HecoBrowser", 
         "settings.json");
 

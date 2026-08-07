@@ -1,4 +1,4 @@
-﻿[Info]
+[Info]
 LanguageName=Italiano
 
 [Menu]
@@ -113,7 +113,12 @@ SyncData=Sync data
 SyncDesc=Sign in to sync history, bookmarks and passwords
 CurrentProfile=Current profile
 ProfileApplyDesc=Changing profile will apply when opening a new Tab
-AddProfile=Add profile
+ManageProfile=Gestisci profili
+CopyProfileData=Copia dati profilo
+CopyProfileDesc=Copia impostazioni e cookie da un altro profilo
+CopyFromProfile=Copia da
+ConfirmCopyData=Copiare impostazioni e cookie da '{0}' al profilo corrente?
+CopyComplete=Dati del profilo copiati con successo!
 Autofill=Autofill and passwords
 AutofillDesc=Manage form storage data
 ManagePasswords=Manage passwords

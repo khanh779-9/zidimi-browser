@@ -1,4 +1,4 @@
-﻿[Info]
+[Info]
 LanguageName=Tiếng Việt
 
 [Menu]
@@ -113,7 +113,12 @@ SyncData=Đồng bộ dữ liệu
 SyncDesc=Đăng nhập để đồng bộ lịch sử, dấu trang và mật khẩu
 CurrentProfile=Hồ sơ hiện tại
 ProfileApplyDesc=Đổi profile sẽ áp dụng khi mở Tab mới
-AddProfile=Thêm hồ sơ
+ManageProfile=Quản lý hồ sơ\r
+CopyProfileData=Sao chép dữ liệu hồ sơ\r
+CopyProfileDesc=Sao chép Cài đặt & Cookie từ hồ sơ khác\r
+CopyFromProfile=Sao chép từ\r
+ConfirmCopyData=Sao chép Cài đặt & Cookie từ '{0}' sang hồ sơ hiện tại?\r
+CopyComplete=Đã sao chép dữ liệu hồ sơ thành công!
 Autofill=Tự động điền và mật khẩu
 AutofillDesc=Quản lý dữ liệu lưu trữ biểu mẫu
 ManagePasswords=Quản lý mật khẩu

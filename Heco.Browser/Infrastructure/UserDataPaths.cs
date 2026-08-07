@@ -201,142 +201,37 @@ catch { /* not critical — just metadata */ }
     }
 
     /// <summary>
-    /// Moves data from the old layout to the new CocCoc layout (runs once, idempotent).
-    /// Old JSON files are moved into the new profile folder with a ".migrate" suffix so the
-    /// History/Autofill/Bookmark services can read the JSON, convert it to SQLite, then delete the migrate file.
-    ///   1) %LOCALAPPDATA%\HecoBrowser\{bookmarks.json, autofill.json, Cache}        (very old, flat)
-    ///   2) %LOCALAPPDATA%\HecoBrowser\User Data\...                               (the previous layout)
-    ///   → %LOCALAPPDATA%\HecoBrowser\Browser\User Data\
-    /// Each profile's old cache is merged into the shared cache at the root.
+    /// Flushes all app metadata into Local State after CEF has shut down,
+    /// ensuring CEF's shutdown flush does not overwrite or remove any custom metadata.
     /// </summary>
-    public static void MigrateLegacyData()
+    public static void SaveLocalStateOnExit()
     {
         try
         {
-            var appRoot = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                "HecoBrowser");
-
-            // 1) Very old flat layout (only the default profile)
-            var defaultDir = ProfileDir(DefaultProfileName);
-            EnsureProfileDir(DefaultProfileName);
-            MigrateFile(Path.Combine(appRoot, "bookmarks.json"), Path.Combine(defaultDir, "heco_bookmarks.json"));
-            MigrateFile(Path.Combine(appRoot, "autofill.json"), Path.Combine(defaultDir, "Autofill.migrate"));
-            MigrateDir(Path.Combine(appRoot, "Cache"), SharedCacheDir);
-
-            // 2) The previous User Data layout
-            var oldRoot = Path.Combine(appRoot, "User Data");
-            if (Directory.Exists(oldRoot))
+            UpdateLocalState(root =>
             {
-                MigrateFile(Path.Combine(oldRoot, "Local State"), LocalStatePath);
+                var profile = (System.Text.Json.Nodes.JsonObject?)root["profile"]
+                              ?? (System.Text.Json.Nodes.JsonObject)(root["profile"] = new System.Text.Json.Nodes.JsonObject());
 
-                foreach (var dir in Directory.GetDirectories(oldRoot))
+                profile["show_picker_on_startup"] = App.ShowPickerOnStartupPreference;
+
+                var infoCache = (System.Text.Json.Nodes.JsonObject?)profile["info_cache"]
+                                ?? (System.Text.Json.Nodes.JsonObject)(profile["info_cache"] = new System.Text.Json.Nodes.JsonObject());
+
+                foreach (var name in Models.AppSettings.Global.Profiles)
                 {
-                    var name = Path.GetFileName(dir);
-                    var targetDir = Path.Combine(Root, name);
-                    Directory.CreateDirectory(targetDir);
-
-                    // Bookmarks stay as JSON (like Chrome) → just rename straight to the heco_* names.
-                    MigrateFile(Path.Combine(dir, "Bookmarks.json"), Path.Combine(targetDir, "heco_bookmarks.json"));
-                    // History / autofill (previously "Login Data.json") → JSON migrate files for the service to convert to SQLite.
-                    MigrateFile(Path.Combine(dir, "History.json"), Path.Combine(targetDir, "History.migrate"));
-                    MigrateFile(Path.Combine(dir, "Login Data.json"), Path.Combine(targetDir, "Autofill.migrate"));
-                    MigrateFile(Path.Combine(dir, "Preferences.json"), Path.Combine(targetDir, "heco_setting.json"));
-
-                    // Each profile's old cache → merged into the shared cache (only if not already present)
-                    var oldCache = Path.Combine(dir, "Cache");
-                    if (Directory.Exists(oldCache) && !Directory.Exists(SharedCacheDir))
-                        MigrateDir(oldCache, SharedCacheDir);
+                    if (string.IsNullOrWhiteSpace(name)) continue;
+                    var folder = ProfileFolder(name);
+                    if (!infoCache.ContainsKey(folder))
+                    {
+                        infoCache[folder] = new System.Text.Json.Nodes.JsonObject
+                        {
+                            ["name"] = name,
+                            ["user_name"] = name,
+                        };
+                    }
                 }
-            }
-
-            RegisterProfile(DefaultProfileName);
-        }
-        catch { }
-
-        // Move leftover app data still occupying Chromium file names over to the heco_* names,
-        // so Chromium can open a clean profile (fixes the "Something went wrong when opening your profile" error).
-        MigrateAppDataToHeco();
-    }
-
-/// <summary>Scans every profile folder in User Data, moving over old app files (which shared Chromium's
-/// names) to the heco_* names. Only moves a file when it is clearly app data (never touches Chromium's files).</summary>
-    public static void MigrateAppDataToHeco()
-    {
-        try
-        {
-            if (!Directory.Exists(Root)) return;
-            foreach (var dir in Directory.EnumerateDirectories(Root))
-            {
-                try
-                {
-                    var profileDir = Path.Combine(Root, Path.GetFileName(dir));
-                    MigrateAppSettingsFile(profileDir);
-                    MigrateAppBookmarksFile(profileDir);
-                }
-                catch { }
-            }
-        }
-        catch { }
-    }
-
-/// <summary>Moves Preferences (the app's JSON) → heco_setting.json if it contains app keys.
-/// Chromium's Preferences file is left untouched.</summary>
-    private static void MigrateAppSettingsFile(string profileDir)
-    {
-        var source = Path.Combine(profileDir, "Preferences");
-        var target = Path.Combine(profileDir, "heco_setting.json");
-        if (!File.Exists(source) || File.Exists(target)) return;
-        try
-        {
-            var text = File.ReadAllText(source);
-            // App keys (PascalCase) never appear in Chromium's Preferences.
-            if (text.Contains("\"HomePageUrl\"") || text.Contains("\"FontSize\"") || text.Contains("\"StartupBehavior\""))
-                File.Move(source, target);
-        }
-        catch { }
-    }
-
-/// <summary>Moves the app's array-style JSON Bookmarks → heco_bookmarks.json.
-/// Chromium's Bookmarks is a JSON object → left untouched.</summary>
-    private static void MigrateAppBookmarksFile(string profileDir)
-    {
-        var source = Path.Combine(profileDir, "Bookmarks");
-        var target = Path.Combine(profileDir, "heco_bookmarks.json");
-        if (!File.Exists(source) || File.Exists(target)) return;
-        try
-        {
-            var text = File.ReadAllText(source).TrimStart();
-            if (text.StartsWith("["))
-                File.Move(source, target);
-        }
-        catch { }
-    }
-
-
-
-    private static void MigrateFile(string source, string target)
-    {
-        try
-        {
-            if (File.Exists(source) && !File.Exists(target))
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-                File.Move(source, target);
-            }
-        }
-        catch { }
-    }
-
-    private static void MigrateDir(string source, string target)
-    {
-        try
-        {
-            if (Directory.Exists(source) && !Directory.Exists(target))
-            {
-                Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-                Directory.Move(source, target);
-            }
+            });
         }
         catch { }
     }

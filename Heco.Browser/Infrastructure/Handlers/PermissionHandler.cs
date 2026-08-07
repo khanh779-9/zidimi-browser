@@ -58,6 +58,8 @@ public sealed class HecoPermissionHandler : CefSharp.Handler.PermissionHandler
         var question = Localize("Perm_Dialog_Media", requestingOrigin, name);
         var allowed = AskUser(requestingOrigin, question, Localize("Perm_MediaTitle"));
 
+        PersistException(chromiumWebBrowser, requestingOrigin, GetCefPrefKey(requestedPermissions), allowed);
+
         if (!allowed)
         {
             using (callback) callback.Cancel();
@@ -133,6 +135,8 @@ public sealed class HecoPermissionHandler : CefSharp.Handler.PermissionHandler
         var names = DescribeRequestedTypes(requestedPermissions);
         var question = Localize("Perm_Dialog_Prompt", requestingOrigin, names);
         var allowed = AskUser(requestingOrigin, question, Localize("Perm_GenericTitle"));
+
+        PersistException(chromiumWebBrowser, requestingOrigin, GetCefPrefKey(requestedPermissions), allowed);
 
         if (!allowed)
         {
@@ -223,4 +227,58 @@ public sealed class HecoPermissionHandler : CefSharp.Handler.PermissionHandler
 
     private static string Localize(string key, params string[] args)
         => string.Format(LanguageManager.Instance[key], args);
+
+    private static string? GetCefPrefKey(MediaAccessPermissionType perms)
+    {
+        if ((perms & MediaAccessPermissionType.AudioCapture) != 0) return "media_stream_mic";
+        if ((perms & MediaAccessPermissionType.VideoCapture) != 0) return "media_stream_camera";
+        return null;
+    }
+
+    private static string? GetCefPrefKey(PermissionRequestType type)
+    {
+        // Maps a few common types, returns null if it shouldn't or can't be persisted this way.
+        if ((type & PermissionRequestType.Geolocation) != 0) return "geolocation";
+        if ((type & PermissionRequestType.Notifications) != 0) return "notifications";
+        if ((type & PermissionRequestType.CameraStream) != 0) return "media_stream_camera";
+        if ((type & PermissionRequestType.MicStream) != 0) return "media_stream_mic";
+        if ((type & PermissionRequestType.Clipboard) != 0) return "clipboard";
+        if ((type & PermissionRequestType.PointerLock) != 0) return "mouselock";
+        if ((type & PermissionRequestType.MidiSysex) != 0) return "midi_sysex";
+        if ((type & PermissionRequestType.MultipleDownloads) != 0) return "automatic_downloads";
+        if ((type & PermissionRequestType.WindowManagement) != 0) return "window_placement";
+        if ((type & PermissionRequestType.ProtectedMediaIdentifier) != 0) return "protected_media_identifier";
+        if ((type & PermissionRequestType.IdleDetection) != 0) return "idle_detection";
+        if ((type & PermissionRequestType.FileSystemAccess) != 0) return "file_system_write_guard";
+        if ((type & PermissionRequestType.LocalFonts) != 0) return "local_fonts";
+        if ((type & PermissionRequestType.ArSession) != 0) return "ar";
+        if ((type & PermissionRequestType.VrSession) != 0) return "vr";
+        return null;
+    }
+
+    private static void PersistException(IWebBrowser browser, string origin, string? prefKey, bool allow)
+    {
+        if (prefKey == null) return;
+        try
+        {
+            var ctx = browser.GetBrowserHost().RequestContext;
+            if (ctx == null) return;
+            var fullKey = "profile.content_settings.exceptions." + prefKey;
+            
+            var exceptions = ctx.GetPreference(fullKey);
+            var dict = exceptions as IDictionary<string, object> ?? new System.Dynamic.ExpandoObject() as IDictionary<string, object>;
+            
+            var uri = new Uri(origin);
+            string port = uri.Port > 0 ? uri.Port.ToString() : (uri.Scheme == "https" ? "443" : "80");
+            string originPattern = $"{uri.Scheme}://{uri.Host}:{port},*";
+
+            var settingNode = new System.Dynamic.ExpandoObject() as IDictionary<string, object>;
+            settingNode["setting"] = allow ? 1 : 2;
+            settingNode["last_modified"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
+
+            dict[originPattern] = settingNode;
+            ctx.SetPreference(fullKey, dict, out string error);
+        }
+        catch { }
+    }
 }

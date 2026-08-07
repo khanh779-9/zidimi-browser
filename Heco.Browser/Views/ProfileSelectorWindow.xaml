@@ -112,7 +112,7 @@
 
             <controls:HecoCheckBox Grid.Column="2" x:Name="ShowOnStartupToggle" 
                                    Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[ProfilePicker_ShowOnStartup]}" 
-                                   Checked="ShowOnStartup_Toggled" Unchecked="ShowOnStartup_Toggled" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                   Click="ShowOnStartup_Toggled" HorizontalAlignment="Right" VerticalAlignment="Center" />
         </Grid>
     </Grid>
 </controls:HecoWindow>

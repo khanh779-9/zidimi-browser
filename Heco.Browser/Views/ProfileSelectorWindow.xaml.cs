@@ -6,12 +6,14 @@ using System.Windows;
 using Heco.Browser.Controls;
 using Heco.Browser.Infrastructure;
 using Heco.Browser.Models;
+using CefSharp;
 
 namespace Heco.Browser.Views;
 
 public partial class ProfileSelectorWindow : HecoWindow
 {
     public ObservableCollection<ProfileSelectorItem> Profiles { get; } = new();
+    private bool _isUpdating = true;
 
     public ProfileSelectorWindow()
     {
@@ -22,9 +24,8 @@ public partial class ProfileSelectorWindow : HecoWindow
 
     private void LoadProfiles()
     {
+        _isUpdating = true;
         Profiles.Clear();
-
-        ShowOnStartupToggle.IsChecked = AppSettings.Global.ShowPickerOnStartup;
 
         try
         {
@@ -35,6 +36,15 @@ public partial class ProfileSelectorWindow : HecoWindow
                     root.TryGetPropertyValue("profile", out var profileNode) && 
                     profileNode is JsonObject profileObj)
                 {
+                    if (profileObj.TryGetPropertyValue("show_picker_on_startup", out var showPickerNode) && showPickerNode != null)
+                    {
+                        ShowOnStartupToggle.IsChecked = showPickerNode.GetValue<bool>();
+                    }
+                    else
+                    {
+                        ShowOnStartupToggle.IsChecked = true;
+                    }
+
                     if (profileObj.TryGetPropertyValue("info_cache", out var infoCacheNode) && infoCacheNode is JsonObject infoCache)
                     {
                         var orderedFolders = new List<string>();
@@ -100,10 +110,12 @@ public partial class ProfileSelectorWindow : HecoWindow
                 AvatarPath = avatarPath,
                 IsAddButton = false
             });
+            ShowOnStartupToggle.IsChecked = true;
         }
 
         // Add Button
         Profiles.Add(new ProfileSelectorItem { IsAddButton = true });
+        _isUpdating = false;
     }
 
     private void Profile_Click(object sender, RoutedEventArgs e)
@@ -112,9 +124,19 @@ public partial class ProfileSelectorWindow : HecoWindow
         {
             if (item.IsAddButton)
             {
-                var pm = new ProfileManagerWindow();
-                pm.Owner = this;
-                pm.ShowDialog();
+                // Inline add-profile logic (formerly in ProfileManagerWindow.Add_Click)
+                var newProfile = AppSettings.NextProfileName();
+                AppSettings.Global.Profiles.Add(newProfile);
+                AppSettings.Global.CurrentProfile = newProfile;
+                AppSettings.LoadProfile(newProfile);
+                AppSettings.SaveAll();
+
+                UserDataPaths.EnsureProfileDir(newProfile);
+                AvatarGenerator.GenerateAndSave(newProfile);
+                UserDataPaths.RegisterProfile(newProfile);
+                App.ViewModel?.SwitchProfile(newProfile);
+                ThemeManager.ApplyFromSettings(AppSettings.Profile.Theme);
+
                 LoadProfiles();
                 return;
             }
@@ -206,8 +228,21 @@ public partial class ProfileSelectorWindow : HecoWindow
 
     private void ShowOnStartup_Toggled(object sender, RoutedEventArgs e)
     {
-        AppSettings.Global.ShowPickerOnStartup = ShowOnStartupToggle.IsChecked == true;
-        AppSettings.SaveGlobal();
+        if (_isUpdating) return;
+        bool show = ShowOnStartupToggle.IsChecked == true;
+        App.ShowPickerOnStartupPreference = show;
+
+        UserDataPaths.UpdateLocalState(root =>
+        {
+            var profileObj = (JsonObject?)root["profile"] ?? (JsonObject)(root["profile"] = new JsonObject());
+            profileObj["show_picker_on_startup"] = show;
+        });
+
+        if (App.CefReady)
+        {
+            var ctx = App.RequestContexts?.GetProfileContext(AppSettings.Global.CurrentProfile) ?? Cef.GetGlobalRequestContext();
+            ctx?.SetPreference("profile.show_picker_on_startup", show, out _);
+        }
     }
 
     private void LaunchProfile(string profileName)

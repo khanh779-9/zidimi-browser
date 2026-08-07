@@ -1,4 +1,4 @@
-﻿[Info]
+[Info]
 LanguageName=English
 
 [Menu]
@@ -113,7 +113,12 @@ SyncData=Sync data
 SyncDesc=Sign in to sync history, bookmarks and passwords
 CurrentProfile=Current profile
 ProfileApplyDesc=Changing profile will apply when opening a new Tab
-AddProfile=Add profile
+ManageProfile=Manage profiles
+CopyProfileData=Copy Profile Data
+CopyProfileDesc=Copy Preferences & Cookies from another profile
+CopyFromProfile=Copy From
+ConfirmCopyData=Copy Preferences & Cookies from '{0}' to the current profile?
+CopyComplete=Profile data copied successfully!
 Autofill=Autofill and passwords
 AutofillDesc=Manage form storage data
 ManagePasswords=Manage passwords

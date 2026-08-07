@@ -1,4 +1,4 @@
-﻿[Info]
+[Info]
 LanguageName=中文 (简体)
 
 [Menu]
@@ -113,7 +113,12 @@ SyncData=同步数据
 SyncDesc=登录以同步历史记录、书签和密码
 CurrentProfile=当前配置文件
 ProfileApplyDesc=更改配置文件将在打开新标签页时应用
-AddProfile=添加配置文件
+ManageProfile=管理配置文件
+CopyProfileData=复制配置文件数据
+CopyProfileDesc=从其他配置文件复制设置和Cookie
+CopyFromProfile=从...复制
+ConfirmCopyData=将'{0}'的设置和Cookie复制到当前配置文件？
+CopyComplete=配置文件数据复制成功！
 Autofill=自动填充和密码
 AutofillDesc=管理表单存储数据
 ManagePasswords=管理密码

@@ -9,6 +9,8 @@
 *.sln.docstates
 
 # Build results
+ReleaseBuild/
+*.zip
 [Dd]ebug/
 [Dd]ebugPublic/
 [Rr]elease/

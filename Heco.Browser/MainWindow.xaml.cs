@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Controls;
 using Heco.Browser.Controls;
@@ -31,7 +31,7 @@ InitializeComponent();
 
     private void UpdateAppFontSize()
     {
-        FontSize = Models.AppSettings.Profile.FontSize;
+        FontSize = 14;
     }
 
     private void OnMainWindowClosing(object? sender, CancelEventArgs e)

@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using CefSharp;
@@ -197,21 +197,63 @@ public partial class PreferencesView : UserControl
             }
         };
 
-        var btnAddProfile = new HecoButton { Content = LanguageManager.Instance["Pref_AddProfile"], Padding = new Thickness(16,8,16,8) };
-        btnAddProfile.Click += (s, e) =>
+        var btnManageProfile = new HecoButton { Content = LanguageManager.Instance["Pref_ManageProfile"] ?? "Quản lý hồ sơ", Padding = new Thickness(16,8,16,8) };
+        btnManageProfile.Click += (s, e) =>
         {
             var owner = Window.GetWindow(this);
-            var pm = new ProfileManagerWindow { Owner = owner };
-            pm.ShowDialog();
+            var ps = new ProfileSelectorWindow { Owner = owner };
+            ps.ShowDialog();
             LoadSettingsSection("Profiles"); // Reload UI
         };
 
         var profilePanel = new StackPanel { Orientation = Orientation.Horizontal };
         profilePanel.Children.Add(profileCombo);
         profilePanel.Children.Add(new Border { Width = 8 });
-        profilePanel.Children.Add(btnAddProfile);
+        profilePanel.Children.Add(btnManageProfile);
 
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_CurrentProfile"], LanguageManager.Instance["Pref_ProfileApplyDesc"], profilePanel));
+
+        // Copy data from another profile
+        var otherProfiles = AppSettings.Global.Profiles
+            .Where(p => p != AppSettings.Global.CurrentProfile).ToArray();
+
+        if (otherProfiles.Length > 0)
+        {
+            var copyFromCombo = MakeCombo(200, 0, otherProfiles);
+            var btnCopyFrom = new HecoButton { Content = LanguageManager.Instance["Pref_CopyFromProfile"] ?? "Copy From", Padding = new Thickness(16,8,16,8) };
+            btnCopyFrom.Click += async (s, e) =>
+            {
+                var selectedProfile = (copyFromCombo.SelectedItem as HecoComboBoxItem)?.Content?.ToString();
+                if (string.IsNullOrEmpty(selectedProfile)) return;
+
+                var sourceCtx = App.RequestContexts.GetProfileContext(selectedProfile);
+                var targetCtx = App.RequestContexts.GetProfileContext(AppSettings.Global.CurrentProfile)
+                                ?? Cef.GetGlobalRequestContext();
+                if (sourceCtx == null) return;
+
+                var result = HecoMessageBox.Show(
+                    string.Format(LanguageManager.Instance["Pref_ConfirmCopyData"] ?? "Copy Preferences & Cookies from '{0}' to the current profile?", selectedProfile),
+                    "Heco Browser", HecoMessageBoxButton.YesNo, HecoMessageBoxImage.Question, Window.GetWindow(this));
+
+                if (result == HecoMessageBoxResult.Yes)
+                {
+                    await CefProfileDataHelper.CopyAllAsync(sourceCtx, targetCtx);
+                    HecoMessageBox.Show(
+                        LanguageManager.Instance["Pref_CopyComplete"] ?? "Profile data copied successfully!",
+                        "Heco Browser", HecoMessageBoxButton.OK, HecoMessageBoxImage.Information, Window.GetWindow(this));
+                }
+            };
+
+            var copyPanel = new StackPanel { Orientation = Orientation.Horizontal };
+            copyPanel.Children.Add(copyFromCombo);
+            copyPanel.Children.Add(new Border { Width = 8 });
+            copyPanel.Children.Add(btnCopyFrom);
+
+            panel.Children.Add(CreateSettingRow(
+                LanguageManager.Instance["Pref_CopyProfileData"] ?? "Copy Profile Data",
+                LanguageManager.Instance["Pref_CopyProfileDesc"] ?? "Copy Preferences & Cookies from another profile",
+                copyPanel));
+        }
 
         return panel;
     }
@@ -286,34 +328,56 @@ public partial class PreferencesView : UserControl
         };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_Theme"], LanguageManager.Instance["Pref_SelectTheme"], themeCombo));
 
+        var ctx = App.RequestContexts.GetProfileContext(AppSettings.Global.CurrentProfile) ?? Cef.GetGlobalRequestContext();
+
         var fontSizes = new[] { LanguageManager.Instance["Pref_SizeSmall"], LanguageManager.Instance["Pref_SizeMedium"], LanguageManager.Instance["Pref_SizeLarge"], LanguageManager.Instance["Pref_SizeExtraLarge"] };
-        var idxFont = AppSettings.Profile.FontSize switch { 12 => 0, 14 => 1, 16 => 2, 18 => 3, _ => 1 };
+        var currentFontSize = ctx.GetPreference("webkit.webprefs.default_font_size");
+        int size = 16;
+        if (currentFontSize is int i) size = i;
+        var idxFont = size switch { <= 12 => 0, 16 => 1, 20 => 2, >= 24 => 3, _ => 1 };
         var fontCombo = MakeCombo(180, idxFont, fontSizes);
         fontCombo.SelectionChanged += (s, e) => 
         { 
-            AppSettings.Profile.FontSize = fontCombo.SelectedIndex switch { 0 => 12, 1 => 14, 2 => 16, 3 => 18, _ => 14 };
-            AppSettings.SaveAll();
-            // Apply to the UI in real time
-            if (Application.Current?.MainWindow is MainWindow mw)
-                mw.FontSize = AppSettings.Profile.FontSize;
+            int newSize = fontCombo.SelectedIndex switch { 0 => 12, 1 => 16, 2 => 20, 3 => 24, _ => 16 };
+            ctx.SetPreference("webkit.webprefs.default_font_size", newSize, out string err);
+            ctx.SetPreference("webkit.webprefs.default_fixed_font_size", newSize - 3, out _);
         };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_FontSize"], LanguageManager.Instance["Pref_DefaultFontSize"], fontCombo));
 
         var zooms = new[] { "25%", "50%", "75%", "90%", "100%", "110%", "125%", "150%", "200%" };
         var zoomLevels = new[] { -1.5, -1.0, -0.5, -0.2, 0.0, 0.5, 1.0, 1.5, 2.0 }; // CefSharp ZoomLevels are approx these values
-        var idxZoom = Array.IndexOf(zoomLevels, AppSettings.Profile.ZoomLevel);
-        var zoomCombo = MakeCombo(140, Math.Max(0, idxZoom), zooms);
+        var currentZoomPref = ctx.GetPreference("partition.default_zoom_level");
+        double z = 0.0;
+        if (currentZoomPref is double d) z = d;
+        
+        // Find nearest index
+        int idxZoom = 4;
+        double minDiff = double.MaxValue;
+        for (int j = 0; j < zoomLevels.Length; j++)
+        {
+            double diff = Math.Abs(zoomLevels[j] - z);
+            if (diff < minDiff)
+            {
+                minDiff = diff;
+                idxZoom = j;
+            }
+        }
+
+        var zoomCombo = MakeCombo(140, idxZoom, zooms);
         zoomCombo.SelectionChanged += (s, e) => 
         {
             if (zoomCombo.SelectedIndex >= 0 && zoomCombo.SelectedIndex < zoomLevels.Length)
-                AppSettings.Profile.ZoomLevel = zoomLevels[zoomCombo.SelectedIndex];
-            AppSettings.SaveAll();
-            // Apply immediately to the active web tab (if any).
-            var activeTab = App.ViewModel?.ActiveTab;
-            if (activeTab != null)
             {
-                var b = App.ViewModel?.GetBrowser(activeTab) as CefSharp.Wpf.ChromiumWebBrowser;
-                b?.SetZoomLevel(AppSettings.Profile.ZoomLevel);
+                double newZoom = zoomLevels[zoomCombo.SelectedIndex];
+                ctx.SetPreference("partition.default_zoom_level", newZoom, out string err);
+                
+                // Apply immediately to the active web tab (if any).
+                var activeTab = App.ViewModel?.ActiveTab;
+                if (activeTab != null)
+                {
+                    var b = App.ViewModel?.GetBrowser(activeTab) as CefSharp.Wpf.ChromiumWebBrowser;
+                    b?.SetZoomLevel(newZoom);
+                }
             }
         };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_ZoomPage"], LanguageManager.Instance["Pref_DefaultZoom"], zoomCombo));
@@ -353,25 +417,28 @@ public partial class PreferencesView : UserControl
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_Privacy"], FontSize = 20, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("Ink100Brush"), Margin = new Thickness(0, 0, 0, 16) });
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_ProtectData"], Foreground = (Brush)FindResource("Ink400Brush"), Margin = new Thickness(0, 0, 0, 24) });
 
-        var chkCookie = MakeCheck(LanguageManager.Instance["Pref_BlockThirdPartyCookies"], AppSettings.Profile.BlockThirdPartyCookies);
-        chkCookie.Checked += (s, e) => { AppSettings.Profile.BlockThirdPartyCookies = true; AppSettings.SaveAll(); };
-        chkCookie.Unchecked += (s, e) => { AppSettings.Profile.BlockThirdPartyCookies = false; AppSettings.SaveAll(); };
+        var ctx = App.RequestContexts.GetProfileContext(AppSettings.Global.CurrentProfile) ?? Cef.GetGlobalRequestContext();
+
+        bool block3rd = false;
+        if (ctx.GetPreference("profile.cookie_controls_mode") is int c) block3rd = c == 1;
+        var chkCookie = MakeCheck(LanguageManager.Instance["Pref_BlockThirdPartyCookies"], block3rd);
+        chkCookie.Checked += (s, e) => { ctx.SetPreference("profile.cookie_controls_mode", 1, out _); };
+        chkCookie.Unchecked += (s, e) => { ctx.SetPreference("profile.cookie_controls_mode", 0, out _); };
         panel.Children.Add(CreateSettingRow("", "", chkCookie));
 
-        var chkDnt = MakeCheck(LanguageManager.Instance["Pref_DoNotTrack"], AppSettings.Profile.SendDoNotTrack);
-        chkDnt.Checked += (s, e) => { AppSettings.Profile.SendDoNotTrack = true; AppSettings.SaveAll(); };
-        chkDnt.Unchecked += (s, e) => { AppSettings.Profile.SendDoNotTrack = false; AppSettings.SaveAll(); };
+        bool doNotTrack = false;
+        if (ctx.GetPreference("enable_do_not_track") is bool dnt) doNotTrack = dnt;
+        var chkDnt = MakeCheck(LanguageManager.Instance["Pref_DoNotTrack"], doNotTrack);
+        chkDnt.Checked += (s, e) => { ctx.SetPreference("enable_do_not_track", true, out _); };
+        chkDnt.Unchecked += (s, e) => { ctx.SetPreference("enable_do_not_track", false, out _); };
         panel.Children.Add(CreateSettingRow("", "", chkDnt));
 
-        var chkSafe = MakeCheck(LanguageManager.Instance["Pref_SafeBrowsing"], AppSettings.Profile.SafeBrowsing);
-        chkSafe.Checked += (s, e) => { AppSettings.Profile.SafeBrowsing = true; AppSettings.SaveAll(); };
-        chkSafe.Unchecked += (s, e) => { AppSettings.Profile.SafeBrowsing = false; AppSettings.SaveAll(); };
+        bool safeBrowsing = true;
+        if (ctx.GetPreference("safebrowsing.enabled") is bool sb) safeBrowsing = sb;
+        var chkSafe = MakeCheck(LanguageManager.Instance["Pref_SafeBrowsing"], safeBrowsing);
+        chkSafe.Checked += (s, e) => { ctx.SetPreference("safebrowsing.enabled", true, out _); };
+        chkSafe.Unchecked += (s, e) => { ctx.SetPreference("safebrowsing.enabled", false, out _); };
         panel.Children.Add(CreateSettingRow("", "", chkSafe));
-
-        var chkWarn = MakeCheck(LanguageManager.Instance["Pref_WarnDangerousSites"], AppSettings.Profile.WarnDangerousSites);
-        chkWarn.Checked += (s, e) => { AppSettings.Profile.WarnDangerousSites = true; AppSettings.SaveAll(); };
-        chkWarn.Unchecked += (s, e) => { AppSettings.Profile.WarnDangerousSites = false; AppSettings.SaveAll(); };
-        panel.Children.Add(CreateSettingRow("", "", chkWarn));
 
         var btnClear = MakeButton(LanguageManager.Instance["Pref_ClearBrowsingDataBtn"], 200);
         btnClear.Click += (s, e) => 
@@ -395,7 +462,7 @@ public partial class PreferencesView : UserControl
         var allow = LanguageManager.Instance["Perm_Allow"];
         var block = LanguageManager.Instance["Perm_Block"];
 
-        void Row(string label, string key)
+        void Row(string label, string key, string? cefKey = null)
         {
             var value = (ContentPermission)typeof(SitePermissions).GetProperty(key)!.GetValue(perms)!;
             var combo = MakeCombo(160, (int)value, ask, allow, block);
@@ -404,32 +471,40 @@ public partial class PreferencesView : UserControl
                 if (combo.SelectedIndex < 0) return;
                 typeof(SitePermissions).GetProperty(key)!.SetValue(perms, (ContentPermission)combo.SelectedIndex);
                 AppSettings.SaveAll();
+
+                if (cefKey != null)
+                {
+                    var ctx = App.RequestContexts.GetProfileContext(AppSettings.Global.CurrentProfile) ?? Cef.GetGlobalRequestContext();
+                    // Cef values: 1 = Allow, 2 = Block, 3 = Ask
+                    int cefVal = combo.SelectedIndex == 1 ? 1 : (combo.SelectedIndex == 2 ? 2 : 3);
+                    ctx.SetPreference("profile.default_content_setting_values." + cefKey, cefVal, out string err);
+                }
             };
             panel.Children.Add(CreateSettingRow(label, "", combo));
         }
 
-        Row(LanguageManager.Instance["Perm_Camera"], nameof(SitePermissions.Camera));
-        Row(LanguageManager.Instance["Perm_Microphone"], nameof(SitePermissions.Microphone));
-        Row(LanguageManager.Instance["Perm_Location"], nameof(SitePermissions.Geolocation));
-        Row(LanguageManager.Instance["Perm_Notifications"], nameof(SitePermissions.Notifications));
-        Row(LanguageManager.Instance["Perm_Clipboard"], nameof(SitePermissions.Clipboard));
-        Row(LanguageManager.Instance["Perm_PointerLock"], nameof(SitePermissions.PointerLock));
-        Row(LanguageManager.Instance["Perm_Midi"], nameof(SitePermissions.MidiSysex));
-        Row(LanguageManager.Instance["Perm_FileSystem"], nameof(SitePermissions.FileSystemAccess));
-        Row(LanguageManager.Instance["Perm_IdleDetection"], nameof(SitePermissions.IdleDetection));
-        Row(LanguageManager.Instance["Perm_LocalFonts"], nameof(SitePermissions.LocalFonts));
-        Row(LanguageManager.Instance["Perm_MultipleDownloads"], nameof(SitePermissions.MultipleDownloads));
-        Row(LanguageManager.Instance["Perm_WindowManagement"], nameof(SitePermissions.WindowManagement));
+        Row(LanguageManager.Instance["Perm_Camera"], nameof(SitePermissions.Camera), "media_stream_camera");
+        Row(LanguageManager.Instance["Perm_Microphone"], nameof(SitePermissions.Microphone), "media_stream_mic");
+        Row(LanguageManager.Instance["Perm_Location"], nameof(SitePermissions.Geolocation), "geolocation");
+        Row(LanguageManager.Instance["Perm_Notifications"], nameof(SitePermissions.Notifications), "notifications");
+        Row(LanguageManager.Instance["Perm_Clipboard"], nameof(SitePermissions.Clipboard), "clipboard");
+        Row(LanguageManager.Instance["Perm_PointerLock"], nameof(SitePermissions.PointerLock), "mouselock");
+        Row(LanguageManager.Instance["Perm_Midi"], nameof(SitePermissions.MidiSysex), "midi_sysex");
+        Row(LanguageManager.Instance["Perm_FileSystem"], nameof(SitePermissions.FileSystemAccess), "file_system_write_guard");
+        Row(LanguageManager.Instance["Perm_IdleDetection"], nameof(SitePermissions.IdleDetection), "idle_detection");
+        Row(LanguageManager.Instance["Perm_LocalFonts"], nameof(SitePermissions.LocalFonts), "local_fonts");
+        Row(LanguageManager.Instance["Perm_MultipleDownloads"], nameof(SitePermissions.MultipleDownloads), "automatic_downloads");
+        Row(LanguageManager.Instance["Perm_WindowManagement"], nameof(SitePermissions.WindowManagement), "window_placement");
         Row(LanguageManager.Instance["Perm_KeyboardLock"], nameof(SitePermissions.KeyboardLock));
-        Row(LanguageManager.Instance["Perm_ProtectedMedia"], nameof(SitePermissions.ProtectedMedia));
+        Row(LanguageManager.Instance["Perm_ProtectedMedia"], nameof(SitePermissions.ProtectedMedia), "protected_media_identifier");
         Row(LanguageManager.Instance["Perm_HandTracking"], nameof(SitePermissions.HandTracking));
         Row(LanguageManager.Instance["Perm_CameraPanTilt"], nameof(SitePermissions.CameraPanTiltZoom));
         Row(LanguageManager.Instance["Perm_CapturedSurface"], nameof(SitePermissions.CapturedSurfaceControl));
         Row(LanguageManager.Instance["Perm_StorageAccess"], nameof(SitePermissions.StorageAccess));
         Row(LanguageManager.Instance["Perm_TopLevelStorage"], nameof(SitePermissions.TopLevelStorageAccess));
         Row(LanguageManager.Instance["Perm_DiskQuota"], nameof(SitePermissions.DiskQuota));
-        Row(LanguageManager.Instance["Perm_Vr"], nameof(SitePermissions.VrSession));
-        Row(LanguageManager.Instance["Perm_Ar"], nameof(SitePermissions.ArSession));
+        Row(LanguageManager.Instance["Perm_Vr"], nameof(SitePermissions.VrSession), "vr");
+        Row(LanguageManager.Instance["Perm_Ar"], nameof(SitePermissions.ArSession), "ar");
         Row(LanguageManager.Instance["Perm_ProtocolHandler"], nameof(SitePermissions.RegisterProtocolHandler));
         Row(LanguageManager.Instance["Perm_WebAppInstall"], nameof(SitePermissions.WebAppInstallation));
         Row(LanguageManager.Instance["Perm_IdentityProvider"], nameof(SitePermissions.IdentityProvider));
@@ -438,9 +513,26 @@ public partial class PreferencesView : UserControl
         Row(LanguageManager.Instance["Perm_LoopbackNetwork"], nameof(SitePermissions.LoopbackNetwork));
 
         var chkPopups = MakeCheck(LanguageManager.Instance["Pref_BlockPopups"], AppSettings.Profile.SitePermissions.BlockPopups);
-        chkPopups.Checked += (s, e) => { AppSettings.Profile.SitePermissions.BlockPopups = true; AppSettings.SaveAll(); };
-        chkPopups.Unchecked += (s, e) => { AppSettings.Profile.SitePermissions.BlockPopups = false; AppSettings.SaveAll(); };
+        chkPopups.Checked += (s, e) => { 
+            AppSettings.Profile.SitePermissions.BlockPopups = true; 
+            AppSettings.SaveAll(); 
+            var ctx = App.RequestContexts.GetProfileContext(AppSettings.Global.CurrentProfile) ?? Cef.GetGlobalRequestContext();
+            ctx.SetPreference("profile.default_content_setting_values.popups", 2, out string err);
+        };
+        chkPopups.Unchecked += (s, e) => { 
+            AppSettings.Profile.SitePermissions.BlockPopups = false; 
+            AppSettings.SaveAll(); 
+            var ctx = App.RequestContexts.GetProfileContext(AppSettings.Global.CurrentProfile) ?? Cef.GetGlobalRequestContext();
+            ctx.SetPreference("profile.default_content_setting_values.popups", 1, out string err);
+        };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_Popups"], "", chkPopups));
+
+        var btnExceptions = MakeButton(LanguageManager.Instance["Pref_ManageExceptions"] ?? "Manage Exceptions", 180);
+        btnExceptions.Click += (s, e) => {
+            var w = new SiteExceptionsWindow { Owner = Window.GetWindow(this) };
+            w.ShowDialog();
+        };
+        panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_Exceptions"] ?? "Site Exceptions", "", btnExceptions));
 
         return panel;
     }
@@ -451,23 +543,28 @@ public partial class PreferencesView : UserControl
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_Downloads"], FontSize = 20, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("Ink100Brush"), Margin = new Thickness(0, 0, 0, 16) });
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_ManageDownloads"], Foreground = (Brush)FindResource("Ink400Brush"), Margin = new Thickness(0, 0, 0, 24) });
 
-        var tbDownload = new TextBox { Text = AppSettings.Profile.DownloadPath, IsReadOnly = true, FontSize = 13 };
+        var ctx = App.RequestContexts.GetProfileContext(AppSettings.Global.CurrentProfile) ?? Cef.GetGlobalRequestContext();
+
+        string currentDlPath = System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile), "Downloads");
+        if (ctx.GetPreference("download.default_directory") is string p && !string.IsNullOrEmpty(p)) currentDlPath = p;
+
+        var tbDownload = new TextBox { Text = currentDlPath, IsReadOnly = true, FontSize = 13 };
 
         var btnBrowse = MakeButton(LanguageManager.Instance["Pref_ChooseFolder"], 130);
         btnBrowse.Click += (s, e) => 
         {
             var dlg = new Microsoft.Win32.OpenFolderDialog
             {
-                InitialDirectory = System.IO.Directory.Exists(AppSettings.Profile.DownloadPath)
-                    ? AppSettings.Profile.DownloadPath
+                InitialDirectory = System.IO.Directory.Exists(currentDlPath)
+                    ? currentDlPath
                     : System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile),
                 Title = LanguageManager.Instance["Pref_ChooseDownloadFolder"],
             };
             if (dlg.ShowDialog(Window.GetWindow(this)) == true)
             {
-                AppSettings.Profile.DownloadPath = dlg.FolderName;
-                AppSettings.SaveAll();
-                tbDownload.Text = dlg.FolderName;
+                currentDlPath = dlg.FolderName;
+                ctx.SetPreference("download.default_directory", currentDlPath, out _);
+                tbDownload.Text = currentDlPath;
             }
         };
 
@@ -490,14 +587,16 @@ public partial class PreferencesView : UserControl
         var btnOpen = MakeButton(LanguageManager.Instance["Pref_OpenFolder"], 140);
         btnOpen.Click += (s, e) => 
         {
-            try { System.Diagnostics.Process.Start("explorer.exe", AppSettings.Profile.DownloadPath); }
+            try { System.Diagnostics.Process.Start("explorer.exe", currentDlPath); }
             catch { }
         };
         panel.Children.Add(CreateSettingRow("", "", btnOpen));
 
-        var chkAsk = MakeCheck(LanguageManager.Instance["Pref_AskWhereToSave"], AppSettings.Profile.AskBeforeSave);
-        chkAsk.Checked += (s, e) => { AppSettings.Profile.AskBeforeSave = true; AppSettings.SaveAll(); };
-        chkAsk.Unchecked += (s, e) => { AppSettings.Profile.AskBeforeSave = false; AppSettings.SaveAll(); };
+        bool askBeforeSave = true;
+        if (ctx.GetPreference("download.prompt_for_download") is bool ask) askBeforeSave = ask;
+        var chkAsk = MakeCheck(LanguageManager.Instance["Pref_AskWhereToSave"], askBeforeSave);
+        chkAsk.Checked += (s, e) => { ctx.SetPreference("download.prompt_for_download", true, out _); };
+        chkAsk.Unchecked += (s, e) => { ctx.SetPreference("download.prompt_for_download", false, out _); };
         panel.Children.Add(CreateSettingRow("", "", chkAsk));
 
         var chkBar = MakeCheck(LanguageManager.Instance["Pref_ShowDownloadBar"], AppSettings.Profile.ShowDownloadBar);
