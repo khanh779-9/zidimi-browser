@@ -25,9 +25,11 @@
     </UserControl.Resources>
 
     <Grid>
+        <Grid x:Name="TabBarGrid">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="Auto" />
@@ -311,8 +313,24 @@
         </Button>
 
         
-        <Button x:Name="AllTabsBtn"
+        <Button x:Name="TabSearchBtn"
                 Grid.Column="4"
+                Width="30" Height="34"
+                Margin="0,3,2,3"
+                Style="{DynamicResource ToolIconButton}"
+                WindowChrome.IsHitTestVisibleInChrome="True"
+                Click="TabSearchBtn_Click"
+                ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Tab_Search]}">
+            <Path Width="13" Height="13" Stretch="Uniform"
+                  Stroke="{DynamicResource Ink200Brush}"
+                  StrokeThickness="1.5"
+                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                  Data="M11,4 a7,7 0 1 0 0 14 a7,7 0 1 0 0 -14 M20,20 L15,15" />
+        </Button>
+
+        
+        <Button x:Name="AllTabsBtn"
+                Grid.Column="5"
                 Width="30" Height="34"
                 Margin="0,3,6,3"
                 Style="{DynamicResource ToolIconButton}"
@@ -325,5 +343,50 @@
                   StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                   Data="M7,5 L12,10 L17,5 M7,12 L12,17 L17,12" />
         </Button>
+        </Grid>
+
+    <Popup x:Name="TabSearchPopup"
+           PlacementTarget="{Binding ElementName=TabSearchBtn}"
+           Placement="Bottom"
+           StaysOpen="False"
+           AllowsTransparency="True"
+           PopupAnimation="Fade">
+        <Border Background="{DynamicResource HecoBgElevatedBrush}"
+                BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1"
+                CornerRadius="8" Padding="8" Width="320"
+                MaxHeight="360">
+            <StackPanel>
+                <TextBox x:Name="TabSearchBox"
+                         Margin="0,0,0,8"
+                         Padding="8,6"
+                         FontSize="13"
+                         TextChanged="TabSearchBox_TextChanged"
+                         KeyDown="TabSearchBox_KeyDown"
+                         VerticalContentAlignment="Center"
+                         Foreground="{DynamicResource Ink100Brush}"
+                         CaretBrush="{DynamicResource HecoPurpleLightBrush}" />
+                <ListBox x:Name="TabSearchList"
+                         BorderThickness="0" Background="Transparent"
+                         MaxHeight="400"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto"
+                         SelectionChanged="TabSearchList_SelectionChanged">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Padding" Value="4" />
+                            <Setter Property="Foreground" Value="{DynamicResource Ink200Brush}" />
+                            <Setter Property="FontSize" Value="13" />
+                            <Style.Triggers>
+                                <Trigger Property="IsSelected" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource HecoPurpleBrush}" />
+                                    <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                </ListBox>
+            </StackPanel>
+        </Border>
+    </Popup>
     </Grid>
 </UserControl>

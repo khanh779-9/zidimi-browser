@@ -74,5 +74,10 @@ private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
         PageId.Downloads => new DownloadsView(),
         _ => new UserControl(),
     };
+
+    public void OpenTabSearch()
+    {
+        TheTabStrip?.OpenTabSearch();
+    }
 }
 

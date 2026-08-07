@@ -234,4 +234,84 @@ public partial class TabStrip : UserControl
         menu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
         menu.IsOpen = true;
     }
+
+    // ===== Tab search =====
+
+    public void OpenTabSearch()
+    {
+        RefreshTabSearch();
+        TabSearchPopup.PlacementTarget = TabSearchBtn;
+        TabSearchPopup.IsOpen = true;
+        TabSearchBox.Text = string.Empty;
+        TabSearchBox.Focus();
+        Keyboard.Focus(TabSearchBox);
+    }
+
+    private void TabSearchBtn_Click(object sender, RoutedEventArgs e)
+    {
+        OpenTabSearch();
+    }
+
+    private void TabSearchBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        RefreshTabSearch();
+    }
+
+    private void RefreshTabSearch()
+    {
+        if (TabSearchList == null) return;
+        var q = (TabSearchBox?.Text ?? "").Trim().ToLower();
+        var matches = _vm.Tabs
+            .Where(t => string.IsNullOrEmpty(q)
+                || (t.Title?.ToLowerInvariant().Contains(q) ?? false)
+                || (t.Address?.ToLowerInvariant().Contains(q) ?? false))
+            .ToList();
+
+        TabSearchList.Items.Clear();
+        foreach (var tab in matches)
+        {
+            var item = new System.Windows.Controls.ListBoxItem
+            {
+                Content = string.IsNullOrWhiteSpace(tab.Title) ? tab.Address : tab.Title,
+                Tag = tab,
+            };
+            TabSearchList.Items.Add(item);
+        }
+    }
+
+    private void TabSearchBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Escape)
+        {
+            TabSearchPopup.IsOpen = false;
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Enter)
+        {
+            if (TabSearchList.SelectedItem is System.Windows.Controls.ListBoxItem sel && sel.Tag is TabViewModel selected)
+            {
+                _vm.ActiveTab = selected;
+                TabSearchPopup.IsOpen = false;
+            }
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Down && TabSearchList.Items.Count > 0)
+        {
+            TabSearchList.SelectedIndex = Math.Min(TabSearchList.Items.Count - 1, TabSearchList.SelectedIndex + 1);
+            e.Handled = true;
+        }
+        else if (e.Key == Key.Up)
+        {
+            TabSearchList.SelectedIndex = Math.Max(0, TabSearchList.SelectedIndex - 1);
+            e.Handled = true;
+        }
+    }
+
+    private void TabSearchList_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (sender == null) return;
+        var sel = TabSearchList.SelectedItem as System.Windows.Controls.ListBoxItem;
+        if (sel?.Tag is TabViewModel tab)
+            _vm.ActiveTab = tab;
+    }
 }

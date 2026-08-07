@@ -10,7 +10,7 @@
                  Height="481" Width="683">
 
     <ctrl:HecoWindow.TabStripContent>
-        <views:TabStrip Margin="0,3,0,0" />
+        <views:TabStrip x:Name="TheTabStrip" Margin="0,3,0,0" />
     </ctrl:HecoWindow.TabStripContent>
 
     <Grid Background="{DynamicResource ContentBackgroundBrush}">

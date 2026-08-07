@@ -101,6 +101,19 @@ public sealed class HecoPermissionHandler : CefSharp.Handler.PermissionHandler
         check(PermissionRequestType.KeyboardLock, policy.KeyboardLock);
         check(PermissionRequestType.ProtectedMediaIdentifier, policy.ProtectedMedia);
         check(PermissionRequestType.HandTracking, policy.HandTracking);
+        check(PermissionRequestType.CameraPanTiltZoom, policy.CameraPanTiltZoom);
+        check(PermissionRequestType.CapturedSurfaceControl, policy.CapturedSurfaceControl);
+        check(PermissionRequestType.StorageAccess, policy.StorageAccess);
+        check(PermissionRequestType.TopLevelStorageAccess, policy.TopLevelStorageAccess);
+        check(PermissionRequestType.DiskQuota, policy.DiskQuota);
+        check(PermissionRequestType.VrSession, policy.VrSession);
+        check(PermissionRequestType.ArSession, policy.ArSession);
+        check(PermissionRequestType.RegisterProtocolHandler, policy.RegisterProtocolHandler);
+        check(PermissionRequestType.WebAppInstallation, policy.WebAppInstallation);
+        check(PermissionRequestType.IdentityProvider, policy.IdentityProvider);
+        check(PermissionRequestType.LocalNetworkAccess, policy.LocalNetworkAccess);
+        check(PermissionRequestType.LocalNetwork, policy.LocalNetwork);
+        check(PermissionRequestType.LoopbackNetwork, policy.LoopbackNetwork);
 
         // If any requested capability is set to Block, deny the whole request.
         if (block)
@@ -183,6 +196,19 @@ public sealed class HecoPermissionHandler : CefSharp.Handler.PermissionHandler
             [PermissionRequestType.WindowManagement] = l["Perm_WindowManagement"],
             [PermissionRequestType.KeyboardLock] = l["Perm_KeyboardLock"],
             [PermissionRequestType.HandTracking] = l["Perm_HandTracking"],
+            [PermissionRequestType.CameraPanTiltZoom] = l["Perm_CameraPanTilt"],
+            [PermissionRequestType.CapturedSurfaceControl] = l["Perm_CapturedSurface"],
+            [PermissionRequestType.StorageAccess] = l["Perm_StorageAccess"],
+            [PermissionRequestType.TopLevelStorageAccess] = l["Perm_TopLevelStorage"],
+            [PermissionRequestType.DiskQuota] = l["Perm_DiskQuota"],
+            [PermissionRequestType.VrSession] = l["Perm_Vr"],
+            [PermissionRequestType.ArSession] = l["Perm_Ar"],
+            [PermissionRequestType.RegisterProtocolHandler] = l["Perm_ProtocolHandler"],
+            [PermissionRequestType.WebAppInstallation] = l["Perm_WebAppInstall"],
+            [PermissionRequestType.IdentityProvider] = l["Perm_IdentityProvider"],
+            [PermissionRequestType.LocalNetworkAccess] = l["Perm_LocalNetworkAccess"],
+            [PermissionRequestType.LocalNetwork] = l["Perm_LocalNetwork"],
+            [PermissionRequestType.LoopbackNetwork] = l["Perm_LoopbackNetwork"],
         };
 
         var selected = new List<string>();

@@ -54,3 +54,8 @@ debug.log
 
 
 bin/
+
+
+# Publish output and release archives
+publish/
+*.zip

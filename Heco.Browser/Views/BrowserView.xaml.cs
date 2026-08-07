@@ -112,6 +112,10 @@ public partial class BrowserView : UserControl
                 _vm.OpenAppTab(TabKind.History);
                 e.Handled = true;
                 break;
+            case Key.A when mods == (ModifierKeys.Control | ModifierKeys.Shift):
+                (Application.Current?.MainWindow as MainWindow)?.OpenTabSearch();
+                e.Handled = true;
+                break;
             case Key.J when mods == ModifierKeys.Control:
                 _vm.OpenAppTab(TabKind.Downloads);
                 e.Handled = true;

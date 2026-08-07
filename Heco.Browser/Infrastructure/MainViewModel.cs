@@ -310,9 +310,12 @@ ClearDownloadsCommand = new RelayCommand(_ => _downloads.Clear());
         ThemeManager.Apply(theme == Theme.Light ? ThemeManager.AppTheme.Light : ThemeManager.AppTheme.Dark);
     }
 
-    /// <summary>Saves the list of open tabs (used for "Continue" mode on restart).</summary>
+/// <summary>Saves the list of open tabs (used for "Continue" mode on restart).
+/// Incognito (guest) sessions are never persisted, matching Chrome's behavior
+/// (spec 8.2).</summary>
     public void SaveSession()
     {
+        if (IsGuestMode) return;
         var urls = Tabs
             .Where(t => t.Kind == TabKind.Web && !string.IsNullOrEmpty(t.Address))
             .Select(t => t.Address!)

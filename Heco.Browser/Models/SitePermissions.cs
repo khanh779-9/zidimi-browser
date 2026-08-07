@@ -37,6 +37,19 @@ public class SitePermissions
     public ContentPermission KeyboardLock { get; set; } = ContentPermission.Ask;
     public ContentPermission ProtectedMedia { get; set; } = ContentPermission.Ask;
     public ContentPermission HandTracking { get; set; } = ContentPermission.Ask;
+    public ContentPermission CameraPanTiltZoom { get; set; } = ContentPermission.Ask;
+    public ContentPermission CapturedSurfaceControl { get; set; } = ContentPermission.Ask;
+    public ContentPermission StorageAccess { get; set; } = ContentPermission.Ask;
+    public ContentPermission TopLevelStorageAccess { get; set; } = ContentPermission.Ask;
+    public ContentPermission DiskQuota { get; set; } = ContentPermission.Ask;
+    public ContentPermission VrSession { get; set; } = ContentPermission.Ask;
+    public ContentPermission ArSession { get; set; } = ContentPermission.Ask;
+    public ContentPermission RegisterProtocolHandler { get; set; } = ContentPermission.Ask;
+    public ContentPermission WebAppInstallation { get; set; } = ContentPermission.Ask;
+    public ContentPermission IdentityProvider { get; set; } = ContentPermission.Ask;
+    public ContentPermission LocalNetworkAccess { get; set; } = ContentPermission.Ask;
+    public ContentPermission LocalNetwork { get; set; } = ContentPermission.Ask;
+    public ContentPermission LoopbackNetwork { get; set; } = ContentPermission.Ask;
 
     /// <summary>When set, pop-ups (window.open / target=_blank) are blocked entirely.</summary>
     public bool BlockPopups { get; set; } = false;

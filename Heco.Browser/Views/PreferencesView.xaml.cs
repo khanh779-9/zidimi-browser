@@ -425,6 +425,19 @@ public partial class PreferencesView : UserControl
         Row(LanguageManager.Instance["Perm_KeyboardLock"], nameof(SitePermissions.KeyboardLock));
         Row(LanguageManager.Instance["Perm_ProtectedMedia"], nameof(SitePermissions.ProtectedMedia));
         Row(LanguageManager.Instance["Perm_HandTracking"], nameof(SitePermissions.HandTracking));
+        Row(LanguageManager.Instance["Perm_CameraPanTilt"], nameof(SitePermissions.CameraPanTiltZoom));
+        Row(LanguageManager.Instance["Perm_CapturedSurface"], nameof(SitePermissions.CapturedSurfaceControl));
+        Row(LanguageManager.Instance["Perm_StorageAccess"], nameof(SitePermissions.StorageAccess));
+        Row(LanguageManager.Instance["Perm_TopLevelStorage"], nameof(SitePermissions.TopLevelStorageAccess));
+        Row(LanguageManager.Instance["Perm_DiskQuota"], nameof(SitePermissions.DiskQuota));
+        Row(LanguageManager.Instance["Perm_Vr"], nameof(SitePermissions.VrSession));
+        Row(LanguageManager.Instance["Perm_Ar"], nameof(SitePermissions.ArSession));
+        Row(LanguageManager.Instance["Perm_ProtocolHandler"], nameof(SitePermissions.RegisterProtocolHandler));
+        Row(LanguageManager.Instance["Perm_WebAppInstall"], nameof(SitePermissions.WebAppInstallation));
+        Row(LanguageManager.Instance["Perm_IdentityProvider"], nameof(SitePermissions.IdentityProvider));
+        Row(LanguageManager.Instance["Perm_LocalNetworkAccess"], nameof(SitePermissions.LocalNetworkAccess));
+        Row(LanguageManager.Instance["Perm_LocalNetwork"], nameof(SitePermissions.LocalNetwork));
+        Row(LanguageManager.Instance["Perm_LoopbackNetwork"], nameof(SitePermissions.LoopbackNetwork));
 
         var chkPopups = MakeCheck(LanguageManager.Instance["Pref_BlockPopups"], AppSettings.Profile.SitePermissions.BlockPopups);
         chkPopups.Checked += (s, e) => { AppSettings.Profile.SitePermissions.BlockPopups = true; AppSettings.SaveAll(); };
