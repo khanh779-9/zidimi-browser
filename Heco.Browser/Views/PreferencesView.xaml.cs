@@ -462,8 +462,13 @@ public partial class PreferencesView : UserControl
         var allow = LanguageManager.Instance["Perm_Allow"];
         var block = LanguageManager.Instance["Perm_Block"];
 
-        void Row(string label, string key, string? cefKey = null)
+        void Row(string permKey, string key, string? cefKey = null)
         {
+            var label = LanguageManager.Instance[permKey];
+            var descKey = permKey + "_Desc";
+            var desc = LanguageManager.Instance[descKey];
+            if (desc == descKey) desc = string.Empty;
+
             var value = (ContentPermission)typeof(SitePermissions).GetProperty(key)!.GetValue(perms)!;
             var combo = MakeCombo(160, (int)value, ask, allow, block);
             combo.SelectionChanged += (s, e) =>
@@ -480,39 +485,41 @@ public partial class PreferencesView : UserControl
                     ctx.SetPreference("profile.default_content_setting_values." + cefKey, cefVal, out string err);
                 }
             };
-            panel.Children.Add(CreateSettingRow(label, "", combo));
+            panel.Children.Add(CreateSettingRow(label, desc, combo));
         }
 
-        Row(LanguageManager.Instance["Perm_Camera"], nameof(SitePermissions.Camera), "media_stream_camera");
-        Row(LanguageManager.Instance["Perm_Microphone"], nameof(SitePermissions.Microphone), "media_stream_mic");
-        Row(LanguageManager.Instance["Perm_Location"], nameof(SitePermissions.Geolocation), "geolocation");
-        Row(LanguageManager.Instance["Perm_Notifications"], nameof(SitePermissions.Notifications), "notifications");
-        Row(LanguageManager.Instance["Perm_Clipboard"], nameof(SitePermissions.Clipboard), "clipboard");
-        Row(LanguageManager.Instance["Perm_PointerLock"], nameof(SitePermissions.PointerLock), "mouselock");
-        Row(LanguageManager.Instance["Perm_Midi"], nameof(SitePermissions.MidiSysex), "midi_sysex");
-        Row(LanguageManager.Instance["Perm_FileSystem"], nameof(SitePermissions.FileSystemAccess), "file_system_write_guard");
-        Row(LanguageManager.Instance["Perm_IdleDetection"], nameof(SitePermissions.IdleDetection), "idle_detection");
-        Row(LanguageManager.Instance["Perm_LocalFonts"], nameof(SitePermissions.LocalFonts), "local_fonts");
-        Row(LanguageManager.Instance["Perm_MultipleDownloads"], nameof(SitePermissions.MultipleDownloads), "automatic_downloads");
-        Row(LanguageManager.Instance["Perm_WindowManagement"], nameof(SitePermissions.WindowManagement), "window_placement");
-        Row(LanguageManager.Instance["Perm_KeyboardLock"], nameof(SitePermissions.KeyboardLock));
-        Row(LanguageManager.Instance["Perm_ProtectedMedia"], nameof(SitePermissions.ProtectedMedia), "protected_media_identifier");
-        Row(LanguageManager.Instance["Perm_HandTracking"], nameof(SitePermissions.HandTracking));
-        Row(LanguageManager.Instance["Perm_CameraPanTilt"], nameof(SitePermissions.CameraPanTiltZoom));
-        Row(LanguageManager.Instance["Perm_CapturedSurface"], nameof(SitePermissions.CapturedSurfaceControl));
-        Row(LanguageManager.Instance["Perm_StorageAccess"], nameof(SitePermissions.StorageAccess));
-        Row(LanguageManager.Instance["Perm_TopLevelStorage"], nameof(SitePermissions.TopLevelStorageAccess));
-        Row(LanguageManager.Instance["Perm_DiskQuota"], nameof(SitePermissions.DiskQuota));
-        Row(LanguageManager.Instance["Perm_Vr"], nameof(SitePermissions.VrSession), "vr");
-        Row(LanguageManager.Instance["Perm_Ar"], nameof(SitePermissions.ArSession), "ar");
-        Row(LanguageManager.Instance["Perm_ProtocolHandler"], nameof(SitePermissions.RegisterProtocolHandler));
-        Row(LanguageManager.Instance["Perm_WebAppInstall"], nameof(SitePermissions.WebAppInstallation));
-        Row(LanguageManager.Instance["Perm_IdentityProvider"], nameof(SitePermissions.IdentityProvider));
-        Row(LanguageManager.Instance["Perm_LocalNetworkAccess"], nameof(SitePermissions.LocalNetworkAccess));
-        Row(LanguageManager.Instance["Perm_LocalNetwork"], nameof(SitePermissions.LocalNetwork));
-        Row(LanguageManager.Instance["Perm_LoopbackNetwork"], nameof(SitePermissions.LoopbackNetwork));
+        Row("Perm_Camera", nameof(SitePermissions.Camera), "media_stream_camera");
+        Row("Perm_Microphone", nameof(SitePermissions.Microphone), "media_stream_mic");
+        Row("Perm_Location", nameof(SitePermissions.Geolocation), "geolocation");
+        Row("Perm_Notifications", nameof(SitePermissions.Notifications), "notifications");
+        Row("Perm_Clipboard", nameof(SitePermissions.Clipboard), "clipboard");
+        Row("Perm_PointerLock", nameof(SitePermissions.PointerLock), "mouselock");
+        Row("Perm_Midi", nameof(SitePermissions.MidiSysex), "midi_sysex");
+        Row("Perm_FileSystem", nameof(SitePermissions.FileSystemAccess), "file_system_write_guard");
+        Row("Perm_IdleDetection", nameof(SitePermissions.IdleDetection), "idle_detection");
+        Row("Perm_LocalFonts", nameof(SitePermissions.LocalFonts), "local_fonts");
+        Row("Perm_MultipleDownloads", nameof(SitePermissions.MultipleDownloads), "automatic_downloads");
+        Row("Perm_WindowManagement", nameof(SitePermissions.WindowManagement), "window_placement");
+        Row("Perm_KeyboardLock", nameof(SitePermissions.KeyboardLock));
+        Row("Perm_ProtectedMedia", nameof(SitePermissions.ProtectedMedia), "protected_media_identifier");
+        Row("Perm_HandTracking", nameof(SitePermissions.HandTracking));
+        Row("Perm_CameraPanTilt", nameof(SitePermissions.CameraPanTiltZoom));
+        Row("Perm_CapturedSurface", nameof(SitePermissions.CapturedSurfaceControl));
+        Row("Perm_StorageAccess", nameof(SitePermissions.StorageAccess));
+        Row("Perm_TopLevelStorage", nameof(SitePermissions.TopLevelStorageAccess));
+        Row("Perm_DiskQuota", nameof(SitePermissions.DiskQuota));
+        Row("Perm_Vr", nameof(SitePermissions.VrSession), "vr");
+        Row("Perm_Ar", nameof(SitePermissions.ArSession), "ar");
+        Row("Perm_ProtocolHandler", nameof(SitePermissions.RegisterProtocolHandler));
+        Row("Perm_WebAppInstall", nameof(SitePermissions.WebAppInstallation));
+        Row("Perm_IdentityProvider", nameof(SitePermissions.IdentityProvider));
+        Row("Perm_LocalNetworkAccess", nameof(SitePermissions.LocalNetworkAccess));
+        Row("Perm_LocalNetwork", nameof(SitePermissions.LocalNetwork));
+        Row("Perm_LoopbackNetwork", nameof(SitePermissions.LoopbackNetwork));
 
-        var chkPopups = MakeCheck(LanguageManager.Instance["Pref_BlockPopups"], AppSettings.Profile.SitePermissions.BlockPopups);
+        var blockPopupsLabel = LanguageManager.Instance["Pref_BlockPopups"];
+        if (blockPopupsLabel == "Pref_BlockPopups") blockPopupsLabel = LanguageManager.Instance["Pref_BlockPopups"] != "Pref_BlockPopups" ? LanguageManager.Instance["Pref_BlockPopups"] : "Chặn cửa sổ bật lên";
+        var chkPopups = MakeCheck(blockPopupsLabel, AppSettings.Profile.SitePermissions.BlockPopups);
         chkPopups.Checked += (s, e) => { 
             AppSettings.Profile.SitePermissions.BlockPopups = true; 
             AppSettings.SaveAll(); 
@@ -525,14 +532,24 @@ public partial class PreferencesView : UserControl
             var ctx = App.RequestContexts.GetProfileContext(AppSettings.Global.CurrentProfile) ?? Cef.GetGlobalRequestContext();
             ctx.SetPreference("profile.default_content_setting_values.popups", 1, out string err);
         };
-        panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_Popups"], "", chkPopups));
+        var popupDesc = LanguageManager.Instance["Pref_Popups_Desc"];
+        if (popupDesc == "Pref_Popups_Desc") popupDesc = string.Empty;
+        var popupTitle = LanguageManager.Instance["Pref_Popups"];
+        if (popupTitle == "Pref_Popups") popupTitle = "Pop-up";
+        panel.Children.Add(CreateSettingRow(popupTitle, popupDesc, chkPopups));
 
-        var btnExceptions = MakeButton(LanguageManager.Instance["Pref_ManageExceptions"] ?? "Manage Exceptions", 180);
+        var btnExceptionsText = LanguageManager.Instance["Pref_ManageExceptions"];
+        if (btnExceptionsText == "Pref_ManageExceptions") btnExceptionsText = "Quản lý ngoại lệ";
+        var btnExceptions = MakeButton(btnExceptionsText, 180);
         btnExceptions.Click += (s, e) => {
             var w = new SiteExceptionsWindow { Owner = Window.GetWindow(this) };
             w.ShowDialog();
         };
-        panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_Exceptions"] ?? "Site Exceptions", "", btnExceptions));
+        var excDesc = LanguageManager.Instance["Pref_Exceptions_Desc"];
+        if (excDesc == "Pref_Exceptions_Desc") excDesc = string.Empty;
+        var excTitle = LanguageManager.Instance["Pref_Exceptions"];
+        if (excTitle == "Pref_Exceptions") excTitle = "Ngoại lệ trang web";
+        panel.Children.Add(CreateSettingRow(excTitle, excDesc, btnExceptions));
 
         return panel;
     }
@@ -728,14 +745,14 @@ public partial class PreferencesView : UserControl
     {
         var border = new Border { Style = (Style)FindResource("CardPanel"), Margin = new Thickness(0, 0, 0, 12) };
         var grid = new Grid();
-        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
         grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+        grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-        var stack = new StackPanel();
+        var stack = new StackPanel { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 16, 0) };
         if (!string.IsNullOrEmpty(label))
-            stack.Children.Add(new TextBlock { Text = label, FontSize = 14, FontWeight = FontWeights.SemiBold, Foreground = (Brush)FindResource("Ink100Brush") });
+            stack.Children.Add(new TextBlock { Text = label, FontSize = 14, FontWeight = FontWeights.SemiBold, Foreground = (Brush)FindResource("Ink100Brush"), TextWrapping = TextWrapping.Wrap });
         if (!string.IsNullOrEmpty(desc))
-            stack.Children.Add(new TextBlock { Text = desc, FontSize = 12, Foreground = (Brush)FindResource("Ink400Brush"), Margin = new Thickness(0, 2, 0, 0) });
+            stack.Children.Add(new TextBlock { Text = desc, FontSize = 12, Foreground = (Brush)FindResource("Ink400Brush"), Margin = new Thickness(0, 2, 0, 0), TextWrapping = TextWrapping.Wrap });
 
         grid.Children.Add(stack);
         grid.Children.Add(control);
@@ -750,7 +767,10 @@ public partial class PreferencesView : UserControl
         {
             Grid.SetColumn(control, 1);
             if (control is FrameworkElement fe)
+            {
                 fe.HorizontalAlignment = HorizontalAlignment.Right;
+                fe.VerticalAlignment = VerticalAlignment.Center;
+            }
         }
 
         border.Child = grid;

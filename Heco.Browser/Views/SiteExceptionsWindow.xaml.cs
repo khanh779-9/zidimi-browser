@@ -69,7 +69,9 @@ public partial class SiteExceptionsWindow : Window
                     Grid.SetColumn(stateText, 1);
                     row.Children.Add(stateText);
 
-                    var btnRemove = new HecoButton { Content = "Remove", Padding = new Thickness(8,4,8,4) };
+                    var removeText = LanguageManager.Instance["ProfileManager_Delete"];
+                    if (removeText == "ProfileManager_Delete") removeText = "Xóa";
+                    var btnRemove = new HecoButton { Content = removeText, Padding = new Thickness(8,4,8,4) };
                     Grid.SetColumn(btnRemove, 2);
                     btnRemove.Click += (s, e) => 
                     {
@@ -86,9 +88,11 @@ public partial class SiteExceptionsWindow : Window
 
         if (!hasAny)
         {
+            var noExcText = LanguageManager.Instance["Pref_NoExceptions"];
+            if (noExcText == "Pref_NoExceptions") noExcText = "Không tìm thấy ngoại lệ quyền trang web nào.";
             ExceptionsPanel.Children.Add(new TextBlock 
             { 
-                Text = LanguageManager.Instance["Pref_NoExceptions"] ?? "No site exceptions found.", 
+                Text = noExcText, 
                 Foreground = (Brush)FindResource("Ink400Brush"),
                 FontStyle = FontStyles.Italic,
                 Margin = new Thickness(0, 10, 0, 0)
