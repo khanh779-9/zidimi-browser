@@ -399,3 +399,9 @@ Scheme_NewTabTitle=Tab mới
 Scheme_NewTabBody=Bạn vừa mở một tab mới. Nhập địa chỉ hoặc từ khóa để bắt đầu.
 Scheme_NotFoundTitle=Không tìm thấy trang
 Scheme_NotFoundBody=Trang nội bộ '{0}' không tồn tại.
+
+[ProfilePicker]
+ProfilePicker_Title=Ai sẽ sử dụng Heco Browser?
+ProfilePicker_GuestMode=Chế độ khách
+ProfilePicker_ShowOnStartup=Hiển thị khi khởi động
+ProfilePicker_Add=Thêm

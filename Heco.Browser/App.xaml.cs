@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Windows;
 using CefSharp;
 using CefSharp.Wpf;
@@ -51,6 +51,38 @@ public partial class App : Application
         // then initialize CEF at low priority so the window doesn't stay "frozen white" for long.
         base.OnStartup(e);
 
+        bool showPicker = true;
+        try
+        {
+            if (File.Exists(UserDataPaths.LocalStatePath))
+            {
+                var json = File.ReadAllText(UserDataPaths.LocalStatePath);
+                if (System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.Nodes.JsonNode>(json) is System.Text.Json.Nodes.JsonObject root &&
+                    root.TryGetPropertyValue("profile", out var profileNode) &&
+                    profileNode is System.Text.Json.Nodes.JsonObject profileObj)
+                {
+                    if (profileObj.TryGetPropertyValue("show_picker_on_startup", out var showPickerNode) && showPickerNode != null)
+                    {
+                        showPicker = showPickerNode.GetValue<bool>();
+                    }
+                }
+            }
+        }
+        catch { }
+
+        if (showPicker)
+        {
+            var picker = new Heco.Browser.Views.ProfileSelectorWindow();
+            picker.Show();
+        }
+        else
+        {
+            InitializeBrowser();
+        }
+    }
+
+    public void InitializeBrowser()
+    {
         var history = new HistoryService();
         var bookmarks = new BookmarkService();
         var downloads = new DownloadService();
@@ -58,6 +90,10 @@ public partial class App : Application
         ViewModel = new MainViewModel(history, bookmarks, downloads);
 
         TrayIcon = new TrayIconManager();
+
+        var mainWindow = new MainWindow();
+        Application.Current.MainWindow = mainWindow;
+        mainWindow.Show();
 
         Dispatcher.BeginInvoke(InitializeCefAfterStart,
             System.Windows.Threading.DispatcherPriority.ApplicationIdle);

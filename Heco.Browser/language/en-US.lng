@@ -413,3 +413,9 @@ Scheme_NewTabTitle=New Tab
 Scheme_NewTabBody=You just opened a new tab. Type an address or search query to begin.
 Scheme_NotFoundTitle=Page not found
 Scheme_NotFoundBody=The internal page '{0}' does not exist.
+
+[ProfilePicker]
+ProfilePicker_Title=Who's using Heco Browser?
+ProfilePicker_GuestMode=Guest Mode
+ProfilePicker_ShowOnStartup=Show on startup
+ProfilePicker_Add=Add
