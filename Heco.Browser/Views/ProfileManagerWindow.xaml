@@ -9,7 +9,7 @@
         Title="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[ProfileManager_Title]}" 
         Height="500" Width="450"
         WindowStartupLocation="CenterOwner"
-        Background="{DynamicResource WindowBackgroundBrush}">
+        Background="{DynamicResource HecoBgSurfaceBrush}">
     
     <Grid Margin="20">
         <Grid.RowDefinitions>
@@ -63,17 +63,17 @@
                             <TextBlock Text="{Binding Name}" FontSize="15" FontWeight="SemiBold" Foreground="{DynamicResource Ink100Brush}" />
                             <TextBlock Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[ProfileManager_Active]}" 
                                        FontSize="12" Foreground="{DynamicResource Ink400Brush}" 
-                                       Visibility="{Binding IsActive, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                       Visibility="{Binding IsActive, Converter={StaticResource BoolToVisibilityConverter}}" />
                         </StackPanel>
 
                         <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                             <controls:HecoButton Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[ProfileManager_Switch]}" 
                                                  Style="{DynamicResource HecoButtonSecondary}"
                                                  Margin="0,0,8,0"
-                                                 Visibility="{Binding IsNotActive, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                                 Visibility="{Binding IsNotActive, Converter={StaticResource BoolToVisibilityConverter}}"
                                                  Click="Switch_Click" Tag="{Binding}" />
                             <Button Background="Transparent" BorderThickness="0" Cursor="Hand"
-                                    Visibility="{Binding IsNotActive, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                    Visibility="{Binding IsNotActive, Converter={StaticResource BoolToVisibilityConverter}}"
                                     Click="Delete_Click" Tag="{Binding}" ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[ProfileManager_Delete]}">
                                 <Path Width="16" Height="16" Stretch="Uniform" Fill="#EF4444"
                                       Data="M19 7l-.867 12.142A2 2 0 0 1 16.138 21H7.862a2 2 0 0 1-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v3M4 7h16" />

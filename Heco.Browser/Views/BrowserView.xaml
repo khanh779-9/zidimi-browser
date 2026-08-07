@@ -30,7 +30,7 @@
                 Padding="12,6,12,6">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="70" />
                     
                     <ColumnDefinition Width="Auto" />
                     
@@ -260,18 +260,16 @@
                     <Button Style="{DynamicResource ToolIconButton}" Width="34" Height="34"
                             x:Name="ExtensionsBtn" Click="ExtensionsBtn_Click"
                             ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_ExtensionsTooltip]}">
-                        <Path Width="17" Height="17" Stretch="Uniform" Fill="{DynamicResource Ink200Brush}"
-                              Stroke="{DynamicResource Ink200Brush}" StrokeThickness="1.5"
-                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
-                              Data="M10 2 L14 2 v3 a1 1 0 0 0 2 0 V2 h3 v3 a1 1 0 0 0 2 0 V2 h1 a2 2 0 0 1 2 2 v3 a1 1 0 0 0-2 0 V5 a1 1 0 0 0-2 0 v3 h1 v3 a1 1 0 0 0-2 0 V8 h-3 v2 a1 1 0 0 0 2 0 v3 h1 a1 1 0 0 0-2 0 h-2 a1 1 0 0 0-2 0 h-1 v3 a1 1 0 0 0 2 0 h1 v-3 h3 v3 a1 1 0 0 0 2 0 v1 h-6 a2 2 0 0 1-2-2 v-4 Z" />
+                        <Path Width="17" Height="17" Stretch="Uniform" Fill="{DynamicResource Ink300Brush}"
+                              Data="M20.5 11H19V7a2 2 0 0 0-2-2h-4V3.5A2.5 2.5 0 0 0 10.5 1 2.5 2.5 0 0 0 8 3.5V5H4a2 2 0 0 0-2 2v4h1.5a2.5 2.5 0 0 1 0 5H2v3.8a2 2 0 0 0 2 2h4c0-1.55 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5h4a2 2 0 0 0 2-2v-4h1.5a2.5 2.5 0 0 1 0-5z" />
                     </Button>
                 </StackPanel>
 
-                <Button Grid.Column="4" Style="{DynamicResource ToolIconButton}"
+                <Button Grid.Column="4" Style="{DynamicResource ToolIconButton}" SnapsToDevicePixels="True"
                         x:Name="AvatarBtn" Click="Avatar_Click"
                         ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_AvatarTooltip]}">
                     <Grid Width="22" Height="22">
-                        <Ellipse x:Name="AvatarFallback" Fill="{DynamicResource HecoPurpleBrush}" />
+                        <Ellipse x:Name="AvatarFallback" Fill="{DynamicResource HecoPurpleBrush}" SnapsToDevicePixels="True" />
                         <TextBlock x:Name="AvatarInitial" Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Browser_HecoInitial]}"
                                   Foreground="{DynamicResource OnAccentBrush}" FontSize="11" FontWeight="SemiBold"
                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
@@ -338,7 +336,7 @@
                        CornerRadius="8"
                        MinWidth="40">
                     <StackPanel Margin="6">
-<StackPanel Orientation="Horizontal" Margin="8,8,8,6">
+                    <StackPanel Orientation="Horizontal" Margin="8,8,8,6">
                             <Grid Width="32" Height="32">
                                 <Ellipse x:Name="AvatarFallback2" Fill="{DynamicResource HecoPurpleBrush}" />
                                 <TextBlock x:Name="AvatarInitial2" Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Browser_HecoInitial]}"
