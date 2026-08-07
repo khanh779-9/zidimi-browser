@@ -3,8 +3,8 @@ using System.Windows;
 namespace Heco.Browser.Controls;
 
 /// <summary>
-/// Custom RadioButton theo theme Heco: vòng tròn indicator tím + nhãn.
-/// Giữ đầy đủ ngữ nghĩa RadioButton gốc (GroupName, IsChecked, Checked/Unchecked).
+/// Custom RadioButton themed for Heco: a purple indicator circle plus a label.
+/// Keeps the full semantics of the raw RadioButton (GroupName, IsChecked, Checked/Unchecked).
 /// </summary>
 public class HecoRadioButton : System.Windows.Controls.RadioButton
 {

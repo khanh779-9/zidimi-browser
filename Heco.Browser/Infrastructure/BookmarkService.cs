@@ -1,12 +1,13 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using Heco.Browser.Models;
 using System.IO;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Windows;
 
 namespace Heco.Browser.Infrastructure;
 
-/// <summary>Bookmark service có persistence JSON theo profile (User Data\&lt;profile&gt;\Bookmarks — giống Chrome).</summary>
+/// <summary>Bookmark service with per-profile JSON persistence (User Data\&lt;profile&gt;\Bookmarks — like Chrome).</summary>
 public sealed class BookmarkService
 {
     private string _profileName = AppSettings.Global.CurrentProfile;
@@ -20,7 +21,7 @@ public sealed class BookmarkService
         Load();
     }
 
-    /// <summary>Chuyển sang profile khác — tải lại bookmarks của profile đó.</summary>
+    /// <summary>Switch to another profile — reload that profile's bookmarks.</summary>
     public void SwitchProfile(string profileName)
     {
         if (string.IsNullOrWhiteSpace(profileName) || profileName == _profileName) return;
@@ -53,13 +54,40 @@ public sealed class BookmarkService
     {
         try
         {
-            MigrateLegacyJson();
             if (!File.Exists(DataFile)) return;
             var json = File.ReadAllText(DataFile);
-            var list = JsonSerializer.Deserialize<List<Bookmark>>(json) ?? new();
-            foreach (var b in list) Items.Add(b);
+            var root = JsonNode.Parse(json);
+            var roots = root?["roots"];
+            if (roots != null)
+            {
+                ExtractBookmarks(roots["bookmark_bar"]);
+                ExtractBookmarks(roots["other"]);
+                ExtractBookmarks(roots["synced"]);
+            }
         }
         catch { /* ignore corrupted file */ }
+    }
+
+    private void ExtractBookmarks(JsonNode? folder)
+    {
+        var children = folder?["children"] as JsonArray;
+        if (children == null) return;
+        foreach (var child in children)
+        {
+            if (child?["type"]?.GetValue<string>() == "url")
+            {
+                var bm = new Bookmark
+                {
+                    Url = child["url"]?.GetValue<string>() ?? "",
+                    Title = child["name"]?.GetValue<string>() ?? ""
+                };
+                Items.Add(bm);
+            }
+            else if (child?["type"]?.GetValue<string>() == "folder")
+            {
+                ExtractBookmarks(child);
+            }
+        }
     }
 
     public void Save()
@@ -67,23 +95,72 @@ public sealed class BookmarkService
         try
         {
             UserDataPaths.EnsureProfileDir(_profileName);
-            var json = JsonSerializer.Serialize(Items.ToList());
-            File.WriteAllText(DataFile, json);
+            JsonNode? rootNode = null;
+            if (File.Exists(DataFile))
+            {
+                try { rootNode = JsonNode.Parse(File.ReadAllText(DataFile)); } catch { }
+            }
+            
+            if (rootNode == null)
+            {
+                rootNode = new JsonObject
+                {
+                    ["version"] = 1,
+                    ["roots"] = new JsonObject
+                    {
+                        ["bookmark_bar"] = new JsonObject
+                        {
+                            ["id"] = "1",
+                            ["name"] = "Bookmarks bar",
+                            ["type"] = "folder",
+                            ["children"] = new JsonArray()
+                        },
+                        ["other"] = new JsonObject
+                        {
+                            ["id"] = "2",
+                            ["name"] = "Other bookmarks",
+                            ["type"] = "folder",
+                            ["children"] = new JsonArray()
+                        },
+                        ["synced"] = new JsonObject
+                        {
+                            ["id"] = "3",
+                            ["name"] = "Mobile bookmarks",
+                            ["type"] = "folder",
+                            ["children"] = new JsonArray()
+                        }
+                    }
+                };
+            }
+            
+            // Replace the bookmark_bar children
+            var children = new JsonArray();
+            int id = 10;
+            foreach (var b in Items)
+            {
+                children.Add(new JsonObject
+                {
+                    ["id"] = (id++).ToString(),
+                    ["name"] = b.Title,
+                    ["type"] = "url",
+                    ["url"] = b.Url,
+                    ["guid"] = Guid.NewGuid().ToString()
+                });
+            }
+            
+            var roots = rootNode["roots"] as JsonObject;
+            if (roots != null)
+            {
+                var bbar = roots["bookmark_bar"] as JsonObject;
+                if (bbar != null)
+                {
+                    bbar["children"] = children;
+                }
+            }
+            
+            File.WriteAllText(DataFile, rootNode.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
         }
         catch { /* ignore write errors */ }
-    }
-
-    /// <summary>Di chuyển bookmarks JSON cũ (nếu migration chưa rename kịp) sang file mới.</summary>
-    private void MigrateLegacyJson()
-    {
-        try
-        {
-            var dir = UserDataPaths.ProfileDir(_profileName);
-            var oldFile = System.IO.Path.Combine(dir, "Bookmarks.migrate");
-            if (File.Exists(oldFile) && !File.Exists(DataFile))
-                File.Move(oldFile, DataFile);
-        }
-        catch { }
     }
 }
 

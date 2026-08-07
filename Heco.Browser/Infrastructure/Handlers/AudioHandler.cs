@@ -5,8 +5,8 @@ using CefSharp.Structs;
 namespace Heco.Browser.Infrastructure.Handlers;
 
 /// <summary>
-/// Theo dõi trạng thái phát âm thanh của tab (spec 10.4 — chỉ báo âm thanh).
-/// Đếm số luồng audio đang chạy; đang chạy &gt; 0 thì báo đang phát.
+/// Tracks the tab's audio playback state (spec 10.4 — audio indicator).
+/// Counts active audio streams; if any are running, reports that audio is playing.
 /// </summary>
 public sealed class AudioHandler : CefSharp.Handler.AudioHandler
 {
@@ -17,7 +17,7 @@ public sealed class AudioHandler : CefSharp.Handler.AudioHandler
     protected override bool GetAudioParameters(IWebBrowser browserControl, IBrowser browser,
         ref AudioParameters parameters)
     {
-        // Cho phép nhận dữ liệu audio (để biết khi nào bắt đầu/dừng).
+        // Allow receiving audio data (so we know when playback starts/stops).
         return true;
     }
 
@@ -31,7 +31,7 @@ public sealed class AudioHandler : CefSharp.Handler.AudioHandler
     protected override void OnAudioStreamPacket(IWebBrowser browserControl, IBrowser browser,
         IntPtr data, int noOfFrames, long pts)
     {
-        // Không cần xử lý dữ liệu thô — chỉ cần biết trạng thái.
+        // No need to process raw data — we only need the state.
     }
 
     protected override void OnAudioStreamStopped(IWebBrowser browserControl, IBrowser browser)

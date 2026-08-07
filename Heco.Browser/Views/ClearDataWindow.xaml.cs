@@ -37,11 +37,11 @@ namespace Heco.Browser.Views
                 await Dispatcher.BeginInvoke(() => vm.ClearHistoryCommand.Execute(null));
             }
 
-            // 2) Bookmarks — ClearDataWindow chỉ xoá khi người dùng chọn Cookies (như Chrome gộp);
-            // History đã có History. We won't touch bookmarks từ cửa sổ này, theo UX Chrome.
+            // 2) Bookmarks — ClearDataWindow only clears them when the user selects Cookies (like Chrome combines);
+            // History is already handled separately. We won't touch bookmarks from this window, following Chrome's UX.
             // (Skipping bookmark removal intentionally.)
 
-            // 3) Cookies + cache qua CEF request context
+            // 3) Cookies + cache via the CEF request context
             var profile = AppSettings.Global.CurrentProfile;
             var context = App.RequestContexts.GetProfileContext(profile) ?? Cef.GetGlobalRequestContext();
 
@@ -58,7 +58,7 @@ namespace Heco.Browser.Views
                 context.ClearHttpAuthCredentials(null);
             }
 
-            await Task.Delay(300); // Cho UI feedback
+            await Task.Delay(300); // Give the UI feedback time
             
             HecoMessageBox.Show(LanguageManager.Instance["Clear_DataCleared"], LanguageManager.Instance["Clear_Success"], HecoMessageBoxButton.OK, HecoMessageBoxImage.Success, this);
             Close();

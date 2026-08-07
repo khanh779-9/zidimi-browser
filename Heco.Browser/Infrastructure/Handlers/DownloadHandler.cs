@@ -6,8 +6,8 @@ using Heco.Browser.Models;
 namespace Heco.Browser.Infrastructure.Handlers;
 
 /// <summary>
-/// Tracking download — lưu entry vào collection để UI Downloads panel hiển thị
-/// (spec 11.2 — IDownloadHandler). Test chỉ log; UI đầy đủ ở phase 2B.
+/// Tracks downloads — stores entries in a collection so the Downloads panel UI can display them
+/// (spec 11.2 — IDownloadHandler). Tests only log; full UI comes in phase 2B.
 /// </summary>
 public sealed class DownloadHandler : IDownloadHandler
 {
@@ -38,7 +38,7 @@ public sealed class DownloadHandler : IDownloadHandler
 
         string finalPath = entry.FullPath;
 
-        // Nếu AppSettings yêu cầu hỏi nơi lưu → hiển thị SaveFileDialog (trên UI thread).
+        // If AppSettings asks where to save, show a SaveFileDialog (on the UI thread).
         if (AppSettings.Profile.AskBeforeSave)
         {
             System.Windows.Application.Current?.Dispatcher.Invoke(() =>
@@ -64,7 +64,7 @@ public sealed class DownloadHandler : IDownloadHandler
         }
         else
         {
-            // Tự lưu vào DownloadPath với tên file đề nghị.
+            // Save straight into DownloadPath using the suggested file name.
             try
             {
                 System.IO.Directory.CreateDirectory(AppSettings.Profile.DownloadPath);

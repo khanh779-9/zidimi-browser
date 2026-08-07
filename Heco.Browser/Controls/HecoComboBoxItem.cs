@@ -1,8 +1,8 @@
 namespace Heco.Browser.Controls;
 
 /// <summary>
-/// Helper để thêm item vào <see cref="HecoComboBox"/> từ code-behind,
-/// giống <c>ComboBoxItem</c> gốc: có Content và IsSelected.
+/// Helper for adding items to a <see cref="HecoComboBox"/> from code-behind,
+/// mirroring the raw <c>ComboBoxItem</c>: it has a Content and an IsSelected property.
 /// </summary>
 public sealed class HecoComboBoxItem
 {

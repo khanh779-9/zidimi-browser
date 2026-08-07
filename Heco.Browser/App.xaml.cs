@@ -4,6 +4,7 @@ using CefSharp;
 using CefSharp.Wpf;
 using Heco.Browser.Controls;
 using Heco.Browser.Infrastructure;
+using Heco.Browser.Infrastructure.Handlers;
 
 using Heco.Browser.Models;
 
@@ -15,7 +16,7 @@ public partial class App : Application
     public static RequestContextFactory RequestContexts { get; private set; } = null!;
     public static TrayIconManager? TrayIcon { get; private set; }
 
-    /// <summary>true khi CEF đã init xong — trước đó không được tạo ChromiumWebBrowser nào.</summary>
+    /// <summary>true once CEF has finished initializing — no ChromiumWebBrowser may be created before that.</summary>
     public static bool CefReady { get; private set; }
     public static event Action? CefReadyChanged;
 
@@ -24,9 +25,9 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
-        // Phải nạp cấu hình và theme trước để nếu gọi HecoMessageBox (do lỗi hay mutex) thì không bị trong suốt
-        // Migration trước khi Load để dữ liệu app còn chiếm tên file Chromium
-        // được chuyển sang heco_* trước khi AppSettings.Load đọc (và trước khi CEF mở profile).
+// Config and theme must be loaded first so that if HecoMessageBox is shown (due to an error or the mutex), it isn't transparent.
+        // Migrate before Load so that app data still holding the Chromium file names is
+        // moved to heco_* before AppSettings.Load reads it (and before CEF opens the profile).
         UserDataPaths.MigrateLegacyData();
         AppSettings.Load();
         UserDataPaths.RegisterProfiles(AppSettings.Global.Profiles);
@@ -35,7 +36,7 @@ public partial class App : Application
 
         if (!SingleInstanceMutex.WaitOne(0, false))
         {
-            // Đã có instance Heco.Browser đang chạy — CEF không cho 2 instance dùng chung cache.
+            // A Heco.Browser instance is already running — CEF doesn't allow two instances to share cache.
             HecoMessageBox.Show(LanguageManager.Instance["App_AlreadyRunning"],
                 "Heco Browser", HecoMessageBoxButton.OK, HecoMessageBoxImage.Information);
             Shutdown();
@@ -46,14 +47,15 @@ public partial class App : Application
         AppDomain.CurrentDomain.UnhandledException += OnDomainException;
         var dummy = LanguageManager.Instance; // Initialize LanguageManager
 
-        // Cho WPF tạo & hiện MainWindow trước (giờ đây nhẹ vì browser tạo lazy),
-        // rồi mới khởi tạo CEF ở độ ưu tiên thấp để cửa sổ không bị "treo trắng" lâu.
+        // Let WPF create and show MainWindow first (now light because the browser is created lazily),
+        // then initialize CEF at low priority so the window doesn't stay "frozen white" for long.
         base.OnStartup(e);
 
         var history = new HistoryService();
         var bookmarks = new BookmarkService();
+        var downloads = new DownloadService();
         RequestContexts = new RequestContextFactory();
-        ViewModel = new MainViewModel(history, bookmarks);
+        ViewModel = new MainViewModel(history, bookmarks, downloads);
 
         TrayIcon = new TrayIconManager();
 
@@ -87,17 +89,27 @@ public partial class App : Application
 
     private static void InitializeCef()
     {
-        // CefSharp phải được khởi tạo trước khi dùng bất kỳ control ChromiumWebBrowser nào.
+        // CefSharp must be initialized before using any ChromiumWebBrowser control.
         var cachePath = UserDataPaths.SharedCacheDir;
         Directory.CreateDirectory(cachePath);
 
-        var settings = new CefSettings
+var settings = new CefSettings
         {
             CachePath = cachePath,
             LogSeverity = LogSeverity.Error,
         };
-        // Bỏ qua GPU blacklist để chạy ổn định trên nhiều GPU khác nhau.
-        // CefSharp 150 tự thêm một số switch mặc định nên phải dùng indexer để tránh trùng key.
+        // Custom scheme "heco://" (spec 11.2 — ISchemeHandlerFactory): lightweight internal pages.
+        settings.RegisterScheme(new CefCustomScheme
+        {
+            SchemeName = "heco",
+            IsStandard = true,
+            IsSecure = true,
+            IsCorsEnabled = true,
+            IsLocal = true,
+            SchemeHandlerFactory = new HecoSchemeHandlerFactory(),
+        });
+// Bypass the GPU blacklist so it runs stably across many GPUs.
+        // CefSharp 150 adds some default switches itself, so use the indexer to avoid duplicate keys.
         if (!AppSettings.Global.EnableGpu)
         {
             settings.CefCommandLineArgs["disable-gpu"] = "1";
@@ -106,7 +118,7 @@ public partial class App : Application
         
         if (AppSettings.Global.EnhanceVideos)
         {
-            // Bật cờ tối ưu hóa giải mã video của Chromium
+            // Enable Chromium's optimized video decoding flag
             settings.CefCommandLineArgs["enable-features"] = "HardwareSecureDecryption,Vulkan";
         }
 
@@ -115,16 +127,16 @@ public partial class App : Application
             settings.CefCommandLineArgs["no-proxy-server"] = "1";
         }
 
-        // Chính sách Cookie 3rd-party (spec 8.3): CefSharp 150 không có RequestContextSettings.AcceptThirdPartyCookies
-        // nên dùng command-line switch của Chromium dưới đây áp dụng cho toàn bộ context.
+// 3rd-party cookie policy (spec 8.3): CefSharp 150 has no RequestContextSettings.AcceptThirdPartyCookies,
+        // so use the Chromium command-line switch below, applied to the whole context.
         if (AppSettings.Profile.BlockThirdPartyCookies)
         {
             settings.CefCommandLineArgs["block-3rd-party-cookies"] = "1";
-            // Tắt enums "allow" 3rd-party cookies để ép chặn cứng.
+            // Turn off the "allow" 3rd-party cookies enum to force a hard block.
             settings.CefCommandLineArgs["disable-3rd-party-cookies"] = "1";
         }
 
-        // Do Not Track: Chromium command-line switch - áp dụng cho mọi request.
+        // Do Not Track: Chromium command-line switch — applies to every request.
         if (AppSettings.Profile.SendDoNotTrack)
         {
             settings.CefCommandLineArgs["enable-do-not-track"] = "1";

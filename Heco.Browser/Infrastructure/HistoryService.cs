@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
@@ -10,8 +10,8 @@ using Microsoft.Data.Sqlite;
 namespace Heco.Browser.Infrastructure;
 
 /// <summary>
-/// Lưu trữ lịch sử duyệt web dạng SQLite theo schema Chrome (User Data\&lt;profile&gt;\History).
-/// Timestamp dùng WebKit time (microseconds kể từ 1601-01-01) như Chrome.
+/// Stores browsing history as SQLite using Chrome's schema (User Data\&lt;profile&gt;\History).
+/// Timestamps use WebKit time (microseconds since 1601-01-01) like Chrome.
 /// </summary>
 public sealed class HistoryService
 {
@@ -26,7 +26,7 @@ public sealed class HistoryService
         Load();
     }
 
-    /// <summary>Chuyển sang profile khác — tải lại lịch sử của profile đó.</summary>
+    /// <summary>Switches to another profile — reloads that profile's history.</summary>
     public void SwitchProfile(string profileName)
     {
         if (string.IsNullOrWhiteSpace(profileName) || profileName == _profileName) return;
@@ -37,91 +37,27 @@ public sealed class HistoryService
 
     public void Add(string url, string title)
     {
-        if (string.IsNullOrWhiteSpace(url)) return;
-        try
-        {
-            MigrateLegacyJson();
-            UserDataPaths.EnsureProfileDir(_profileName);
-            using var conn = SqliteHelper.Open(DbPath);
-            EnsureSchema(conn);
-            var now = DateTime.UtcNow;
-            var chromeTime = SqliteHelper.ToChromeTime(now);
-
-            // Tìm url có sẵn → tăng visit_count + cập nhật last_visit_time
-            long urlId;
-            using (var find = conn.CreateCommand())
-            {
-                find.CommandText = "SELECT id FROM urls WHERE url=$u;";
-                find.Parameters.AddWithValue("$u", url);
-                var id = find.ExecuteScalar();
-                if (id is not null && id != DBNull.Value)
-                {
-                    urlId = Convert.ToInt64(id);
-                    SqliteHelper.Exec(conn,
-                        "UPDATE urls SET visit_count = visit_count + 1, last_visit_time = $t, title = $title WHERE id = $id;",
-                        ("$t", chromeTime), ("$title", title), ("$id", urlId));
-                }
-                else
-                {
-                    SqliteHelper.Exec(conn,
-                        "INSERT INTO urls(url, title, visit_count, typed_count, last_visit_time, hidden) VALUES ($u,$t,1,0,$ct,0);",
-                        ("$u", url), ("$t", title), ("$ct", chromeTime));
-                    using var last = conn.CreateCommand();
-                    last.CommandText = "SELECT last_insert_rowid();";
-                    urlId = Convert.ToInt64(last.ExecuteScalar());
-                }
-            }
-
-            SqliteHelper.Exec(conn,
-                "INSERT INTO visits(url, visit_time, from_visit, transition, segment_id, visit_duration) VALUES ($id,$t,0,1,NULL,0);",
-                ("$id", urlId), ("$t", chromeTime));
-
-            var entry = new HistoryEntry
-            {
-                Url = url,
-                Title = string.IsNullOrWhiteSpace(title) ? url : title,
-                VisitedAt = now.ToLocalTime(),
-                Id = urlId,
-            };
-            Application.Current?.Dispatcher.Invoke(() => Entries.Insert(0, entry));
-        }
-        catch { }
+        // CEF handles history natively.
     }
 
     public void Remove(HistoryEntry entry)
     {
-        if (entry == null) return;
-        try
-        {
-            MigrateLegacyJson();
-            using var conn = SqliteHelper.Open(DbPath);
-            EnsureSchema(conn);
-            SqliteHelper.Exec(conn, "DELETE FROM visits WHERE url=$id; DELETE FROM urls WHERE id=$id;", ("$id", entry.Id));
+        // CEF handles history natively. Read-only from UI.
+        if (entry != null)
             Application.Current?.Dispatcher.Invoke(() => Entries.Remove(entry));
-        }
-        catch { }
     }
 
     public void Clear()
     {
-        try
-        {
-            MigrateLegacyJson();
-            using var conn = SqliteHelper.Open(DbPath);
-            EnsureSchema(conn);
-            SqliteHelper.Exec(conn, "DELETE FROM visits; DELETE FROM urls;");
-            Application.Current?.Dispatcher.Invoke(Entries.Clear);
-        }
-        catch { }
+        // CEF handles history natively. Read-only from UI.
+        Application.Current?.Dispatcher.Invoke(Entries.Clear);
     }
 
     private void Load()
     {
         try
         {
-            MigrateLegacyJson();
             using var conn = SqliteHelper.Open(DbPath);
-            EnsureSchema(conn);
 
             var list = new System.Collections.Generic.List<HistoryEntry>();
             using var cmd = conn.CreateCommand();
@@ -249,7 +185,7 @@ public sealed class HistoryService
         try { SqliteHelper.SetMeta(conn, "version", "24"); } catch { }
     }
 
-    /// <summary>Chuyển History.json cũ (bố cục JSON trước đây) sang SQLite rồi xoá file migrate.</summary>
+    /// <summary>Migrates the old History.json (the previous JSON layout) to SQLite, then deletes the migrate file.</summary>
     private void MigrateLegacyJson()
     {
         try

@@ -79,8 +79,8 @@ namespace Heco.Browser.Infrastructure
                 }
             }
 
-            // Load last used language: ưu tiên AppSettings.DisplayLanguage (nguồn chính),
-            // fallback về config.ini cũ rồi mới đến mặc định.
+// Load last used language: prefer AppSettings.DisplayLanguage (the primary source),
+            // fall back to the old config.ini, then to the default.
             string lastLangCode = Heco.Browser.Models.AppSettings.Global.DisplayLanguage;
             if (string.IsNullOrEmpty(lastLangCode) || lastLangCode.Length > 10)
                 lastLangCode = "vi-VN";
@@ -176,8 +176,8 @@ namespace Heco.Browser.Infrastructure
 
         private void SaveConfig(string langCode)
         {
-            // Nguồn chính là AppSettings.DisplayLanguage (lưu trong settings.json),
-            // config.ini chỉ giữ lại để tương thích ngược.
+// The primary source is AppSettings.DisplayLanguage (stored in settings.json);
+            // config.ini is kept only for backward compatibility.
             try
             {
                 Heco.Browser.Models.AppSettings.Global.DisplayLanguage = langCode;

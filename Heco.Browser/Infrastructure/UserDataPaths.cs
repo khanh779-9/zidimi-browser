@@ -8,24 +8,21 @@ using Microsoft.Data.Sqlite;
 namespace Heco.Browser.Infrastructure;
 
 /// <summary>
-/// Đường dẫn dữ liệu người dùng theo mô hình giống CocCoc/Chromium:
+/// User data paths following the CocCoc/Chromium model:
 ///   %LOCALAPPDATA%\HecoBrowser\Browser\User Data\
-///       Local State        (JSON: metadata, profile info_cache)
-///       Default\           (profile mặc định)
-///       &lt;ProfileName&gt;\  (các profile khác — tên được làm sạch ký tự không hợp lệ)
+///       Local State     (JSON: metadata, profile info_cache)
+///       (Default)       (the default profile)
+///       (ProfileName)\  (other profiles — folder name cleaned of invalid characters)
 ///
-/// QUAN TRỌNG: thư mục User Data cũng là nơi CEF/Chromium tạo profile của riêng nó,
-/// nên Chromium SỞ HỮU các file `Preferences`, `Secure Preferences`, `Bookmarks`,
-/// `History`, `Web Data`, `Login Data`, `Cookies`... App KHÔNG được ghi vào những tên
-/// này (trước đây ghi trùng → làm hỏng profile → lỗi "Something went wrong...").
-/// Mọi dữ liệu riêng của app lưu dưới tiền tố heco_:
-///   heco_setting.json   ↔ Preferences (cấu hình AppSettings)
-///   heco_bookmarks.json ↔ Bookmarks
-///   heco_history.db     ↔ History
-///   heco_autofill.db    ↔ Web Data
-///   heco_login.db       ↔ Login Data
-///   heco_shortcuts.db   ↔ Shortcuts
-/// CEF dùng các file Chromium riêng của nó. Cache CEF được chia sẻ ở root.
+/// IMPORTANT: the User Data folder is also where CEF/Chromium creates its own profile,
+/// so Chromium OWNS these files: `Preferences`, `Secure Preferences`, `Bookmarks`,
+/// `History`, `Web Data`, `Login Data`, `Cookies`... The app MUST NOT write to those names
+/// (in the past writing over them corrupted the profile and caused "Something went wrong...").
+/// All app-specific data is stored under the heco_ prefix:
+///   heco_setting.json   AppSettings config (Preferences)
+///   heco_bookmarks.json Bookmarks
+///   heco_shortcuts.db   Shortcuts
+/// CEF uses its own Chromium files. CEF's cache is shared at the root.
 /// </summary>
 public static class UserDataPaths
 {
@@ -37,10 +34,10 @@ public static class UserDataPaths
 
     public static string LocalStatePath => Path.Combine(Root, "Local State");
 
-    /// <summary>Cache dùng chung cho mọi profile, nằm ngay trong User Data root (giống CocCoc).</summary>
+    /// <summary>Shared cache for all profiles, kept directly in the User Data root (like CocCoc).</summary>
     public static string SharedCacheDir => Path.Combine(Root);
 
-    /// <summary>Tên thư mục trên đĩa cho một profile (Default cho profile mặc định).</summary>
+    /// <summary>The on-disk folder name for a profile (Default for the default profile).</summary>
     public static string ProfileFolder(string profileName)
     {
         if (string.IsNullOrWhiteSpace(profileName) || profileName == DefaultProfileName)
@@ -50,28 +47,52 @@ public static class UserDataPaths
 
     public static string ProfileDir(string profileName) => Path.Combine(Root, ProfileFolder(profileName));
 
-    /// <summary>Lịch sử duyệt web của app — SQLite riêng (không đụng file History của Chromium).</summary>
-    public static string HistoryFile(string profileName) => Path.Combine(ProfileDir(profileName), "heco_history.db");
+    /// <summary>Chromium's browsing history.</summary>
+    public static string HistoryFile(string profileName) => Path.Combine(ProfileDir(profileName), "History");
 
-    /// <summary>Bookmark của app — JSON riêng (không đụng file Bookmarks của Chromium).</summary>
-    public static string BookmarksFile(string profileName) => Path.Combine(ProfileDir(profileName), "heco_bookmarks.json");
+    /// <summary>Chromium's bookmarks (JSON).</summary>
+    public static string BookmarksFile(string profileName) => Path.Combine(ProfileDir(profileName), "Bookmarks");
 
-    /// <summary>Từ khoá gợi ý Omnibox của app — SQLite riêng.</summary>
-    public static string ShortcutsFile(string profileName) => Path.Combine(ProfileDir(profileName), "heco_shortcuts.db");
+    /// <summary>Chromium's Omnibox suggestion keywords. (SQLite)</summary>
+    public static string ShortcutsFile(string profileName) => Path.Combine(ProfileDir(profileName), "Shortcuts");
 
-    /// <summary>Autofill của app (địa chỉ/thẻ) — SQLite riêng.</summary>
-    public static string WebDataFile(string profileName) => Path.Combine(ProfileDir(profileName), "heco_autofill.db");
+    /// <summary>Chromium's autofill data (addresses/cards). (SQLite)</summary>
+    public static string WebDataFile(string profileName) => Path.Combine(ProfileDir(profileName), "Web Data");
 
-    /// <summary>Mật khẩu đã lưu của app — SQLite riêng.</summary>
-    public static string LoginDataFile(string profileName) => Path.Combine(ProfileDir(profileName), "heco_login.db");
+    /// <summary>Chromium's autofill data for synced accounts. (SQLite)</summary>
+    public static string AccountWebDataFile(string profileName) => Path.Combine(ProfileDir(profileName), "Account Web Data");
 
-    /// <summary>Cấu hình AppSettings của app — JSON riêng, không ghi vào file Preferences của Chromium.</summary>
+    /// <summary>Chromium's saved passwords. (SQLite)</summary>
+    public static string LoginDataFile(string profileName) => Path.Combine(ProfileDir(profileName), "Login Data");
+
+    /// <summary>Chromium's passwords for synced accounts. (SQLite)</summary>
+    public static string LoginDataForAccountFile(string profileName) => Path.Combine(ProfileDir(profileName), "Login Data For Account");
+
+    /// <summary>Favicons for saved/visited pages. (SQLite)</summary>
+    public static string FaviconsFile(string profileName) => Path.Combine(ProfileDir(profileName), "Favicons");
+
+    /// <summary>Most-visited pages. (SQLite)</summary>
+    public static string TopSitesFile(string profileName) => Path.Combine(ProfileDir(profileName), "Top Sites");
+
+    /// <summary>Browser cookies. (SQLite)</summary>
+    public static string CookiesFile(string profileName) => Path.Combine(ProfileDir(profileName), "Network", "Cookies");
+
+    /// <summary>Chromium's Preferences configuration. (JSON)</summary>
+    public static string ChromiumPreferencesFile(string profileName) => Path.Combine(ProfileDir(profileName), "Preferences");
+
+    /// <summary>Chromium's Secure Preferences configuration. (JSON)</summary>
+    public static string SecurePreferencesFile(string profileName) => Path.Combine(ProfileDir(profileName), "Secure Preferences");
+
+    /// <summary>The app's AppSettings configuration — its own JSON, never written into Chromium's Preferences file.</summary>
     public static string PreferencesFile(string profileName) => Path.Combine(ProfileDir(profileName), "heco_setting.json");
+
+    /// <summary>The app's download list — its own SQLite (avoids touching Chromium's downloads table).</summary>
+    public static string DownloadsFile(string profileName) => Path.Combine(ProfileDir(profileName), "heco_downloads.db");
 
     /// <summary>Avatar icon for the profile (.ico)</summary>
     public static string AvatarIconFile(string profileName) => Path.Combine(ProfileDir(profileName), "avatar.ico");
 
-    /// <summary>Làm sạch tên profile để dùng làm tên thư mục.</summary>
+    /// <summary>Cleans a profile name so it can be used as a folder name.</summary>
     private static string CleanProfileName(string name)
     {
         var invalid = Path.GetInvalidFileNameChars();
@@ -87,9 +108,9 @@ public static class UserDataPaths
         Directory.CreateDirectory(ProfileDir(profileName));
     }
 
-    /// <summary>
-    /// Ghi/đọc "Local State" (JSON giống CocCoc). Dùng JsonNode để giữ cấu trúc mở rộng được.
-    /// </summary>
+/// <summary>
+/// Reads/writes "Local State" (JSON like CocCoc). Uses JsonNode so the structure stays extensible.
+/// </summary>
     public static void UpdateLocalState(Action<System.Text.Json.Nodes.JsonObject> mutate)
     {
         try
@@ -112,18 +133,18 @@ public static class UserDataPaths
             File.WriteAllText(path, JsonSerializer.Serialize(root,
                 new JsonSerializerOptions { WriteIndented = true }));
         }
-        catch { /* không nghiêm trọng — chỉ là metadata */ }
+        catch { /* not critical — just metadata */ }
     }
 
-    /// <summary>Đăng ký một profile vào info_cache của Local State (như CocCoc).</summary>
+    /// <summary>Registers a profile into Local State's info_cache (like CocCoc).</summary>
     public static void RegisterProfile(string profileName)
     {
         if (string.IsNullOrWhiteSpace(profileName)) return;
         RegisterProfiles(new[] { profileName });
     }
 
-    /// <summary>Đăng ký nhiều profile vào info_cache của Local State trong một lần đọc/ghi (tránh
-    /// ghi lại toàn bộ file nhiều lần khi có nhiều profile — tối ưu khởi động).</summary>
+/// <summary>Registers multiple profiles into Local State's info_cache in a single read/write (avoids
+/// rewriting the whole file repeatedly when many profiles exist — optimizes startup).</summary>
     public static void RegisterProfiles(IEnumerable<string> profileNames)
     {
         try
@@ -164,17 +185,17 @@ public static class UserDataPaths
             File.WriteAllText(path, JsonSerializer.Serialize(root,
                 new JsonSerializerOptions { WriteIndented = true }));
         }
-        catch { /* không nghiêm trọng — chỉ là metadata */ }
+catch { /* not critical — just metadata */ }
     }
 
     /// <summary>
-    /// Di chuyển dữ liệu từ bố cục cũ sang bố cục CocCoc mới (chạy 1 lần, idempotent).
-    /// File JSON cũ được đưa vào thư mục profile mới với hậu tố ".migrate" để những service
-    /// (History/Autofill/Bookmark) đọc JSON, chuyển sang SQLite, rồi xoá file migrate đi.
-    ///   1) %LOCALAPPDATA%\HecoBrowser\{bookmarks.json, autofill.json, Cache}        (rất cũ, phẳng)
-    ///   2) %LOCALAPPDATA%\HecoBrowser\User Data\...                                  (bố cục trước đó)
+    /// Moves data from the old layout to the new CocCoc layout (runs once, idempotent).
+    /// Old JSON files are moved into the new profile folder with a ".migrate" suffix so the
+    /// History/Autofill/Bookmark services can read the JSON, convert it to SQLite, then delete the migrate file.
+    ///   1) %LOCALAPPDATA%\HecoBrowser\{bookmarks.json, autofill.json, Cache}        (very old, flat)
+    ///   2) %LOCALAPPDATA%\HecoBrowser\User Data\...                               (the previous layout)
     ///   → %LOCALAPPDATA%\HecoBrowser\Browser\User Data\
-    /// Cache cũ của từng profile được gộp vào Cache chung ở root.
+    /// Each profile's old cache is merged into the shared cache at the root.
     /// </summary>
     public static void MigrateLegacyData()
     {
@@ -184,14 +205,14 @@ public static class UserDataPaths
                 Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
                 "HecoBrowser");
 
-            // 1) Bố cục phẳng rất cũ (chỉ có profile mặc định)
+            // 1) Very old flat layout (only the default profile)
             var defaultDir = ProfileDir(DefaultProfileName);
             EnsureProfileDir(DefaultProfileName);
             MigrateFile(Path.Combine(appRoot, "bookmarks.json"), Path.Combine(defaultDir, "heco_bookmarks.json"));
             MigrateFile(Path.Combine(appRoot, "autofill.json"), Path.Combine(defaultDir, "Autofill.migrate"));
             MigrateDir(Path.Combine(appRoot, "Cache"), SharedCacheDir);
 
-            // 2) Bố cục User Data trước đây
+            // 2) The previous User Data layout
             var oldRoot = Path.Combine(appRoot, "User Data");
             if (Directory.Exists(oldRoot))
             {
@@ -203,14 +224,14 @@ public static class UserDataPaths
                     var targetDir = Path.Combine(Root, name);
                     Directory.CreateDirectory(targetDir);
 
-                    // Bookmarks giữ JSON (giống Chrome) → rename thẳng sang tên heco_*.
+                    // Bookmarks stay as JSON (like Chrome) → just rename straight to the heco_* names.
                     MigrateFile(Path.Combine(dir, "Bookmarks.json"), Path.Combine(targetDir, "heco_bookmarks.json"));
-                    // History / autofill (trước đây là "Login Data.json") → file migrate JSON để service chuyển sang SQLite.
+                    // History / autofill (previously "Login Data.json") → JSON migrate files for the service to convert to SQLite.
                     MigrateFile(Path.Combine(dir, "History.json"), Path.Combine(targetDir, "History.migrate"));
                     MigrateFile(Path.Combine(dir, "Login Data.json"), Path.Combine(targetDir, "Autofill.migrate"));
                     MigrateFile(Path.Combine(dir, "Preferences.json"), Path.Combine(targetDir, "heco_setting.json"));
 
-                    // Cache riêng của profile cũ → gộp vào cache chung (chỉ nếu chưa có)
+                    // Each profile's old cache → merged into the shared cache (only if not already present)
                     var oldCache = Path.Combine(dir, "Cache");
                     if (Directory.Exists(oldCache) && !Directory.Exists(SharedCacheDir))
                         MigrateDir(oldCache, SharedCacheDir);
@@ -221,13 +242,13 @@ public static class UserDataPaths
         }
         catch { }
 
-        // Di chuyển dữ liệu app còn sót lại đang chiếm tên file Chromium sang tên heco_*,
-        // để Chromium mở được profile sạch (fix lỗi "Something went wrong when opening your profile").
+        // Move leftover app data still occupying Chromium file names over to the heco_* names,
+        // so Chromium can open a clean profile (fixes the "Something went wrong when opening your profile" error).
         MigrateAppDataToHeco();
     }
 
-    /// <summary>Quét mọi thư mục profile trong User Data, di chuyển file app cũ (tên trùng Chromium)
-    /// sang tên heco_*. Chỉ di chuyển khi file rõ ràng là dữ liệu của app (không đụng file của Chromium).</summary>
+/// <summary>Scans every profile folder in User Data, moving over old app files (which shared Chromium's
+/// names) to the heco_* names. Only moves a file when it is clearly app data (never touches Chromium's files).</summary>
     public static void MigrateAppDataToHeco()
     {
         try
@@ -240,9 +261,6 @@ public static class UserDataPaths
                     var profileDir = Path.Combine(Root, Path.GetFileName(dir));
                     MigrateAppSettingsFile(profileDir);
                     MigrateAppBookmarksFile(profileDir);
-                    MigrateAppSqliteFile(profileDir, "History", "heco_history.db", "24");
-                    MigrateAppSqliteFile(profileDir, "Web Data", "heco_autofill.db", "102");
-                    MigrateAppSqliteFile(profileDir, "Login Data", "heco_login.db", "102");
                 }
                 catch { }
             }
@@ -250,8 +268,8 @@ public static class UserDataPaths
         catch { }
     }
 
-    /// <summary>Di chuyển Preferences (JSON của app) → heco_setting.json nếu nó chứa key của app.
-    /// File Preferences của Chromium thì để nguyên.</summary>
+/// <summary>Moves Preferences (the app's JSON) → heco_setting.json if it contains app keys.
+/// Chromium's Preferences file is left untouched.</summary>
     private static void MigrateAppSettingsFile(string profileDir)
     {
         var source = Path.Combine(profileDir, "Preferences");
@@ -260,15 +278,15 @@ public static class UserDataPaths
         try
         {
             var text = File.ReadAllText(source);
-            // Key app dùng (PascalCase) không xuất hiện trong Preferences của Chromium.
+            // App keys (PascalCase) never appear in Chromium's Preferences.
             if (text.Contains("\"HomePageUrl\"") || text.Contains("\"FontSize\"") || text.Contains("\"StartupBehavior\""))
                 File.Move(source, target);
         }
         catch { }
     }
 
-    /// <summary>Di chuyển Bookmarks dạng mảng JSON của app → heco_bookmarks.json.
-    /// Bookmarks của Chromium là object JSON → để nguyên.</summary>
+/// <summary>Moves the app's array-style JSON Bookmarks → heco_bookmarks.json.
+/// Chromium's Bookmarks is a JSON object → left untouched.</summary>
     private static void MigrateAppBookmarksFile(string profileDir)
     {
         var source = Path.Combine(profileDir, "Bookmarks");
@@ -283,34 +301,7 @@ public static class UserDataPaths
         catch { }
     }
 
-    /// <summary>Di chuyển SQLite của app (có meta version = phiên bản app) sang tên heco_*.
-    /// SQLite của Chromium (version khác / không có meta) thì để nguyên.</summary>
-    private static void MigrateAppSqliteFile(string profileDir, string sourceName, string targetName, string appVersion)
-    {
-        var source = Path.Combine(profileDir, sourceName);
-        var target = Path.Combine(profileDir, targetName);
-        if (!File.Exists(source) || File.Exists(target)) return;
-        try
-        {
-            if (ReadMetaVersion(source) == appVersion)
-                File.Move(source, target);
-        }
-        catch { }
-    }
 
-    private static string? ReadMetaVersion(string dbPath)
-    {
-        try
-        {
-            using var conn = new SqliteConnection($"Data Source={dbPath};Mode=ReadOnly;Pooling=False");
-            conn.Open();
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = "SELECT value FROM meta WHERE key='version' LIMIT 1;";
-            var v = cmd.ExecuteScalar();
-            return v?.ToString();
-        }
-        catch { return null; }
-    }
 
     private static void MigrateFile(string source, string target)
     {

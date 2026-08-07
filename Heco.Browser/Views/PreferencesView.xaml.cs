@@ -15,7 +15,7 @@ public partial class PreferencesView : UserControl
     public PreferencesView()
     {
         InitializeComponent();
-        // Rebuild section đang xem khi đổi theme để label dựng bằng code lấy đúng brush mới.
+        // Rebuild the section being viewed when the theme changes so code-built labels pick up the new brushes.
         ThemeManager.ThemeChanged += OnThemeChanged;
         Unloaded += (s, e) => ThemeManager.ThemeChanged -= OnThemeChanged;
         if (SettingsContent.Content == null)
@@ -75,7 +75,7 @@ public partial class PreferencesView : UserControl
 
     private static string? FindNavLabel(FrameworkElement element)
     {
-        // NavItem content là Grid { Path col0, TextBlock col1 } — tìm TextBlock sâu nhất.
+        // NavItem content is a Grid { Path col0, TextBlock col1 } — find the deepest TextBlock.
         foreach (var descendant in EnumerateVisuals(element))
         {
             if (descendant is TextBlock tb && !string.IsNullOrEmpty(tb.Text))
@@ -294,7 +294,7 @@ public partial class PreferencesView : UserControl
         { 
             AppSettings.Profile.FontSize = fontCombo.SelectedIndex switch { 0 => 12, 1 => 14, 2 => 16, 3 => 18, _ => 14 };
             AppSettings.SaveAll();
-            // Áp dụng real-time cho UI
+            // Apply to the UI in real time
             if (Application.Current?.MainWindow is MainWindow mw)
                 mw.FontSize = AppSettings.Profile.FontSize;
         };
@@ -309,7 +309,7 @@ public partial class PreferencesView : UserControl
             if (zoomCombo.SelectedIndex >= 0 && zoomCombo.SelectedIndex < zoomLevels.Length)
                 AppSettings.Profile.ZoomLevel = zoomLevels[zoomCombo.SelectedIndex];
             AppSettings.SaveAll();
-            // Áp dụng ngay cho tab web đang active (nếu có).
+            // Apply immediately to the active web tab (if any).
             var activeTab = App.ViewModel?.ActiveTab;
             if (activeTab != null)
             {
@@ -470,17 +470,12 @@ public partial class PreferencesView : UserControl
                     AppSettings.Global.DisplayLanguage = selectedLang.Code;
                     AppSettings.SaveAll();
                     
-                    // Cập nhật lại giao diện (vì các text trong phần nội dung được tạo cứng bằng C#)
+                    // Refresh the UI (because the texts in the content section are built hardcoded in C#)
                     LoadSettingsSection("Languages");
                 }
             }
         };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_DisplayLang"], LanguageManager.Instance["Pref_SelectUILang"], langCombo));
-
-        var translateCheck = MakeCheck(LanguageManager.Instance["Pref_AutoTranslate"], AppSettings.Global.AutoTranslate);
-        translateCheck.Checked += (s, e) => { AppSettings.Global.AutoTranslate = true; AppSettings.SaveAll(); };
-        translateCheck.Unchecked += (s, e) => { AppSettings.Global.AutoTranslate = false; AppSettings.SaveAll(); };
-        panel.Children.Add(CreateSettingRow("", "", translateCheck));
 
         return panel;
     }
@@ -536,7 +531,7 @@ public partial class PreferencesView : UserControl
 
         var info = new[]
         {
-            (LanguageManager.Instance["Pref_Version"], "Heco Browser 1.0.0"),
+            (LanguageManager.Instance["Pref_Version"], "Heco Browser " + (System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.1.0")),
             (LanguageManager.Instance["Pref_EngineLabel"], "Chromium (CefSharp 150)"),
             (LanguageManager.Instance["Pref_Runtime"], ".NET 8 (WPF, x86)"),
             (LanguageManager.Instance["Pref_SourceCode"], LanguageManager.Instance["Pref_AboutSourceCode"]),
@@ -559,7 +554,7 @@ public partial class PreferencesView : UserControl
             var originalContent = btnCheck.Content;
             btnCheck.Content = LanguageManager.Instance["Pref_CheckingUpdate"];
             btnCheck.IsEnabled = false;
-            await System.Threading.Tasks.Task.Delay(2000); // Giả lập kiểm tra mạng
+            await System.Threading.Tasks.Task.Delay(2000); // Simulate a network check
             btnCheck.Content = originalContent;
             btnCheck.IsEnabled = true;
             HecoMessageBox.Show(LanguageManager.Instance["Pref_UpToDate"], LanguageManager.Instance["Pref_Update"], HecoMessageBoxButton.OK, HecoMessageBoxImage.Information, Window.GetWindow(this));

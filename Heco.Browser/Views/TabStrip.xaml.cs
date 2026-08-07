@@ -40,7 +40,7 @@ public partial class TabStrip : UserControl
     {
         if (e.Action == NotifyCollectionChangedAction.Add)
         {
-            // đợi layout xong rồi cuộn về tab mới
+            // wait for the layout to finish, then scroll to the new tab
             Dispatcher.BeginInvoke(DispatcherPriority.Loaded, new Action(() =>
             {
                 _scroller?.ScrollToRightEnd();

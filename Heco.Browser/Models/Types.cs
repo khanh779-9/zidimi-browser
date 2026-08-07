@@ -3,7 +3,7 @@ using System.ComponentModel;
 namespace Heco.Browser.Models;
 
 /// <summary>
-/// Định danh các page hiển thị trong sidebar.
+/// Identifies the pages shown in the sidebar.
 /// </summary>
 public enum PageId
 {
@@ -14,7 +14,7 @@ public enum PageId
     Downloads,
 }
 
-/// <summary>Loại tab: web (ChromiumWebBrowser) hoặc app-tab nội bộ (Settings/History/...).</summary>
+/// <summary>Tab kind: web (ChromiumWebBrowser) or an internal app tab (Settings/History/...).</summary>
 public enum TabKind
 {
     Web,
@@ -24,10 +24,10 @@ public enum TabKind
     Downloads,
 }
 
-/// <summary>Trạng thái theme.</summary>
+/// <summary>Theme state.</summary>
 public enum Theme { Dark, Light }
 
-/// <summary>Entry lịch sử duyệt web.</summary>
+/// <summary>Browsing history entry.</summary>
 public sealed class HistoryEntry : INotifyPropertyChanged
 {
     private string _title = "";
@@ -72,7 +72,7 @@ public sealed class HistoryEntry : INotifyPropertyChanged
     private void OnPropertyChanged(string n) => PropertyChanged?.Invoke(this, new(n));
 }
 
-/// <summary>Bookmark (thư mục_bookmark).</summary>
+/// <summary>Bookmark (folder_bookmark).</summary>
 public sealed class Bookmark : INotifyPropertyChanged
 {
     private string _title = "";
@@ -93,9 +93,10 @@ public sealed class Bookmark : INotifyPropertyChanged
     private void OnPropertyChanged(string n) => PropertyChanged?.Invoke(this, new(n));
 }
 
-/// <summary>Download entry cho Downloads panel.</summary>
+/// <summary>Download entry for the Downloads panel.</summary>
 public sealed class DownloadEntry : INotifyPropertyChanged
 {
+    private string _guid = System.Guid.NewGuid().ToString();
     private string _url = "";
     private string _suggestedFileName = "";
     private string _fullPath = "";
@@ -103,6 +104,19 @@ public sealed class DownloadEntry : INotifyPropertyChanged
     private bool _isComplete;
     private long _totalBytes = -1;
     private long _receivedBytes;
+    private DateTime _startedAt = DateTime.Now;
+
+    public string Guid
+    {
+        get => _guid;
+        set { _guid = value; OnPropertyChanged(nameof(Guid)); }
+    }
+
+    public DateTime StartedAt
+    {
+        get => _startedAt;
+        set { _startedAt = value; OnPropertyChanged(nameof(StartedAt)); }
+    }
 
     public string Url
     {
@@ -144,7 +158,7 @@ public event PropertyChangedEventHandler? PropertyChanged;
         public void OnPropertyChanged(string n) => PropertyChanged?.Invoke(this, new(n));
     }
 
-    /// <summary>Gợi ý autocomplete cho omnibox (History/Bookmark/Search).</summary>
+    /// <summary>Autocomplete suggestion for the omnibox (History/Bookmark/Search).</summary>
     public sealed class AutocompleteSuggestion : INotifyPropertyChanged
     {
         private string _title = "";
@@ -183,7 +197,7 @@ public event PropertyChangedEventHandler? PropertyChanged;
         public void OnPropertyChanged(string n) => PropertyChanged?.Invoke(this, new(n));
     }
 
-    /// <summary>ViewModel cho 1 tab browser.</summary>
+    /// <summary>ViewModel for one browser tab.</summary>
     public sealed class TabViewModel : INotifyPropertyChanged
 {
     private string _title = "New Tab";
@@ -235,28 +249,28 @@ public event PropertyChangedEventHandler? PropertyChanged;
         set { _isActive = value; OnPropertyChanged(nameof(IsActive)); }
     }
 
-    /// <summary>Icon favicon của trang, tải bất đồng bộ (null = dùng fallback).</summary>
+    /// <summary>The page's favicon, loaded asynchronously (null = fallback).</summary>
     public System.Windows.Media.ImageSource? Favicon
     {
         get => _favicon;
         set { _favicon = value; OnPropertyChanged(nameof(Favicon)); }
     }
 
-    /// <summary>Tab đang phát âm thanh.</summary>
+    /// <summary>Tab is currently playing audio.</summary>
     public bool IsAudioPlaying
     {
         get => _isAudioPlaying;
         set { _isAudioPlaying = value; OnPropertyChanged(nameof(IsAudioPlaying)); }
     }
 
-    /// <summary>Tab đang bị mute.</summary>
+    /// <summary>Tab is muted.</summary>
     public bool IsMuted
     {
         get => _isMuted;
         set { _isMuted = value; OnPropertyChanged(nameof(IsMuted)); }
     }
 
-    /// <summary>Tab được ghim (icon-only, đứng đầu danh sách).</summary>
+    /// <summary>Tab is pinned (icon-only, at the top of the list).</summary>
     public bool IsPinned
     {
         get => _isPinned;

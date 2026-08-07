@@ -5,7 +5,7 @@ using Heco.Browser.Infrastructure;
 
 namespace Heco.Browser.Controls;
 
-/// <summary>Biến thể màu của toast.</summary>
+/// <summary>Color variant of a toast.</summary>
 public enum HecoToastVariant
 {
     Info,
@@ -15,8 +15,8 @@ public enum HecoToastVariant
 }
 
 /// <summary>
-/// Một thông báo toast (card nhỏ, tự biến mất sau khoảng thời gian).
-/// Được host quản lý bởi <see cref="HecoToastHost"/>.
+/// A toast notification (a small card that disappears by itself after a period of time).
+/// It is managed by a host <see cref="HecoToastHost"/>.
 /// </summary>
 public sealed class HecoToast : Control
 {
@@ -58,7 +58,7 @@ public sealed class HecoToast : Control
         set => SetValue(VariantProperty, value);
     }
 
-    /// <summary>Command để tự đóng toast (host gán).</summary>
+    /// <summary>Command used to close the toast (assigned by the host).</summary>
     public System.Windows.Input.ICommand? CloseCommand
     {
         get => (System.Windows.Input.ICommand?)GetValue(CloseCommandProperty);
@@ -83,9 +83,9 @@ public sealed class HecoToast : Control
 }
 
 /// <summary>
-/// Host quản lý các toast trong cửa sổ. Đặt trong Grid của MainWindow (thường bottom-right).
-/// Dùng: <c>ToastHost.Show("Tiêu đề", "Nội dung", HecoToastVariant.Success);</c>
-/// Toast tự biến mất sau <see cref="DefaultDuration"/> (3 giây), có nút đóng.
+/// Host that manages the toasts within a window. Place it in the MainWindow's grid (usually bottom-right).
+/// Usage: <c>ToastHost.Show("Title", "Content", HecoToastVariant.Success);</c>
+/// A toast disappears on its own after <see cref="DefaultDuration"/> (3 seconds) and has a close button.
 /// </summary>
 public class HecoToastHost : Control
 {
@@ -95,7 +95,7 @@ public class HecoToastHost : Control
             new FrameworkPropertyMetadata(typeof(HecoToastHost)));
     }
 
-    /// <summary>Thời gian hiển thị mặc định của mỗi toast (giây).</summary>
+    /// <summary>Default display time for each toast (in seconds).</summary>
     public static readonly TimeSpan DefaultDuration = TimeSpan.FromSeconds(3);
 
     private StackPanel? _panel;
@@ -104,7 +104,7 @@ public class HecoToastHost : Control
     public static readonly DependencyProperty MaxVisibleProperty = DependencyProperty.Register(
         nameof(MaxVisible), typeof(int), typeof(HecoToastHost), new PropertyMetadata(4));
 
-    /// <summary>Số toast hiển thị đồng thời tối đa (toast cũ nhất bị loại trước).</summary>
+    /// <summary>Maximum number of toasts shown at the same time (the oldest toast is dismissed first).</summary>
     public int MaxVisible
     {
         get => (int)GetValue(MaxVisibleProperty);
@@ -119,7 +119,7 @@ public class HecoToastHost : Control
         _active.Clear();
     }
 
-    /// <summary>Hiện một toast.</summary>
+    /// <summary>Shows a toast.</summary>
     public void Show(string? title, string message, HecoToastVariant variant = HecoToastVariant.Info, TimeSpan? duration = null)
     {
         var toast = new HecoToast

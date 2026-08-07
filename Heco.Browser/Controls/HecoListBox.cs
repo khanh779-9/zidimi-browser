@@ -4,8 +4,8 @@ using System.Windows.Controls;
 namespace Heco.Browser.Controls;
 
 /// <summary>
-/// Custom ListBoxItem theo theme Heco: nền trong suốt, hover nổi, selected có
-/// nền tím nhạt + vạch accent trái. Dùng thay <c>ListBoxItem</c> gốc.
+/// Custom ListBoxItem themed for Heco: transparent background, a raised hover state, and a selected
+/// state with a light purple background plus a left accent bar. Use it in place of the raw <c>ListBoxItem</c>.
 /// </summary>
 public class HecoListBoxItem : ListBoxItem
 {
@@ -17,8 +17,8 @@ public class HecoListBoxItem : ListBoxItem
 }
 
 /// <summary>
-/// Custom ListBox theo theme Heco: nền trong suốt, không viền, dùng với
-/// <see cref="HecoListBoxItem"/>. Dùng cho dropdown gợi ý, danh sách.
+/// Custom ListBox themed for Heco: transparent background, no border, meant to be used with
+/// <see cref="HecoListBoxItem"/>. Good for suggestion dropdowns and lists.
 /// </summary>
 public class HecoListBox : ListBox
 {

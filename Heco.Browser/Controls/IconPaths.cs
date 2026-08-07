@@ -6,11 +6,11 @@ using System.Windows.Shapes;
 namespace Heco.Browser.Controls;
 
 /// <summary>
-/// Lớp helper dùng chung.
+/// A commonly used helper class.
 /// </summary>
 public static class IconPaths
 {
-    // Path data cho icon SVG dùng trong custom buttons.
+    // Path data for the SVG icons used in the custom buttons.
     public const string Back = "M15,18 L9,12 L15,6 L16.5,7.5 L12,12 L16.5,16.5 Z";
     public const string Forward = "M9,18 L15,12 L9,6 L7.5,7.5 L12,12 L7.5,16.5 Z";
     public const string Reload = "M17.65,6.35 C16.2,4.9 14.21,4 12,4 c-4.42,0 -7.99,3.58 -7.99,8 s3.57,8 7.99,8 c3.73,0 6.84,-2.55 7.73,-6 h-2.08 c-0.82,2.33 -3.04,4 -5.65,4 -3.31,0 -6,-2.69 -6,-6 s2.69,-6 6,-6 c1.66,0 3.14,0.69 4.22,1.78 L13,11 h7 V4 z";

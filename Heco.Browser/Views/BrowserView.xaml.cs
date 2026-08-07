@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -41,7 +41,7 @@ public partial class BrowserView : UserControl
         Unloaded += OnUnloaded;
     }
 
-    /// <summary>CEF vừa init xong — tạo browser cho tab đang hiển thị nếu trước đó đang đợi.</summary>
+    /// <summary>CEF just finished initializing — create the browser for the visible tab if it was previously waiting.</summary>
     private void OnCefReady()
     {
         if (_currentTab != null && _currentTab.Kind == TabKind.Web)
@@ -151,7 +151,7 @@ public partial class BrowserView : UserControl
                 Forward_Click(null!, null!);
                 e.Handled = true;
                 break;
-            // Ctrl+1..8: nhảy tới tab thứ N
+            // Ctrl+1..8: jump to the Nth tab
             case Key.D1 when mods == ModifierKeys.Control:
             case Key.D2 when mods == ModifierKeys.Control:
             case Key.D3 when mods == ModifierKeys.Control:
@@ -216,24 +216,24 @@ public partial class BrowserView : UserControl
 
     private void SubscribeTab(TabViewModel tab)
     {
-        // App-tab nội bộ (Settings/History/...): không tạo ChromiumWebBrowser,
-        // ẩn toolbar, hiển thị view tương ứng. (spec 7.4 — Settings mở trong tab)
+        // Internal app-tab (Settings/History/...): don't create a ChromiumWebBrowser,
+        // hide the toolbar, and show the corresponding view. (spec 7.4 — Settings opens in a tab)
         if (tab.Kind != TabKind.Web)
         {
             _appViews[tab] = CreateAppView(tab.Kind);
             return;
         }
-        // Browser CEF được tạo LAZY khi tab được hiển thị (xem EnsureBrowser) —
-        // tránh khởi tạo đồng loạt mọi tab ngay lúc mở cửa sổ (nguyên nhân chậm khởi động).
+        // The CEF browser is created LAZILY when the tab is shown (see EnsureBrowser) —
+        // this avoids initializing every tab at once when the window opens (a cause of slow startup).
         _browsers[tab] = null!;
     }
 
-    /// <summary>Tạo ChromiumWebBrowser cho tab nếu chưa có. Chỉ được gọi khi CEF đã sẵn sàng.</summary>
+    /// <summary>Create a ChromiumWebBrowser for the tab if none exists. Only called when CEF is ready.</summary>
     private void EnsureBrowser(TabViewModel tab)
     {
         if (tab.Kind != TabKind.Web) return;
         if (_browsers.TryGetValue(tab, out var existing) && existing != null && !existing.IsDisposed) return;
-        if (!App.CefReady) return; // CEF chưa init xong — sẽ được tạo khi app báo ready
+        if (!App.CefReady) return; // CEF not initialized yet — it will be created when the app reports ready
         var browser = CreateBrowser(tab);
         _browsers[tab] = browser;
         _vm.RegisterBrowser(tab, browser);
@@ -245,43 +245,13 @@ public partial class BrowserView : UserControl
         {
             Address = NormalizeUrl(tab.Address),
             RequestContext = _vm.GetRequestContext(),
-            BrowserSettings = new CefSharp.BrowserSettings
-            {
-                DefaultFontSize = (int)Models.AppSettings.Profile.FontSize,
-                DefaultFixedFontSize = (int)Models.AppSettings.Profile.FontSize
-            }
+            BrowserSettings = BuildBrowserSettings()
         };
 
-        // Áp dụng zoom level mặc định từ AppSettings khi trang bắt đầu load.
+        // Apply the default zoom level from AppSettings when a page starts loading.
         browser.FrameLoadStart += (s, args) =>
         {
             Dispatcher.BeginInvoke(() => browser.SetZoomLevel(Models.AppSettings.Profile.ZoomLevel));
-        };
-
-        // Auto-translate: redirect sang Google Translate khi người dùng bật AutoTranslate và trang
-        // có ngôn ngữ khác tiếng Việt (giải pháp đơn giản, hiển thị trang dịch bằng Google Translate).
-        browser.FrameLoadEnd += (s, args) =>
-        {
-            if (!Models.AppSettings.Global.AutoTranslate) return;
-            if (args.Frame.IsMain == false) return;
-            var url = args.Frame.Url ?? "";
-            if (string.IsNullOrEmpty(url)) return;
-            if (!url.StartsWith("http", StringComparison.OrdinalIgnoreCase)) return;
-            // Trang tiếng Việt / quạt search engine thì bỏ qua.
-            if (url.Contains("vi.") || url.Contains("duckduckgo.com") || url.Contains("google.com") ||
-                url.Contains("bing.com") || url.Contains("search.brave.com")) return;
-            // Chuyển hướng page sang Google Translate wrapper (giữ URL gốc trong query).
-            var translated = "https://translate.google.com/translate?sl=auto&tl=vi&u=" + System.Uri.EscapeDataString(url);
-            if (url == translated) return;
-            Dispatcher.BeginInvoke(() =>
-            {
-                if (!browser.IsDisposed)
-                {
-                    _suppressAddressUpdate = true;
-                    browser.Load(translated);
-                    _suppressAddressUpdate = false;
-                }
-            });
         };
 
         // CEF handlers (spec 11.2)
@@ -291,8 +261,8 @@ public partial class BrowserView : UserControl
         {
             Dispatcher.BeginInvoke(() =>
             {
-                _vm.Downloads.Insert(0, entry);
-                // Nếu AppSettings yêu cầu mở thanh Downloads khi bắt đầu tải → mở trang Downloads.
+                _vm.AddDownload(entry);
+                // If AppSettings requires opening the Downloads bar when a download starts → open the Downloads page.
                 if (Models.AppSettings.Profile.ShowDownloadBar)
                     _vm.OpenAppTab(TabKind.Downloads);
             });
@@ -301,6 +271,7 @@ public partial class BrowserView : UserControl
         {
             Dispatcher.BeginInvoke(() =>
             {
+                _vm.UpdateDownload(entry);
                 var existing = _vm.Downloads.FirstOrDefault(d => d.Url == entry.Url && d.SuggestedFileName == entry.SuggestedFileName);
                 if (existing != null)
                 {
@@ -316,9 +287,28 @@ public partial class BrowserView : UserControl
         browser.MenuHandler = new ContextMenuHandler();
         browser.KeyboardHandler = new KeyboardHandler();
         browser.JsDialogHandler = new JsDialogHandler();
+        browser.DialogHandler = new DialogHandler();
         browser.RequestHandler = new RequestHandler();
+        browser.PermissionHandler = new HecoPermissionHandler();
 
-        // Favicon (spec 10.4): load ảnh bất đồng bộ khi URL favicon đổi
+        var loadHandler = new HecoLoadHandler();
+        loadHandler.LoadingStateChanged += e =>
+        {
+            Dispatcher.BeginInvoke(() =>
+            {
+                tab.IsLoading = e.IsLoading;
+                tab.CanGoBack = browser.CanGoBack;
+                tab.CanGoForward = browser.CanGoForward;
+                if (ReferenceEquals(_currentBrowser, browser))
+                {
+                    UpdateReloadIcon(e.IsLoading);
+                    UpdateLoadingProgress(e.IsLoading);
+                }
+            });
+        };
+        browser.LoadHandler = loadHandler;
+
+        // Favicon (spec 10.4): load the image asynchronously when the favicon URL changes
         var faviconHandler = new FaviconHandler();
         faviconHandler.FaviconUrlChanged += faviconUrl =>
         {
@@ -326,13 +316,36 @@ public partial class BrowserView : UserControl
         };
         browser.DisplayHandler = faviconHandler;
 
-        // Audio indicator (spec 10.4): bật khi tab phát âm thanh
+        // Audio indicator (spec 10.4): turn on when the tab plays audio
         var audioHandler = new AudioHandler();
         audioHandler.PlaybackStateChanged += playing =>
         {
             Dispatcher.BeginInvoke(() => tab.IsAudioPlaying = playing);
         };
         browser.AudioHandler = audioHandler;
+        browser.FocusHandler = new HecoFocusHandler();
+
+        var renderHandler = new HecoRenderProcessMessageHandler();
+        renderHandler.EditableFocused += isEditable =>
+        {
+            if (isEditable && FindBar.Visibility == Visibility.Visible)
+            {
+                Dispatcher.BeginInvoke(HideFindBar);
+            }
+        };
+        browser.RenderProcessMessageHandler = renderHandler;
+        browser.DragHandler = new HecoDragHandler();
+
+        var findHandler = new FindHandler();
+        findHandler.FindResult += (count, activeMatchOrdinal, finalUpdate) =>
+        {
+            if (browser.IsDisposed || FindCount == null)
+                return;
+            Dispatcher.BeginInvoke(() => UpdateFindCount(count, activeMatchOrdinal));
+        };
+        browser.FindHandler = findHandler;
+
+        HecoJsBinding.Bind(browser);
 
         browser.TitleChanged += (s, args) =>
         {
@@ -356,34 +369,39 @@ public partial class BrowserView : UserControl
                     AddressBox.Text = newUrl;
                     UpdateSecurityIcon(newUrl);
                 }
-                AddToHistory(newUrl, tab.Title);
-            });
-        };
-
-        browser.LoadingStateChanged += (s, e) =>
-        {
-            Dispatcher.BeginInvoke(() =>
-            {
-                tab.IsLoading = e.IsLoading;
-                tab.CanGoBack = browser.CanGoBack;
-                tab.CanGoForward = browser.CanGoForward;
-                if (ReferenceEquals(_currentBrowser, browser))
-                {
-                    UpdateReloadIcon(e.IsLoading);
-                    UpdateLoadingProgress(e.IsLoading);
-                }
             });
         };
 
         return browser;
     }
 
-    private static void AddToHistory(string address, string title)
+    /// <summary>
+    /// Extends BrowserSettings configuration based on AppSettings:
+    /// font size (page & fixed), MinimumFontSize tracking the font size, background color per theme
+    /// (to avoid a white flash when loading pages on a dark background), and WindowlessFrameRate.
+    /// </summary>
+    private static CefSharp.BrowserSettings BuildBrowserSettings()
     {
-        if (string.IsNullOrEmpty(address)) return;
-        var a = address.Trim();
-        if (a == "about:blank" || a == "about:newtab") return;
-        App.ViewModel?.AddHistory(a, title);
+        var profile = Models.AppSettings.Profile;
+        var fontSize = Math.Max(6, Math.Min(72, (int)profile.FontSize));
+
+        // BackgroundColor follows the active theme (dark → dark, light → white).
+        var themeKey = Infrastructure.ThemeManager.NormalizeThemeKey(profile.Theme);
+        var effectiveTheme = themeKey == "light"
+            ? Infrastructure.ThemeManager.AppTheme.Light
+            : themeKey == "dark"
+                ? Infrastructure.ThemeManager.AppTheme.Dark
+                : Infrastructure.ThemeManager.DetectSystemTheme();
+        uint bg = effectiveTheme == Infrastructure.ThemeManager.AppTheme.Dark ? 0xFF1E1F24u : 0xFFFFFFFFu;
+
+        return new CefSharp.BrowserSettings
+        {
+            DefaultFontSize = fontSize,
+            DefaultFixedFontSize = fontSize,
+            MinimumFontSize = Math.Min(fontSize, 12),
+            WindowlessFrameRate = 60,
+            BackgroundColor = bg,
+        };
     }
 
     private void UnsubscribeTab(TabViewModel tab)
@@ -398,7 +416,7 @@ public partial class BrowserView : UserControl
         if (ReferenceEquals(_currentTab, tab)) _currentTab = null;
     }
 
-    /// <summary>Tạo view nội bộ cho app-tab (Settings/History/Downloads/Bookmarks).</summary>
+    /// <summary>Create the internal view for an app-tab (Settings/History/Downloads/Bookmarks).</summary>
     private static FrameworkElement CreateAppView(TabKind kind) => kind switch
     {
         TabKind.Settings => new PreferencesView(),
@@ -428,7 +446,7 @@ public partial class BrowserView : UserControl
         }
         catch
         {
-            // favicon lỗi/timed out — giữ fallback icon
+            // favicon errored/timed out — keep the fallback icon
         }
     }
 
@@ -450,7 +468,7 @@ public partial class BrowserView : UserControl
         EmptyHint.Visibility = Visibility.Collapsed;
         _currentTab = tab;
 
-        // App-tab nội bộ: ẩn toolbar trình duyệt, hiển thị view nội bộ.
+        // Internal app-tab: hide the browser toolbar and show the internal view.
         if (tab.Kind != TabKind.Web)
         {
             _currentBrowser = null;
@@ -472,7 +490,7 @@ public partial class BrowserView : UserControl
         EnsureBrowser(tab);
         if (!_browsers.TryGetValue(tab, out var browser) || browser == null)
         {
-            // CEF chưa ready — hiện spinner, sẽ tự tạo browser và hiển thị khi ready.
+            // CEF not ready — show a spinner; the browser will be created and shown when ready.
             _currentBrowser = null;
             BrowserHost.Content = _loadingSpinner;
             return;
@@ -492,7 +510,9 @@ public partial class BrowserView : UserControl
     private static string NormalizeUrl(string raw)
     {
         raw = (raw ?? "").Trim();
-        if (string.IsNullOrEmpty(raw) || raw == "about:newtab") return  SearchEngines.GetEngineUrl(Heco.Browser.Models.AppSettings.Profile.SearchEngine);
+        // New tab / startup: open the search engine's home page (don't escape — escaping would break the URL).
+        if (string.IsNullOrEmpty(raw) || raw == "about:newtab")
+            return SearchEngines.GetEngineUrl(Heco.Browser.Models.AppSettings.Profile.SearchEngine);
         if (Uri.IsWellFormedUriString(raw, UriKind.Absolute)) return raw;
         if (raw.Contains('.') && !raw.Contains(' ')) return "https://" + raw;
         
@@ -526,7 +546,7 @@ public partial class BrowserView : UserControl
         }
         else if (url.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
         {
-            // HTTP không an toàn — icon "info" cảnh báo
+            // HTTP is not secure — a warning "info" icon
             SecurityIcon.Stroke = (Brush)FindResource("WarnBrush");
             SecurityIcon.Fill = WithAlpha(SecurityIcon.Stroke, 0x26);
             SecurityIcon.Data = Geometry.Parse("M12 2 a10 10 0 1 0 0.01 0 Z M12 8 V12 M12 16 H12.01");
@@ -625,7 +645,7 @@ public partial class BrowserView : UserControl
 
     private void Address_LostFocus(object sender, KeyboardFocusChangedEventArgs e)
     {
-        // Delay hide để cho phép click vào dropdown
+        // Delay the hide so the dropdown can be clicked
         AddressBox.Dispatcher.BeginInvoke(() =>
         {
             if (!AutocompletePopup.IsMouseOver)
@@ -791,6 +811,23 @@ public partial class BrowserView : UserControl
         }
     }
 
+    private void UpdateFindCount(int count, int activeMatchOrdinal)
+    {
+        if (FindBar.Visibility != Visibility.Visible || FindCount == null)
+            return;
+
+        if (count == 0)
+        {
+            FindCount.Text = LanguageManager.Instance["Page_Find_NoResults"];
+            FindCount.Foreground = (System.Windows.Media.Brush)FindResource("DangerBrush");
+        }
+        else
+        {
+            FindCount.Text = string.Format("{0}/{1}", activeMatchOrdinal, count);
+            FindCount.Foreground = (System.Windows.Media.Brush)FindResource("Ink400Brush");
+        }
+    }
+
     private void FindBox_KeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Escape)
@@ -931,7 +968,7 @@ public partial class BrowserView : UserControl
             ConnIcon.Data = Geometry.Parse("M12 2 a10 10 0 1 0 0.01 0 Z M12 8 V12 M12 16 H12.01");
         }
 
-        // Permissions placeholder (cần CEF permission handler để lấy thực tế)
+        // Permissions placeholder (needs a CEF permission handler to get real values)
         PermissionsPanel.Children.Clear();
         var perms = new[]
         {
@@ -974,8 +1011,14 @@ public partial class BrowserView : UserControl
     private void SiteInfo_Cookies_Click(object sender, RoutedEventArgs e)
     {
         SiteInfoPopup.IsOpen = false;
-        HecoMessageBox.Show(LanguageManager.Instance["Browser_CookieWIP"],
-            LanguageManager.Instance["Browser_HecoBrowser"], HecoMessageBoxButton.OK, HecoMessageBoxImage.Information, Window.GetWindow(this));
+        var url = _currentTab?.Address?.Trim() ?? "";
+        if (string.IsNullOrEmpty(url) || url.StartsWith("about:", StringComparison.OrdinalIgnoreCase))
+        {
+            HecoMessageBox.Show(LanguageManager.Instance["Cookie_NoSite"],
+                LanguageManager.Instance["Browser_HecoBrowser"], HecoMessageBoxButton.OK, HecoMessageBoxImage.Information, Window.GetWindow(this));
+            return;
+        }
+        new CookieManagerWindow(url) { Owner = Window.GetWindow(this) }.ShowDialog();
     }
 
     private void SiteInfo_Cert_Click(object sender, RoutedEventArgs e)

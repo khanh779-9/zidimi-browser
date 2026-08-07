@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Input;
@@ -16,15 +16,17 @@ public sealed class MainViewModel : ViewModelBase
     private string _searchFilter = "";
     private bool _isGuestMode;
 
-    private readonly HistoryService _history;
+private readonly HistoryService _history;
     private readonly BookmarkService _bookmarks;
+    private readonly DownloadService _downloads;
     private readonly Dictionary<TabViewModel, IWebBrowser> _browsers = new();
     private readonly object _browsersLock = new();
 
-    public MainViewModel(HistoryService history, BookmarkService bookmarks)
+    public MainViewModel(HistoryService history, BookmarkService bookmarks, DownloadService downloads)
     {
         _history = history;
         _bookmarks = bookmarks;
+        _downloads = downloads;
 
         NewTabCommand = new RelayCommand(_ => NewTab());
         CloseTabCommand = new RelayCommand(p =>
@@ -56,19 +58,19 @@ public sealed class MainViewModel : ViewModelBase
         {
             if (p is Bookmark b) _bookmarks.Remove(b);
         });
-        ClearDownloadsCommand = new RelayCommand(_ => Downloads.Clear());
+ClearDownloadsCommand = new RelayCommand(_ => _downloads.Clear());
         RemoveDownloadCommand = new RelayCommand(p =>
         {
-            if (p is DownloadEntry d) Downloads.Remove(d);
+            if (p is DownloadEntry d) _downloads.Remove(d);
         });
 
-        // Tạo tab mặc định
+// Create the default tab
         var startupBehavior = Heco.Browser.Models.AppSettings.Profile.StartupBehavior;
-        if (startupBehavior == 0) // Mở trang mới
+        if (startupBehavior == 0) // Open a blank page
         {
             NewTab("about:newtab");
         }
-        else if (startupBehavior == 1) // Tiếp tục từ nơi đã dừng
+        else if (startupBehavior == 1) // Resume from where you left off
         {
             var urls = Heco.Browser.Models.AppSettings.Profile.LastSessionTabs;
             if (urls.Count > 0)
@@ -81,7 +83,7 @@ public sealed class MainViewModel : ViewModelBase
                 NewTab("about:newtab");
             }
         }
-        else // Mở tập trang cụ thể
+        else // Open a specific set of pages
         {
             var pages = Heco.Browser.Models.AppSettings.Profile.StartupPages;
             if (pages.Count > 0)
@@ -99,9 +101,15 @@ public sealed class MainViewModel : ViewModelBase
     public ObservableCollection<TabViewModel> Tabs { get; } = new();
     public ObservableCollection<HistoryEntry> History => _history.Entries;
     public ObservableCollection<Bookmark> Bookmarks => _bookmarks.Items;
-    public ObservableCollection<DownloadEntry> Downloads { get; } = new();
+    public ObservableCollection<DownloadEntry> Downloads => _downloads.Entries;
 
-    /// <summary>Đăng ký ChromiumWebBrowser cho tab (gọi từ BrowserView).</summary>
+    /// <summary>Registers a new download — adds it to the list and saves it to disk.</summary>
+    public void AddDownload(DownloadEntry entry) => _downloads.Add(entry);
+
+    /// <summary>Updates a download's progress — persists the new state to disk.</summary>
+    public void UpdateDownload(DownloadEntry entry) => _downloads.Update(entry);
+
+    /// <summary>Registers the ChromiumWebBrowser for a tab (called from BrowserView).</summary>
     public void RegisterBrowser(TabViewModel tab, IWebBrowser browser)
     {
         lock (_browsersLock)
@@ -118,7 +126,7 @@ public sealed class MainViewModel : ViewModelBase
         }
     }
 
-    /// <summary>Lấy browser đã đăng ký cho tab (null nếu chưa có).</summary>
+    /// <summary>Gets the browser registered for a tab (null if none yet).</summary>
     public IWebBrowser? GetBrowser(TabViewModel tab)
     {
         lock (_browsersLock)
@@ -127,14 +135,14 @@ public sealed class MainViewModel : ViewModelBase
         }
     }
 
-    /// <summary>Thêm một entry vào lịch sử duyệt web.</summary>
-    public void AddHistory(string url, string title) => _history.Add(url, title);
+/// <summary>Adds an entry to the browsing history.</summary>
 
-    /// <summary>Chuyển profile hiện tại — tải lại lịch sử & bookmarks theo profile mới.</summary>
+/// <summary>Switches the current profile — reloads history, bookmarks and downloads for the new profile.</summary>
     public void SwitchProfile(string profileName)
     {
         _history.SwitchProfile(profileName);
         _bookmarks.SwitchProfile(profileName);
+        _downloads.SwitchProfile(profileName);
         AutofillManager.Load();
     }
 
@@ -171,15 +179,15 @@ public sealed class MainViewModel : ViewModelBase
         set => Set(ref _searchFilter, value);
     }
 
-    /// <summary>Chế độ khách (guest): không lưu dữ liệu nào sau khi đóng (spec 8.2).</summary>
+    /// <summary>Guest mode: no data is saved after closing (spec 8.2).</summary>
     public bool IsGuestMode
     {
         get => _isGuestMode;
         private set => Set(ref _isGuestMode, value);
     }
 
-    /// <summary>Lấy RequestContext cho tab mới theo profile hiện tại.
-    /// Nếu là chế độ khách (GuestMode) thì dùng in-memory context.</summary>
+/// <summary>Gets a RequestContext for a new tab based on the current profile.
+/// In guest mode an in-memory context is used instead.</summary>
     public CefSharp.IRequestContext? GetRequestContext()
         => IsGuestMode ? App.RequestContexts.GetGuestContext() : App.RequestContexts.GetProfileContext(Heco.Browser.Models.AppSettings.Global.CurrentProfile);
 
@@ -195,7 +203,7 @@ public sealed class MainViewModel : ViewModelBase
     public ICommand ClearDownloadsCommand { get; }
     public ICommand RemoveDownloadCommand { get; }
 
-    /// <summary>Quick helper để thêm bookmark từ code-behind.</summary>
+    /// <summary>Quick helper to add a bookmark from code-behind.</summary>
     public void AddBookmark(string url, string title) => _bookmarks.Add(url, title);
 
     public void NewTab(string url = "about:newtab")
@@ -206,8 +214,8 @@ public sealed class MainViewModel : ViewModelBase
         ActivePage = PageId.Browser;
     }
 
-    /// <summary>Mở app-tab nội bộ (Settings/History/Downloads/Bookmarks) trong tab strip.
-    /// Nếu đã có app-tab cùng loại thì activate tab đó (không mở trùng). (spec 7.4)</summary>
+/// <summary>Opens an internal app tab (Settings/History/Downloads/Bookmarks) in the tab strip.
+/// If an app tab of the same kind already exists, activates it instead of opening a duplicate (spec 7.4).</summary>
     public void OpenAppTab(TabKind kind)
     {
         var existing = Tabs.FirstOrDefault(t => t.Kind == kind);
@@ -228,7 +236,7 @@ public sealed class MainViewModel : ViewModelBase
         ActiveTab = tab;
     }
 
-    /// <summary>Di chuyển tab đến vị trí của tab đích (drag-reorder, spec 10.4).</summary>
+    /// <summary>Moves a tab to the target tab's position (drag-reorder, spec 10.4).</summary>
     public void MoveTab(TabViewModel dragged, TabViewModel target)
     {
         var fromIdx = Tabs.IndexOf(dragged);
@@ -249,11 +257,11 @@ public sealed class MainViewModel : ViewModelBase
         }
     }
 
-    /// <summary>Ghim/bỏ ghim tab. Ghim: tab thu nhỏ, đứng đầu danh sách (spec 10.4).</summary>
+    /// <summary>Pins/unpins a tab. When pinned, the tab shrinks and sits at the front of the list (spec 10.4).</summary>
     public void TogglePinTab(TabViewModel tab)
     {
         tab.IsPinned = !tab.IsPinned;
-        // Sắp xếp: tab ghim luôn nằm trước tab thường
+        // Sort: pinned tabs always come before regular tabs
         var pinned = Tabs.Where(t => t.IsPinned).ToList();
         var unpinned = Tabs.Where(t => !t.IsPinned).ToList();
         var reordered = pinned.Concat(unpinned).ToList();
@@ -288,7 +296,7 @@ public sealed class MainViewModel : ViewModelBase
         ApplyTheme(Theme);
     }
 
-    /// <summary>Bật/tắt chế độ khách. Khi bật: đóng toàn bộ tab (không lưu) và mở tab mới in-memory.</summary>
+    /// <summary>Turns guest mode on/off. When enabled, closes all tabs (unsaved) and opens a new in-memory tab.</summary>
     public void ToggleGuestMode()
     {
         IsGuestMode = !IsGuestMode;
@@ -298,11 +306,11 @@ public sealed class MainViewModel : ViewModelBase
 
     public static void ApplyTheme(Theme theme)
     {
-        // Áp dụng theme Sáng/Tối thông qua ThemeManager.
+        // Apply the Light/Dark theme through ThemeManager.
         ThemeManager.Apply(theme == Theme.Light ? ThemeManager.AppTheme.Light : ThemeManager.AppTheme.Dark);
     }
 
-    /// <summary>Lưu danh sách tab đang mở (dùng cho chế độ "Tiếp tục" khi khởi động lại).</summary>
+    /// <summary>Saves the list of open tabs (used for "Continue" mode on restart).</summary>
     public void SaveSession()
     {
         var urls = Tabs

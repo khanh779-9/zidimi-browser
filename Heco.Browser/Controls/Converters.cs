@@ -4,7 +4,7 @@ using System.Windows.Data;
 
 namespace Heco.Browser.Controls;
 
-/// <summary>Bool → Visibility (mặc định Visible/Collapsed). ConverterParameter = "invert" để đảo ngược.</summary>
+/// <summary>Bool → Visibility (Visible/Collapsed by default). Use ConverterParameter = "invert" to flip it.</summary>
 public sealed class BoolToVisibilityConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -18,7 +18,7 @@ public sealed class BoolToVisibilityConverter : IValueConverter
         => value is Visibility v && v == Visibility.Visible;
 }
 
-/// <summary>Object → Visibility: null → Collapsed, có giá trị → Visible. ConverterParameter = "invert" để đảo.</summary>
+/// <summary>Object → Visibility: null → Collapsed, a value → Visible. Use ConverterParameter = "invert" to flip it.</summary>
 public sealed class NullToVisibilityConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
@@ -33,7 +33,7 @@ public sealed class NullToVisibilityConverter : IValueConverter
         => throw new NotSupportedException();
 }
 
-/// <summary>Chuỗi nhập vào address bar trở thành URL hợp lệ (add http:// nếu thiếu).</summary>
+/// <summary>Turns the string entered in the address bar into a valid URL (prepends http:// when missing).</summary>
 public sealed class StringToUrlConverter : IValueConverter{
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         => value ?? "";

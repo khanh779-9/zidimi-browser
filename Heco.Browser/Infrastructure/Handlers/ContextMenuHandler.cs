@@ -5,10 +5,10 @@ using Heco.Browser.Infrastructure;
 namespace Heco.Browser.Infrastructure.Handlers;
 
 /// <summary>
-/// Context menu chuột phải tùy biến (spec 11.2 — IContextMenuHandler).
-/// Dùng đúng CefMenuCommand chuẩn (Back=100, Forward=101, Reload=102, Copy=113,
-/// Print=131, ViewSource=132) để CEF tự xử lý; các action tuỳ chỉnh (mở link tab mới,
-/// sao chép link, lưu ảnh, DevTools) dùng ID trong vùng UserFirst và xử lý thủ công.
+/// Custom right-click context menu (spec 11.2 — IContextMenuHandler).
+/// Uses the standard CefMenuCommand values (Back=100, Forward=101, Reload=102, Copy=113,
+/// Print=131, ViewSource=132) so CEF handles them itself; custom actions (open link in new tab,
+/// copy link, save image, DevTools) use IDs in the UserFirst range and are handled manually.
 /// </summary>
 public sealed class ContextMenuHandler : IContextMenuHandler
 {
@@ -22,7 +22,7 @@ public sealed class ContextMenuHandler : IContextMenuHandler
     public void OnBeforeContextMenu(IWebBrowser browserControl, IBrowser browser, IFrame frame,
         IContextMenuParams parameters, IMenuModel model)
     {
-        // Xoá menu mặc định CEF
+        // Clear the default CEF menu
         model.Clear();
 
         var l = LanguageManager.Instance;
@@ -105,7 +105,7 @@ public sealed class ContextMenuHandler : IContextMenuHandler
                 return true;
 
             default:
-                // Các command chuẩn (Back/Forward/Reload/Copy/Print/ViewSource) do CEF tự xử lý.
+                // Standard commands (Back/Forward/Reload/Copy/Print/ViewSource) are handled by CEF itself.
                 return false;
         }
     }

@@ -5,19 +5,24 @@ using CefSharp;
 namespace Heco.Browser.Infrastructure;
 
 /// <summary>
-/// Cung cấp RequestContext cho tab theo chế độ duyệt.
-/// Cache dùng chung cho mọi profile (User Data\Cache) nên tất cả profile đều dùng
-/// global context (khai báo ở CefSettings.CachePath). Chỉ guest mode dùng context
-/// in-memory riêng (CachePath rỗng) để không ghi gì xuống đĩa.
+/// Provides a RequestContext for a tab based on the browsing mode.
+/// Each profile has its own RequestContext whose CachePath points at its folder
+/// (User Data\&lt;ProfileFolder&gt; — a subfolder of the root, valid per the
+/// CefSettings.RootCachePath requirement), so cookies, session and localStorage are
+/// isolated per profile, following the Chromium model. Guest mode uses an in-memory
+/// context (empty CachePath) so nothing is written to disk.
 /// </summary>
 public sealed class RequestContextFactory : IDisposable
 {
+    private static readonly object Lock = new();
+    private readonly Dictionary<string, IRequestContext> _profileContexts = new();
     private IRequestContext? _guestContext;
 
-    /// <summary>Context bản (profile mặc định) — dùng global context chia sẻ cache chung.</summary>
-    public IRequestContext? GetDefaultContext() => null;
+    /// <summary>The base context (default profile) — the default profile's profile context.</summary>
+    public IRequestContext? GetDefaultContext()
+        => GetProfileContext(UserDataPaths.DefaultProfileName);
 
-    /// <summary>Context in-memory (guest mode / chế độ khách).</summary>
+    /// <summary>In-memory context (guest mode).</summary>
     public IRequestContext GetGuestContext()
     {
         if (_guestContext == null || _guestContext.IsDisposed)
@@ -31,12 +36,43 @@ public sealed class RequestContextFactory : IDisposable
         return _guestContext;
     }
 
-    /// <summary>Context cho Profile chỉ định — mọi profile dùng chung global context (cache chung ở root).</summary>
-    public IRequestContext? GetProfileContext(string profileName) => null;
+/// <summary>
+/// The context for the given Profile. CachePath points at the profile's own folder
+/// (User Data\&lt;ProfileName&gt;) so cookies/session are isolated per profile.
+/// </summary>
+    public IRequestContext? GetProfileContext(string profileName)
+    {
+        if (string.IsNullOrWhiteSpace(profileName))
+            return null;
+
+        lock (Lock)
+        {
+            if (_profileContexts.TryGetValue(profileName, out var existing) && !existing.IsDisposed)
+                return existing;
+
+            var cachePath = UserDataPaths.ProfileDir(profileName);
+            try { System.IO.Directory.CreateDirectory(cachePath); } catch { }
+
+            var context = new RequestContext(new RequestContextSettings
+            {
+                CachePath = cachePath,
+                PersistSessionCookies = true,
+            });
+            _profileContexts[profileName] = context;
+            return context;
+        }
+    }
 
     public void Dispose()
     {
-        _guestContext?.Dispose();
-        _guestContext = null;
+        lock (Lock)
+        {
+            foreach (var ctx in _profileContexts.Values)
+                try { ctx.Dispose(); } catch { }
+            _profileContexts.Clear();
+
+            _guestContext?.Dispose();
+            _guestContext = null;
+        }
     }
 }

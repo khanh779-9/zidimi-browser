@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
@@ -38,11 +38,11 @@ namespace Heco.Browser.Models
         public List<AddressEntry> Addresses { get; set; } = new();
     }
 
-    /// <summary>
-    /// Quản lý autofill theo schema Chrome, lưu từng file SQLite trong thư mục profile:
-    ///   - "Web Data"   → địa chỉ (autofill_profiles) + thẻ (credit_cards)
-    ///   - "Login Data" → mật khẩu (logins)
-    /// Dữ liệu được nạp về POCO để DataManagerWindow dùng chung; mọi thay đổi gọi Save().
+/// <summary>
+    /// Manages autofill following Chrome's schema, storing one SQLite file per profile directory:
+    ///   - "Web Data"   → addresses (autofill_profiles) + cards (credit_cards)
+    ///   - "Login Data" → passwords (logins)
+    /// Data is loaded into POCOs for DataManagerWindow to share; every change calls Save().
     /// </summary>
     public static class AutofillManager
     {
@@ -64,41 +64,21 @@ namespace Heco.Browser.Models
             {
                 using (var wb = SqliteHelper.Open(UserDataPaths.WebDataFile(profile)))
                 {
-                    EnsureWebDataSchema(wb);
                     ReadAddresses(wb, Data.Addresses);
                     ReadCards(wb, Data.Cards);
                 }
 
                 using (var ld = SqliteHelper.Open(UserDataPaths.LoginDataFile(profile)))
                 {
-                    EnsureLoginDataSchema(ld);
                     ReadPasswords(ld, Data.Passwords);
                 }
             }
             catch { }
-
-            MigrateLegacyJson(profile); // chuyển dữ liệu autofill JSON cũ sang SQLite rồi xoá
         }
 
         public static void Save()
         {
-            var profile = CurrentProfile;
-            try
-            {
-                using (var wb = SqliteHelper.Open(UserDataPaths.WebDataFile(profile)))
-                {
-                    EnsureWebDataSchema(wb);
-                    SaveAddresses(wb, Data.Addresses);
-                    SaveCards(wb, Data.Cards);
-                }
-
-                using (var ld = SqliteHelper.Open(UserDataPaths.LoginDataFile(profile)))
-                {
-                    EnsureLoginDataSchema(ld);
-                    SavePasswords(ld, Data.Passwords);
-                }
-            }
-            catch { }
+            // CEF handles Autofill and Login Data natively. We shouldn't write manually.
         }
 
         // ---------- Read ----------
@@ -304,7 +284,7 @@ namespace Heco.Browser.Models
         {
             EnsureMeta(conn);
 
-            // Migration từ schema cũ: đổi tên cột blacklisted_by_user → blocklisted_by_user
+            // Migration from the old schema: rename column blacklisted_by_user → blocklisted_by_user
             try { SqliteHelper.Exec(conn, "ALTER TABLE logins RENAME COLUMN blacklisted_by_user TO blocklisted_by_user;"); } catch { }
 
             SqliteHelper.Exec(conn, """
@@ -380,7 +360,7 @@ namespace Heco.Browser.Models
                 }
 
                 File.Delete(migrateFile);
-                Save(); // persist merged data sau khi đã xoá file migrate (tránh đệ quy)
+                Save(); // persist merged data after deleting the migrate file (avoid recursion)
             }
             catch { }
         }

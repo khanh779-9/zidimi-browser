@@ -23,7 +23,7 @@ InitializeComponent();
 
         SwitchPage(_vm.ActivePage);
 
-        // Áp dụng FontSize mặc định từ AppSettings cho toàn UI khi khởi động.
+        // Apply the default FontSize from AppSettings to the whole UI at startup.
         UpdateAppFontSize();
 
         Closing += OnMainWindowClosing;
@@ -36,8 +36,8 @@ InitializeComponent();
 
     private void OnMainWindowClosing(object? sender, CancelEventArgs e)
     {
-        // "RunInBackground": ẩn window thay vì thoát để CEF chạy nền,
-        // hiện system tray icon để user mở lại hoặc thoát hẳn.
+// "RunInBackground": hide the window instead of exiting so CEF keeps running in the background,
+        // and show the system tray icon so the user can reopen it or quit completely.
         if (Models.AppSettings.Global.RunInBackground)
         {
             e.Cancel = true;
@@ -57,8 +57,8 @@ private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
         PageHost.Content = GetPage(id);
     }
 
-    /// <summary>Lấy page theo nhu cầu (lazy) — tránh tạo BrowserView (và kéo theo việc nạp
-    /// CefSharp/native CEF) ngay khi mở cửa sổ, giúp cửa sổ hiện nhanh.</summary>
+    /// <summary>Get the page lazily on demand — avoids creating BrowserView (and dragging along the loading of
+    /// CefSharp/native CEF) right when the window opens, so the window appears quickly.</summary>
     private UserControl GetPage(PageId id)
     {
         _pages.TryGetValue(id, out var page);

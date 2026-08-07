@@ -4,22 +4,22 @@ using System.Linq;
 namespace Heco.Browser.Models;
 
 /// <summary>
-/// Nguồn duy nhất chứa danh sách công cụ tìm kiếm, engine mặc định và cách dựng URL tìm kiếm.
-/// Mọi nơi (address bar, autocomplete, cài đặt) phải dùng chung để tránh lệch engine mặc định.
+/// Single source of truth for the list of search engines, the default engine, and how to build search URLs.
+/// Everywhere (address bar, autocomplete, settings) must share this to avoid default engine drift.
 /// </summary>
 public static class SearchEngines
 {
-    /// <summary>Thứ tự đúng như hiển thị trong dropdown cài đặt.</summary>
+    /// <summary>Order matches how they appear in the settings dropdown.</summary>
     public static readonly string[] All =
     {
         "DuckDuckGo", "Google", "Bing", "Brave Search", "Yahoo", "Yandex",
         "Baidu", "Ecosia", "Startpage", "Qwant", "Ask.com",
     };
 
-    /// <summary>Công cụ tìm kiếm mặc định của app (khớp HomePageUrl mặc định trong ProfileSettings).</summary>
+    /// <summary>The app's default search engine (matches the default HomePageUrl in ProfileSettings).</summary>
     public const string Default = "DuckDuckGo";
 
-    /// <summary>Chuẩn hoá giá trị tồn tại trong All; giá trị không hợp lệ → Default (DuckDuckGo).</summary>
+    /// <summary>Normalizes a value that exists in All; invalid values fall back to Default (DuckDuckGo).</summary>
     public static string Normalize(string? engine)
         => string.IsNullOrWhiteSpace(engine) ? Default
          : All.Contains(engine) ? engine
@@ -27,7 +27,7 @@ public static class SearchEngines
 
     public static int IndexOf(string? engine) => Array.IndexOf(All, Normalize(engine));
 
-    /// <summary>Dựng URL tìm kiếm theo engine cho một truy vấn (query đã escape).</summary>
+    /// <summary>Builds the search URL for an engine given a query (already escaped).</summary>
     public static string BuildUrl(string engine, string escapedQuery)
         => Normalize(engine) switch
         {

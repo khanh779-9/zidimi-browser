@@ -3,8 +3,8 @@ using System.Windows;
 namespace Heco.Browser.Controls;
 
 /// <summary>
-/// Custom CheckBox theo theme Heco: hộp vuông bo góc + dấu tích tím.
-/// Giữ đầy đủ ngữ nghĩa CheckBox gốc (IsChecked, Checked/Unchecked/Indeterminate).
+/// Custom CheckBox themed for Heco: a rounded square box with a purple check mark.
+/// Keeps the full semantics of the raw CheckBox (IsChecked, Checked/Unchecked/Indeterminate).
 /// </summary>
 public class HecoCheckBox : System.Windows.Controls.CheckBox
 {

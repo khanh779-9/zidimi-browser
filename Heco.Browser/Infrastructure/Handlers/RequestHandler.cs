@@ -15,8 +15,8 @@ public class RequestHandler : CefSharp.Handler.RequestHandler
     {
         if (AppSettings.Profile.SendDoNotTrack && !request.IsReadOnly)
         {
-            // request.Headers là NameValueCollection read-only trong OnBeforeBrowse —
-            // dùng SetHeaderByName (native, không qua collection).
+// request.Headers is a read-only NameValueCollection in OnBeforeBrowse —
+            // so use SetHeaderByName (native, not through the collection).
             var existing = request.GetHeaderByName("DNT");
             if (string.IsNullOrEmpty(existing))
                 request.SetHeaderByName("DNT", "1", overwrite: true);
@@ -26,7 +26,7 @@ public class RequestHandler : CefSharp.Handler.RequestHandler
 
     protected override bool OnCertificateError(IWebBrowser chromiumWebBrowser, IBrowser browser, CefErrorCode errorCode, string requestUrl, ISslInfo sslInfo, IRequestCallback callback)
     {
-        // Safe Browsing: Nếu người dùng tắt cảnh báo trang nguy hiểm, không hiển thị dialog và chặn luôn.
+        // Safe Browsing: if the user disabled dangerous-site warnings, don't show a dialog and just block.
         if (!AppSettings.Profile.WarnDangerousSites)
         {
             callback.Continue(false);

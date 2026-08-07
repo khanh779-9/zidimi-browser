@@ -5,8 +5,8 @@ using Heco.Browser.Models;
 namespace Heco.Browser.Infrastructure.Handlers;
 
 /// <summary>
-/// Bắt sự kiện window.open / target=_blank để mở tab mới trong UI
-/// thay vì để CEF mở cửa sổ Chromium mặc định (spec 11.2 — ILifeSpanHandler).
+/// Catches window.open / target=_blank events to open a new tab in the UI
+/// instead of letting CEF open the default Chromium window (spec 11.2 — ILifeSpanHandler).
 /// </summary>
 public sealed class LifeSpanHandler : ILifeSpanHandler
 {

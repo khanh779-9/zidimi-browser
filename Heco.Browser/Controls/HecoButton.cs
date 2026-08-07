@@ -3,7 +3,7 @@ using System.Windows.Controls;
 
 namespace Heco.Browser.Controls;
 
-/// <summary>Các biến thể màu của HecoButton.</summary>
+/// <summary>Color variants for HecoButton.</summary>
 public enum HecoButtonVariant
 {
     Secondary,
@@ -13,11 +13,11 @@ public enum HecoButtonVariant
 }
 
 /// <summary>
-/// Custom Button theo theme Heco. Hỗ trợ:
-///   - Variant: Primary (gradient tím), Secondary (surface), Ghost (trong suốt), Danger (đỏ).
-///   - IconData: chuỗi path data SVG hiển thị bên trái nhãn.
-///   - CornerRadius tuỳ chỉnh.
-/// Dùng thay <c>Button</c> gốc để giữ đồng bộ theme.
+/// Custom Button themed for Heco. Supports:
+///   - Variant: Primary (purple gradient), Secondary (surface), Ghost (transparent), Danger (red).
+///   - IconData: an SVG path data string shown to the left of the label.
+///   - Customizable corner radius.
+/// Use in place of the base <c>Button</c> to keep the theme consistent.
 /// </summary>
 public class HecoButton : Button
 {
@@ -45,7 +45,7 @@ public class HecoButton : Button
         set => SetValue(VariantProperty, value);
     }
 
-    /// <summary>Path data SVG của icon (xem <see cref="IconPaths"/>).</summary>
+    /// <summary>The icon's SVG path data (see <see cref="IconPaths"/>).</summary>
     public string? IconData
     {
         get => (string?)GetValue(IconDataProperty);

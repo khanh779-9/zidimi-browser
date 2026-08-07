@@ -8,19 +8,19 @@ using Heco.Browser.Infrastructure;
 namespace Heco.Browser.Controls;
 
 /// <summary>
-/// Custom Window control theo phong cách Chrome:
-///   - Code-only base class, UI nằm trong ControlTemplate (HecoWindowStyle trong Controls\HecoWindow.xaml)
-///   - Title bar chính là tab strip (TabStripContent) + caption buttons (Chrome-style)
-///   - Chỉ khai báo DependencyProperties; template tự render title bar + caption buttons
-///   - Khi maximized, RootGrid được lùi vào một khoảng (MaximizedPadding) để thấy rõ border
-///   - Double-click / kéo trên title bar được xử lý bởi WindowChrome (CaptionHeight)
+/// Custom Window control styled like Chrome:
+///   - Code-only base class; the UI lives in a ControlTemplate (HecoWindowStyle in Controls\HecoWindow.xaml)
+///   - The title bar is the tab strip (TabStripContent) plus the caption buttons (Chrome-style)
+///   - Only dependency properties are declared; the template renders the title bar and caption buttons itself
+///   - When maximized, the RootGrid is inset by a margin (MaximizedPadding) so the border stays visible
+///   - Double-click and dragging on the title bar are handled by WindowChrome (CaptionHeight)
 ///
-/// Cách dùng:
+/// Usage:
 ///   <ctrl:HecoWindow Style="{StaticResource HecoWindowStyle}">
 ///       <ctrl:HecoWindow.TabStripContent>
 ///           <views:TabStrip />
 ///       </ctrl:HecoWindow.TabStripContent>
-///       <Grid> ... nội dung chính ... </Grid>
+///       <Grid> ... main content ... </Grid>
 ///   </ctrl:HecoWindow>
 /// </summary>
 public class HecoWindow : Window
@@ -74,8 +74,8 @@ public class HecoWindow : Window
     }
 
     /// <summary>
-    /// True: dùng caption buttons gốc của Windows (WindowChrome.UseAeroCaptionButtons = true),
-    /// custom caption buttons trong template sẽ bị ẩn. False (mặc định): custom Chrome-style buttons.
+    /// When true, uses Windows' native caption buttons (WindowChrome.UseAeroCaptionButtons = true)
+    /// and the custom caption buttons in the template are hidden. False (the default) uses custom Chrome-style buttons.
     /// </summary>
     public bool UseNativeCaption
     {
@@ -99,13 +99,13 @@ public class HecoWindow : Window
         StateChanged += OnStateChanged;
     }
 
-    /// <summary>Áp dụng WindowChrome theo UseNativeCaption (native aero buttons hoặc custom).</summary>
+    /// <summary>Applies WindowChrome based on UseNativeCaption (native aero buttons or custom).</summary>
     private void ApplyChrome()
     {
         WindowChrome.SetWindowChrome(this, new WindowChrome
         {
             CaptionHeight = 40,
-            // GlassFrameThickness khác 0 để Windows giữ DWM shadow + animation minimize/maximize
+            // GlassFrameThickness must be non-zero so Windows keeps the DWM shadow and minimize/maximize animation
             GlassFrameThickness = new Thickness(0, 0, 0, 1),
             ResizeBorderThickness = new Thickness(6),
             CornerRadius = new CornerRadius(0),
@@ -132,7 +132,7 @@ public class HecoWindow : Window
         if (_maximizeBtn != null) _maximizeBtn.Click += Maximize_Click;
         if (_closeBtn != null) _closeBtn.Click += Close_Click;
 
-        // Re-apply content nếu DP được set trước khi template load
+        // Re-apply content in case the DP was set before the template loaded
         if (_tabStripSlot != null) _tabStripSlot.Content = TabStripContent;
 
         UpdateMaximizeState();
@@ -151,7 +151,7 @@ public class HecoWindow : Window
     {
         IsMaximized = WindowState == WindowState.Maximized;
 
-        // RootGrid lùi vào khi maximized để border hiện rõ (template bind Margin vào MaximizedPadding)
+        // Inset the RootGrid when maximized so the border stays visible (the template binds Margin to MaximizedPadding)
         MaximizedPadding = IsMaximized ? new Thickness(8) : new Thickness(0);
 
         if (_maximizePath != null)

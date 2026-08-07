@@ -5,20 +5,20 @@ using Microsoft.Data.Sqlite;
 namespace Heco.Browser.Infrastructure;
 
 /// <summary>
-/// Helper mở/tạo các database SQLite theo schema Chrome (User Data\&lt;profile&gt;).
-/// Chrome dùng timestamp kiểu WebKit: microseconds tính từ 1601-01-01 00:00:00 UTC
-/// (== Windows FILETIME / 10). Mọi file .db đều có bảng meta(key,value) để ghi version.
+/// Helper to open/create SQLite databases using Chrome's schema (User Data\&lt;profile&gt;).
+/// Chrome uses WebKit-style timestamps: microseconds since 1601-01-01 00:00:00 UTC
+/// (equal to Windows FILETIME / 10). Every .db file has a meta(key,value) table to store the version.
 /// </summary>
 public static class SqliteHelper
 {
-    /// <summary>Mốc epoch Chrome/Windows FILETIME.</summary>
+    /// <summary>Chrome/Windows FILETIME epoch.</summary>
     private static readonly DateTime ChromeEpoch = new(1601, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
     public static long ToChromeTime(DateTime utc) => (long)((utc.ToUniversalTime().Ticks - ChromeEpoch.Ticks) / 10);
 
     public static DateTime FromChromeTime(long micros) => ChromeEpoch.AddTicks(micros * 10).ToLocalTime();
 
-    /// <summary>Mở connection SQLite, tự tạo thư mục profile nếu chưa có.</summary>
+    /// <summary>Opens a SQLite connection, creating the profile folder first if needed.</summary>
     public static SqliteConnection Open(string dbPath)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
@@ -30,7 +30,7 @@ public static class SqliteHelper
         return conn;
     }
 
-    /// <summary>Chạy một lệnh DDL/DML.</summary>
+    /// <summary>Runs a DDL/DML command.</summary>
     public static void Exec(SqliteConnection conn, string sql, params (string name, object? value)[] args)
     {
         using var cmd = conn.CreateCommand();
@@ -40,7 +40,7 @@ public static class SqliteHelper
         cmd.ExecuteNonQuery();
     }
 
-    /// <summary>Ghi meta(key,value) — tương tự Chrome's meta table.</summary>
+    /// <summary>Writes meta(key,value) — similar to Chrome's meta table.</summary>
     public static void SetMeta(SqliteConnection conn, string key, string value)
     {
         Exec(conn,
@@ -49,7 +49,7 @@ public static class SqliteHelper
             ("$k", key), ("$v", value));
     }
 
-    /// <summary>Kiểm tra bảng đã tồn tại chưa.</summary>
+    /// <summary>Checks whether a table already exists.</summary>
     public static bool TableExists(SqliteConnection conn, string table)
     {
         using var cmd = conn.CreateCommand();

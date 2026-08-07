@@ -7,8 +7,8 @@ using Heco.Browser.Infrastructure;
 namespace Heco.Browser.Infrastructure;
 
 /// <summary>
-/// Quản lý system tray icon cho "Run in background".
-/// Khi window bị ẩn, icon xuất hiện để user có thể mở lại hoặc thoát hẳn app.
+/// Manages the system tray icon for "Run in background".
+/// When the window is hidden, the icon appears so the user can reopen it or exit the app entirely.
 /// </summary>
 public sealed class TrayIconManager : IDisposable
 {
@@ -51,21 +51,21 @@ public sealed class TrayIconManager : IDisposable
         return SystemIcons.Application;
     }
 
-    /// <summary>Hiện icon trên tray (khi window bị ẩn).</summary>
+    /// <summary>Shows the tray icon (when the window is hidden).</summary>
     public void Show()
     {
         if (_disposed) return;
         _notifyIcon.Visible = true;
     }
 
-    /// <summary>Ẩn icon (khi window hiện lại hoặc trước khi thoát).</summary>
+    /// <summary>Hides the icon (when the window comes back or before exiting).</summary>
     public void Hide()
     {
         if (_disposed) return;
         _notifyIcon.Visible = false;
     }
 
-    /// <summary>Mở lại window chính.</summary>
+    /// <summary>Reopens the main window.</summary>
     public static void RestoreMainWindow()
     {
         var main = Application.Current?.MainWindow;
@@ -79,7 +79,7 @@ public sealed class TrayIconManager : IDisposable
         main.Focus();
     }
 
-    /// <summary>Thoát hẳn ứng dụng (dù window đang ẩn).</summary>
+    /// <summary>Quits the application entirely (even if the window is hidden).</summary>
     public static void ExitApplication()
     {
         Application.Current?.Shutdown();

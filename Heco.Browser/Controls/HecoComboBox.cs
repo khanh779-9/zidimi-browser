@@ -5,8 +5,8 @@ using Heco.Browser.Infrastructure;
 namespace Heco.Browser.Controls;
 
 /// <summary>
-/// Custom ComboBox (select box) theo theme Heco.
-/// Kế thừa trực tiếp từ ComboBox gốc để tận dụng các hành vi có sẵn (auto close popup, keyboard nav, v.v.).
+/// Custom ComboBox (select box) themed for Heco.
+/// Inherits directly from the raw ComboBox to reuse its built-in behaviors (auto-closing popup, keyboard navigation, etc.).
 /// </summary>
 public class HecoComboBox : ComboBox
 {
@@ -18,8 +18,8 @@ public class HecoComboBox : ComboBox
 
     public HecoComboBox()
     {
-        // Default placeholder chỉ lấy ở runtime (sau khi LanguageManager đã nạp),
-        // tránh gọi LanguageManager trong static metadata (nạp XAML trước OnStartup).
+        // The default placeholder is only resolved at runtime (after LanguageManager has loaded),
+        // to avoid calling LanguageManager from static metadata (XAML is loaded before OnStartup).
         if (GetValue(PlaceholderProperty) == null)
             SetValue(PlaceholderProperty, LanguageManager.Instance["Combo_Placeholder"]);
     }

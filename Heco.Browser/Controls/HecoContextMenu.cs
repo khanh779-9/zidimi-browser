@@ -6,9 +6,9 @@ using System.Windows.Media;
 namespace Heco.Browser.Controls;
 
 /// <summary>
-/// Một dòng trong menu theo theme Heco: icon (tuỳ chọn) + nhãn, hover nền, tuỳ chọn màu nguy hiểm.
-/// Tự đóng menu cha (HecoContextMenu) khi được bấm.
-/// Dùng thay <c>MenuItem</c>/nút dòng của ContextMenu gốc.
+/// A single row in the menu themed for Heco: an optional icon plus a label, hover background,
+/// and an optional danger style. Closes the parent menu (HecoContextMenu) when clicked.
+/// Use it in place of the raw <c>MenuItem</c> or row button in an ordinary ContextMenu.
 /// </summary>
 public class HecoMenuItem : Button
 {
@@ -24,14 +24,14 @@ public class HecoMenuItem : Button
     public static readonly DependencyProperty IsDangerProperty = DependencyProperty.Register(
         nameof(IsDanger), typeof(bool), typeof(HecoMenuItem), new PropertyMetadata(false));
 
-    /// <summary>Path data SVG của icon bên trái nhãn (xem <see cref="IconPaths"/>).</summary>
+    /// <summary>The SVG path data of the icon to the left of the label (see <see cref="IconPaths"/>).</summary>
     public string? IconData
     {
         get => (string?)GetValue(IconDataProperty);
         set => SetValue(IconDataProperty, value);
     }
 
-    /// <summary>True: nhãn + icon màu đỏ (hành động nguy hiểm như đóng tab / xoá).</summary>
+    /// <summary>When true, the label and icon are shown in red (for dangerous actions like closing a tab or deleting).</summary>
     public bool IsDanger
     {
         get => (bool)GetValue(IsDangerProperty);
@@ -60,10 +60,10 @@ public class HecoMenuItem : Button
 }
 
 /// <summary>
-/// Menu card theo theme Heco (thay <c>ContextMenu</c> gốc):
-///   - Popup card bo góc, có shadow, đóng khi bấm ra ngoài hoặc chọn item.
-///   - Items là tập <see cref="HecoMenuItem"/> (hoặc object bất kỳ với ItemTemplate).
-///   - Placement mặc định Bottom; hỗ trợ PlacementTarget + HorizontalOffset/VerticalOffset.
+/// Menu card themed for Heco (in place of the raw <c>ContextMenu</c>):
+///   - A rounded popup card with a shadow that closes when you click outside or pick an item.
+///   - Items are a set of <see cref="HecoMenuItem"/> (or any object with an ItemTemplate).
+///   - Placement defaults to Bottom; PlacementTarget plus HorizontalOffset/VerticalOffset are supported.
 /// </summary>
 public class HecoContextMenu : Control
 {
@@ -129,7 +129,7 @@ public class HecoContextMenu : Control
         set => SetValue(VerticalOffsetProperty, value);
     }
 
-    /// <summary>False: đóng khi bấm ra ngoài (mặc định).</summary>
+    /// <summary>When false (the default), closes when you click outside the menu.</summary>
     public bool StaysOpen
     {
         get => (bool)GetValue(StaysOpenProperty);
@@ -142,7 +142,7 @@ public class HecoContextMenu : Control
         set => SetValue(ItemTemplateProperty, value);
     }
 
-    /// <summary>Các mục của menu (HecoMenuItem).</summary>
+    /// <summary>The items in the menu (HecoMenuItem).</summary>
     public System.Collections.ObjectModel.ObservableCollection<object> Items { get; } = new();
 
     private static void OnIsOpenChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
@@ -151,7 +151,7 @@ public class HecoContextMenu : Control
         if (menu._popup != null) menu._popup.IsOpen = (bool)e.NewValue;
     }
 
-    /// <summary>Mở menu tại vị trí chuột (dùng cho context menu mở trên bất kỳ element nào).</summary>
+    /// <summary>Opens the menu at the mouse position (used for context menus opened on any element).</summary>
     public void ShowAt(UIElement target, System.Windows.Point point)
     {
         PlacementTarget = target;

@@ -6,10 +6,11 @@ using Heco.Browser.Infrastructure;
 namespace Heco.Browser.Controls;
 
 /// <summary>
-/// Popup card theo theme Heco (thay <c>Popup</c> gốc): card bo góc có shadow + tuỳ chọn backdrop overlay.
-///   - Placement / PlacementTarget / HorizontalOffset / VerticalOffset / StaysOpen như Popup.
-///   - HasBackdrop = true: phủ nền tối lên toàn app (dùng cho modal nhỏ).
-///   - Content tuỳ ý.
+/// Popup card themed for Heco (in place of the raw <c>Popup</c>): a rounded card with a shadow
+/// plus an optional backdrop overlay.
+///   - Placement / PlacementTarget / HorizontalOffset / VerticalOffset / StaysOpen work like Popup.
+///   - HasBackdrop = true covers the whole app with a dark overlay (for small modals).
+///   - The Content is arbitrary.
 /// </summary>
 public class HecoPopup : ContentControl
 {
@@ -89,7 +90,7 @@ public class HecoPopup : ContentControl
         set => SetValue(StaysOpenProperty, value);
     }
 
-    /// <summary>True: phủ nền tối lên toàn app khi mở (modal backdrop).</summary>
+    /// <summary>When true, covers the whole app with a dark overlay when opened (modal backdrop).</summary>
     public bool HasBackdrop
     {
         get => (bool)GetValue(HasBackdropProperty);
@@ -102,7 +103,7 @@ public class HecoPopup : ContentControl
         set => SetValue(CornerRadiusProperty, value);
     }
 
-    /// <summary>Command đóng/mở popup (bấm backdrop). Mặc định tự đóng popup.</summary>
+    /// <summary>Command used to open/close the popup (e.g. clicking the backdrop). By default it closes the popup.</summary>
     public System.Windows.Input.ICommand? ToggleOpenCommand
     {
         get => (System.Windows.Input.ICommand?)GetValue(ToggleOpenCommandProperty);
