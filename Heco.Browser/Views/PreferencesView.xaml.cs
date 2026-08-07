@@ -189,22 +189,20 @@ public partial class PreferencesView : UserControl
                 if (AppSettings.Global.CurrentProfile != name)
                 {
                     AppSettings.Global.CurrentProfile = name;
+                    AppSettings.LoadProfile(name);
                     AppSettings.SaveAll();
                     App.ViewModel?.SwitchProfile(name);
+                    Infrastructure.ThemeManager.ApplyFromSettings(AppSettings.Profile.Theme);
                 }
             }
         };
 
         var btnAddProfile = new HecoButton { Content = LanguageManager.Instance["Pref_AddProfile"], Padding = new Thickness(16,8,16,8) };
-        btnAddProfile.Click += (s, e) => 
+        btnAddProfile.Click += (s, e) =>
         {
-            var newProfile = string.Format(LanguageManager.Instance["Pref_ProfileCount"], AppSettings.Global.Profiles.Count + 1);
-            AppSettings.Global.Profiles.Add(newProfile);
-            AppSettings.Global.CurrentProfile = newProfile;
-            AppSettings.SaveAll();
-            Infrastructure.UserDataPaths.EnsureProfileDir(newProfile);
-            Infrastructure.UserDataPaths.RegisterProfile(newProfile);
-            App.ViewModel?.SwitchProfile(newProfile);
+            var owner = Window.GetWindow(this);
+            var pm = new ProfileManagerWindow { Owner = owner };
+            pm.ShowDialog();
             LoadSettingsSection("Profiles"); // Reload UI
         };
 

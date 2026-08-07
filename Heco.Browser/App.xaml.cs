@@ -51,7 +51,11 @@ public partial class App : Application
         // then initialize CEF at low priority so the window doesn't stay "frozen white" for long.
         base.OnStartup(e);
 
-        bool showPicker = true;
+        // Read the show-picker flag from app-owned settings (the source of truth).
+        // A stale legacy key may still live inside Chromium's Local State "profile" node from before
+        // this setting moved to app settings — remove it on sight without ever reading it back, so
+        // Chromium's own bookkeeping can't clobber the app-owned value.
+        bool showPicker = AppSettings.Global.ShowPickerOnStartup;
         try
         {
             if (File.Exists(UserDataPaths.LocalStatePath))
@@ -59,12 +63,11 @@ public partial class App : Application
                 var json = File.ReadAllText(UserDataPaths.LocalStatePath);
                 if (System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.Nodes.JsonNode>(json) is System.Text.Json.Nodes.JsonObject root &&
                     root.TryGetPropertyValue("profile", out var profileNode) &&
-                    profileNode is System.Text.Json.Nodes.JsonObject profileObj)
+                    profileNode is System.Text.Json.Nodes.JsonObject profileObj &&
+                    profileObj.TryGetPropertyValue("show_picker_on_startup", out _))
                 {
-                    if (profileObj.TryGetPropertyValue("show_picker_on_startup", out var showPickerNode) && showPickerNode != null)
-                    {
-                        showPicker = showPickerNode.GetValue<bool>();
-                    }
+                    profileObj.Remove("show_picker_on_startup");
+                    UserDataPaths.WriteLocalState(root);
                 }
             }
         }

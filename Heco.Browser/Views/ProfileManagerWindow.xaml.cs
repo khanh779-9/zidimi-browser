@@ -37,17 +37,19 @@ public partial class ProfileManagerWindow : HecoWindow
         }
     }
 
-    private void Add_Click(object sender, RoutedEventArgs e)
+private void Add_Click(object sender, RoutedEventArgs e)
     {
-        var newProfile = string.Format(LanguageManager.Instance["Pref_ProfileCount"], AppSettings.Global.Profiles.Count + 1);
+        var newProfile = AppSettings.NextProfileName();
         AppSettings.Global.Profiles.Add(newProfile);
         AppSettings.Global.CurrentProfile = newProfile;
+        AppSettings.LoadProfile(newProfile);
         AppSettings.SaveAll();
 
         UserDataPaths.EnsureProfileDir(newProfile);
         AvatarGenerator.GenerateAndSave(newProfile);
         UserDataPaths.RegisterProfile(newProfile);
         App.ViewModel?.SwitchProfile(newProfile);
+        Infrastructure.ThemeManager.ApplyFromSettings(AppSettings.Profile.Theme);
 
         LoadProfiles();
     }
@@ -56,9 +58,12 @@ public partial class ProfileManagerWindow : HecoWindow
     {
         if (sender is FrameworkElement b && b.Tag is ProfileItem p)
         {
+            if (AppSettings.Global.CurrentProfile == p.Name) return;
             AppSettings.Global.CurrentProfile = p.Name;
+            AppSettings.LoadProfile(p.Name);
             AppSettings.SaveAll();
             App.ViewModel?.SwitchProfile(p.Name);
+            Infrastructure.ThemeManager.ApplyFromSettings(AppSettings.Profile.Theme);
             LoadProfiles();
         }
     }
@@ -91,14 +96,22 @@ public partial class ProfileManagerWindow : HecoWindow
                 AppSettings.Global.Profiles.Remove(p.Name);
                 AppSettings.SaveAll();
 
-                // Delete from local state info_cache
+// Delete from local state info_cache + profiles_order
                 var folderName = UserDataPaths.ProfileFolder(p.Name);
                 UserDataPaths.UpdateLocalState(root =>
                 {
-                    if (root["profile"] is System.Text.Json.Nodes.JsonObject prof &&
-                        prof["info_cache"] is System.Text.Json.Nodes.JsonObject cache)
+                    if (root["profile"] is System.Text.Json.Nodes.JsonObject prof)
                     {
-                        cache.Remove(folderName);
+                        if (prof["info_cache"] is System.Text.Json.Nodes.JsonObject cache)
+                        {
+                            cache.Remove(folderName);
+                        }
+                        if (prof["profiles_order"] is System.Text.Json.Nodes.JsonArray order)
+                        {
+                            var toRemove = System.Linq.Enumerable.FirstOrDefault(
+                                order, x => x?.GetValue<string>() == folderName);
+                            if (toRemove != null) order.Remove(toRemove);
+                        }
                     }
                 });
 

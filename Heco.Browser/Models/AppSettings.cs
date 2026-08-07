@@ -134,4 +134,20 @@ public static class AppSettings
         }
         catch { }
     }
+
+    /// <summary>Generates the next unused profile name in the "Profile {n}" scheme to avoid duplicates
+    /// (e.g. after profiles are deleted and recreated).</summary>
+    public static string NextProfileName()
+    {
+        var template = Infrastructure.LanguageManager.Instance["Pref_ProfileCount"];
+        var taken = new System.Collections.Generic.HashSet<string>(
+            Global.Profiles, StringComparer.OrdinalIgnoreCase);
+        int n = 1;
+        while (true)
+        {
+            var candidate = string.Format(template, n);
+            if (!taken.Contains(candidate)) return candidate;
+            n++;
+        }
+    }
 }

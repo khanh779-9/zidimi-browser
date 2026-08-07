@@ -116,21 +116,33 @@ public static class UserDataPaths
         try
         {
             Directory.CreateDirectory(Root);
-            var path = LocalStatePath;
-            System.Text.Json.Nodes.JsonObject? root;
-            if (File.Exists(path))
-            {
-                var json = File.ReadAllText(path);
-                root = JsonSerializer.Deserialize<System.Text.Json.Nodes.JsonNode>(json) as System.Text.Json.Nodes.JsonObject
-                       ?? new System.Text.Json.Nodes.JsonObject();
-            }
-            else
-            {
-                root = new System.Text.Json.Nodes.JsonObject();
-            }
-
+            var root = ReadLocalState();
             mutate(root);
-            File.WriteAllText(path, JsonSerializer.Serialize(root,
+            WriteLocalState(root);
+        }
+        catch { /* not critical — just metadata */ }
+    }
+
+    /// <summary>Reads the Local State file as a mutable JsonObject (empty object if missing/corrupt).</summary>
+    private static System.Text.Json.Nodes.JsonObject ReadLocalState()
+    {
+        var path = LocalStatePath;
+        if (File.Exists(path))
+        {
+            var json = File.ReadAllText(path);
+            if (JsonSerializer.Deserialize<System.Text.Json.Nodes.JsonNode>(json) is System.Text.Json.Nodes.JsonObject root)
+                return root;
+        }
+        return new System.Text.Json.Nodes.JsonObject();
+    }
+
+    /// <summary>Serializes and writes the Local State JsonObject to disk.</summary>
+    public static void WriteLocalState(System.Text.Json.Nodes.JsonObject root)
+    {
+        try
+        {
+            Directory.CreateDirectory(Root);
+            File.WriteAllText(LocalStatePath, JsonSerializer.Serialize(root,
                 new JsonSerializerOptions { WriteIndented = true }));
         }
         catch { /* not critical — just metadata */ }

@@ -12,4 +12,5 @@ public class GlobalSettings
     public bool RunInBackground { get; set; } = false;
     public bool UseSystemProxy { get; set; } = true;
     public string? LoggedInUser { get; set; }
+    public bool ShowPickerOnStartup { get; set; } = true;
 }

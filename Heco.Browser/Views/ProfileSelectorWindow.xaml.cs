@@ -24,6 +24,8 @@ public partial class ProfileSelectorWindow : HecoWindow
     {
         Profiles.Clear();
 
+        ShowOnStartupToggle.IsChecked = AppSettings.Global.ShowPickerOnStartup;
+
         try
         {
             if (File.Exists(UserDataPaths.LocalStatePath))
@@ -33,15 +35,6 @@ public partial class ProfileSelectorWindow : HecoWindow
                     root.TryGetPropertyValue("profile", out var profileNode) && 
                     profileNode is JsonObject profileObj)
                 {
-                    if (profileObj.TryGetPropertyValue("show_picker_on_startup", out var showPickerNode) && showPickerNode != null)
-                    {
-                        ShowOnStartupToggle.IsChecked = showPickerNode.GetValue<bool>();
-                    }
-                    else
-                    {
-                        ShowOnStartupToggle.IsChecked = true;
-                    }
-
                     if (profileObj.TryGetPropertyValue("info_cache", out var infoCacheNode) && infoCacheNode is JsonObject infoCache)
                     {
                         var orderedFolders = new List<string>();
@@ -107,7 +100,6 @@ public partial class ProfileSelectorWindow : HecoWindow
                 AvatarPath = avatarPath,
                 IsAddButton = false
             });
-            ShowOnStartupToggle.IsChecked = true;
         }
 
         // Add Button
@@ -168,7 +160,10 @@ public partial class ProfileSelectorWindow : HecoWindow
             {
                 AppSettings.Global.Profiles.Remove(p.Name);
                 if (AppSettings.Global.CurrentProfile == p.Name)
-                    AppSettings.Global.CurrentProfile = AppSettings.Global.Profiles.FirstOrDefault() ?? "Default";
+                {
+                    AppSettings.Global.CurrentProfile = AppSettings.Global.Profiles.FirstOrDefault() ?? UserDataPaths.DefaultProfileName;
+                    AppSettings.LoadProfile(AppSettings.Global.CurrentProfile);
+                }
                 AppSettings.SaveAll();
 
                 UserDataPaths.UpdateLocalState(root =>
@@ -209,14 +204,10 @@ public partial class ProfileSelectorWindow : HecoWindow
         this.Close();
     }
 
-    private void ShowOnStartup_Click(object sender, RoutedEventArgs e)
+    private void ShowOnStartup_Toggled(object sender, RoutedEventArgs e)
     {
-        bool show = ShowOnStartupToggle.IsChecked == true;
-        UserDataPaths.UpdateLocalState(root =>
-        {
-            var profileObj = (JsonObject?)root["profile"] ?? (JsonObject)(root["profile"] = new JsonObject());
-            profileObj["show_picker_on_startup"] = show;
-        });
+        AppSettings.Global.ShowPickerOnStartup = ShowOnStartupToggle.IsChecked == true;
+        AppSettings.SaveGlobal();
     }
 
     private void LaunchProfile(string profileName)
