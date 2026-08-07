@@ -240,17 +240,45 @@
                                  Visibility="Collapsed" />
                 </Grid>
                 
+<StackPanel Grid.Column="3" Orientation="Horizontal" Margin="4,0,0,0">
+                    <Button Style="{DynamicResource ToolIconButton}" Width="34" Height="34"
+                            x:Name="HistoryBtn" Click="HistoryBtn_Click"
+                            ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_HistoryTooltip]}">
+                        <Path Width="17" Height="17" Stretch="Uniform"
+                              Stroke="{DynamicResource Ink200Brush}" StrokeThickness="1.5"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              Data="M12 3 a9 9 0 1 0 9 9 M12 7 v5 l3 2" />
+                    </Button>
+                    <Button Style="{StaticResource ToolIconButton}" Width="34" Height="34"
+                            x:Name="DownloadsBtn" Click="DownloadsBtn_Click"
+                            ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_DownloadsTooltip]}">
+                        <Path Width="17" Height="17" Stretch="Uniform"
+                              Stroke="{DynamicResource Ink200Brush}" StrokeThickness="1.5"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              Data="M12 3 v12 m-5-5 l5 5 l5-5 M5 21 h14" />
+                    </Button>
+                    <Button Style="{DynamicResource ToolIconButton}" Width="34" Height="34"
+                            x:Name="ExtensionsBtn" Click="ExtensionsBtn_Click"
+                            ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_ExtensionsTooltip]}">
+                        <Path Width="17" Height="17" Stretch="Uniform" Fill="{DynamicResource Ink200Brush}"
+                              Stroke="{DynamicResource Ink200Brush}" StrokeThickness="1.5"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                              Data="M10 2 L14 2 v3 a1 1 0 0 0 2 0 V2 h3 v3 a1 1 0 0 0 2 0 V2 h1 a2 2 0 0 1 2 2 v3 a1 1 0 0 0-2 0 V5 a1 1 0 0 0-2 0 v3 h1 v3 a1 1 0 0 0-2 0 V8 h-3 v2 a1 1 0 0 0 2 0 v3 h1 a1 1 0 0 0-2 0 h-2 a1 1 0 0 0-2 0 h-1 v3 a1 1 0 0 0 2 0 h1 v-3 h3 v3 a1 1 0 0 0 2 0 v1 h-6 a2 2 0 0 1-2-2 v-4 Z" />
+                    </Button>
+                </StackPanel>
+
                 <Button Grid.Column="4" Style="{DynamicResource ToolIconButton}"
                         x:Name="AvatarBtn" Click="Avatar_Click"
                         ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_AvatarTooltip]}">
                     <Grid Width="22" Height="22">
-                        <Ellipse Fill="{DynamicResource HecoPurpleBrush}" />
+                        <Ellipse x:Name="AvatarFallback" Fill="{DynamicResource HecoPurpleBrush}" />
                         <TextBlock x:Name="AvatarInitial" Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Browser_HecoInitial]}"
                                   Foreground="{DynamicResource OnAccentBrush}" FontSize="11" FontWeight="SemiBold"
                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <Image x:Name="AvatarImage" Width="22" Height="22" Stretch="UniformToFill" Visibility="Collapsed" />
                     </Grid>
                 </Button>
-                
+
                 <Button Grid.Column="5" Style="{DynamicResource ToolIconButton}"
                         x:Name="MenuBtn" Click="Menu_Click" ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_MenuTooltip]}">
                     <Path Width="18" Height="18" Stretch="Uniform"
@@ -310,12 +338,13 @@
                        CornerRadius="8"
                        MinWidth="40">
                     <StackPanel Margin="6">
-                        <StackPanel Orientation="Horizontal" Margin="8,8,8,6">
+<StackPanel Orientation="Horizontal" Margin="8,8,8,6">
                             <Grid Width="32" Height="32">
-                                <Ellipse Fill="{DynamicResource HecoPurpleBrush}" />
+                                <Ellipse x:Name="AvatarFallback2" Fill="{DynamicResource HecoPurpleBrush}" />
                                 <TextBlock x:Name="AvatarInitial2" Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Browser_HecoInitial]}"
-                                          Foreground="{DynamicResource OnAccentBrush}" FontSize="14" FontWeight="SemiBold"
-                                          HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                           Foreground="{DynamicResource OnAccentBrush}" FontSize="14" FontWeight="SemiBold"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <Image x:Name="AvatarImage2" Width="32" Height="32" Stretch="UniformToFill" Visibility="Collapsed" />
                             </Grid>
                             <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
                                 <TextBlock x:Name="ProfileNameText" Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Browser_HecoBrowser]}"
@@ -332,6 +361,50 @@
                         <Border Height="1" Background="{DynamicResource StrokeBrush}" Margin="6,2" />
                         <ctrl:HecoMenuItem Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Profile_Manage]}"
                                     Click="Avatar_ManageProfiles" />
+                    </StackPanel>
+                </ctrl:HecoPopup>
+
+                <ctrl:HecoPopup x:Name="HistoryPopup" StaysOpen="False" Placement="Bottom"
+                       PlacementTarget="{Binding ElementName=HistoryBtn}"
+                       CornerRadius="8" Width="300">
+                    <StackPanel Margin="6">
+                        <TextBlock Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Menu_History]}"
+                                   FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource Ink100Brush}"
+                                   Margin="12,8,12,4" />
+                        <ListBox x:Name="HistoryRecentList" BorderThickness="0" Background="Transparent"
+                                 MaxHeight="260" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 MouseLeftButtonUp="HistoryRecentList_LeftButtonUp" />
+                        <Border Height="1" Background="{DynamicResource StrokeBrush}" Margin="6,4" />
+                        <ctrl:HecoMenuItem Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Browser_ViewAllHistory]}"
+                                           Click="HistoryPopup_ViewAll" Margin="0,2" />
+                    </StackPanel>
+                </ctrl:HecoPopup>
+                <ctrl:HecoPopup x:Name="DownloadsPopup" StaysOpen="False" Placement="Bottom"
+                                                      PlacementTarget="{Binding ElementName=DownloadsBtn}"
+                                                      CornerRadius="8" Width="300">
+                    <StackPanel Margin="6">
+                        <TextBlock Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Downloads_Title]}"
+                                   FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource Ink100Brush}"
+                                   Margin="12,8,12,4" />
+                        <ListBox x:Name="DownloadsRecentList" BorderThickness="0" Background="Transparent"
+                                 MaxHeight="300" ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                        <Border Height="1" Background="{DynamicResource StrokeBrush}" Margin="6,4" />
+                        <ctrl:HecoMenuItem Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Browser_ViewAllDownloads]}"
+                                           Click="DownloadsPopup_ViewAll" Margin="6,2" />
+                    </StackPanel>
+                </ctrl:HecoPopup>
+                <ctrl:HecoPopup x:Name="ExtensionsPopup" StaysOpen="False" Placement="Bottom"
+                                                      PlacementTarget="{Binding ElementName=ExtensionsBtn}"
+                                                      CornerRadius="8" Width="320">
+                    <StackPanel Margin="6">
+                        <TextBlock Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Menu_Extensions]}"
+                                   FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource Ink100Brush}"
+                                   Margin="12,8,12,4" />
+                        <ListBox x:Name="ExtensionsList" BorderThickness="0" Background="Transparent"
+                                 MaxHeight="300" ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                        <Border Height="1" Background="{DynamicResource StrokeBrush}" Margin="6,4" />
+                        <ctrl:HecoMenuItem Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Browser_ManageExtensions]}"
+                                           Click="ExtensionsPopup_Manage" Margin="6,2" />
                     </StackPanel>
                 </ctrl:HecoPopup>
             </Grid>

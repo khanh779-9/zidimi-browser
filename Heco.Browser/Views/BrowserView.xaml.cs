@@ -4,6 +4,9 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
+using System.Collections.Generic;
+using System.IO;
+using System.Windows.Media.Imaging;
 using CefSharp;
 using CefSharp.Wpf;
 using Heco.Browser.Controls;
@@ -570,7 +573,7 @@ public partial class BrowserView : UserControl
         if (ReloadBtn.Content is not Path p) return;
         p.Data = isLoading
             ? Geometry.Parse("M7 7 L17 17 M17 7 L7 17")
-            : Geometry.Parse("M12 3 a9 9 0 1 0 9 9 M12 3 L9 6 M12 3 L15 6");
+            : Geometry.Parse("M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8 M21 3v5h-5");
         ReloadBtn.ToolTip = isLoading ? LanguageManager.Instance["Browser_StopLoad"] : LanguageManager.Instance["Browser_Reload"];
     }
 
@@ -911,12 +914,57 @@ public partial class BrowserView : UserControl
     // ===== Profile / Guest mode =====
     private void Avatar_Click(object sender, RoutedEventArgs e)
     {
+        LoadProfileAvatar();
         AvatarInitial.Text = _vm.IsGuestMode ? LanguageManager.Instance["Browser_GuestInitial"] : LanguageManager.Instance["Browser_HecoInitial"];
         AvatarInitial2.Text = AvatarInitial.Text;
         ProfileNameText.Text = _vm.IsGuestMode ? LanguageManager.Instance["Browser_Guest"] : LanguageManager.Instance["Browser_HecoBrowser"];
         ProfileModeText.Text = _vm.IsGuestMode ? LanguageManager.Instance["Browser_NoDataSaved"] : LanguageManager.Instance["Browser_DefaultProfile"];
         GuestModeCheck.IsChecked = _vm.IsGuestMode;
         AvatarPopup.IsOpen = !AvatarPopup.IsOpen;
+    }
+
+    /// <summary>Loads the profile's avatar.ico (platform profile folder) and shows it on the toolbar &
+    /// profile popup. Falls back to the purple initial letter when the file is missing or guest mode.</summary>
+    private void LoadProfileAvatar()
+    {
+        var guest = _vm.IsGuestMode;
+        if (guest)
+        {
+            AvatarImage.Visibility = Visibility.Collapsed;
+            AvatarImage2.Visibility = Visibility.Collapsed;
+            AvatarFallback.Visibility = Visibility.Visible;
+            AvatarFallback2.Visibility = Visibility.Visible;
+            return;
+        }
+
+        try
+        {
+            var name = Heco.Browser.Models.AppSettings.Global.CurrentProfile;
+            var ico = UserDataPaths.AvatarIconFile(name);
+            if (File.Exists(ico))
+            {
+                var source = new BitmapImage();
+                source.BeginInit();
+                source.CacheOption = BitmapCacheOption.OnLoad;
+                source.UriSource = new Uri(ico);
+                source.EndInit();
+                source.Freeze();
+
+                AvatarImage.Source = source;
+                AvatarImage.Visibility = Visibility.Visible;
+                AvatarImage2.Source = source;
+                AvatarImage2.Visibility = Visibility.Visible;
+                AvatarFallback.Visibility = Visibility.Collapsed;
+                AvatarFallback2.Visibility = Visibility.Collapsed;
+                return;
+            }
+        }
+        catch { /* fall through to the default initial letter */ }
+
+        AvatarImage.Visibility = Visibility.Collapsed;
+        AvatarImage2.Visibility = Visibility.Collapsed;
+        AvatarFallback.Visibility = Visibility.Visible;
+        AvatarFallback2.Visibility = Visibility.Visible;
     }
 
     private void GuestMode_Changed(object sender, RoutedEventArgs e)
@@ -1039,6 +1087,112 @@ public partial class BrowserView : UserControl
         SiteInfoPopup.IsOpen = false;
         HecoMessageBox.Show(LanguageManager.Instance["Browser_SiteSettingsWIP"],
             LanguageManager.Instance["Browser_HecoBrowser"], HecoMessageBoxButton.OK, HecoMessageBoxImage.Information, Window.GetWindow(this));
+    }
+
+    // ===== Toolbar quick panels: History / Downloads / Extensions =====
+
+    private void HistoryBtn_Click(object sender, RoutedEventArgs e)
+    {
+        PopulateHistoryRecent();
+        HistoryPopup.PlacementTarget = sender as FrameworkElement ?? HistoryBtn;
+        HistoryPopup.IsOpen = !HistoryPopup.IsOpen;
+    }
+
+    private void DownloadsBtn_Click(object sender, RoutedEventArgs e)
+    {
+        PopulateDownloadsRecent();
+        DownloadsPopup.PlacementTarget = sender as FrameworkElement ?? DownloadsBtn;
+        DownloadsPopup.IsOpen = !DownloadsPopup.IsOpen;
+    }
+
+    private void ExtensionsBtn_Click(object sender, RoutedEventArgs e)
+    {
+        PopulateExtensions();
+        ExtensionsPopup.PlacementTarget = sender as FrameworkElement ?? ExtensionsBtn;
+        ExtensionsPopup.IsOpen = !ExtensionsPopup.IsOpen;
+    }
+
+    private void PopulateHistoryRecent()
+    {
+        HistoryRecentList.Items.Clear();
+        var host = Window.GetWindow(this);
+        foreach (var entry in _vm.History.OrderByDescending(h => h.VisitedAt).Take(10))
+        {
+            var item = new ListBoxItem
+            {
+                Content = string.IsNullOrWhiteSpace(entry.Title) ? entry.Url : entry.Title,
+                ToolTip = entry.Url,
+                Tag = entry.Url,
+                Margin = new Thickness(2, 1, 2, 1),
+                Padding = new Thickness(10, 5, 10, 5),
+            };
+            HistoryRecentList.Items.Add(item);
+        }
+    }
+
+    private void HistoryRecentList_LeftButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (HistoryRecentList.SelectedItem is ListBoxItem li && li.Tag is string url && !string.IsNullOrEmpty(url))
+        {
+            HistoryPopup.IsOpen = false;
+            _vm.NewTab(url);
+        }
+    }
+
+    private void HistoryPopup_ViewAll(object sender, RoutedEventArgs e)
+    {
+        HistoryPopup.IsOpen = false;
+        _vm.OpenAppTab(TabKind.History);
+    }
+
+    private void PopulateDownloadsRecent()
+    {
+        DownloadsRecentList.Items.Clear();
+        var items = _vm.Downloads.Take(10).ToList();
+        foreach (var d in items)
+        {
+            var display = string.IsNullOrWhiteSpace(d.SuggestedFileName) ? d.Url : d.SuggestedFileName;
+            var status = d.IsComplete ? LanguageManager.Instance["Browser_DlComplete"]
+                        : d.IsCancelled ? LanguageManager.Instance["Browser_DlCancelled"]
+                        : LanguageManager.Instance["Browser_DlInProgress"];
+            var item = new ListBoxItem { Tag = d, Padding = new Thickness(10, 5, 10, 5) };
+            item.Content = new StackPanel
+            {
+                Children =
+                {
+                    new TextBlock { Text = display, FontSize = 13, Foreground = (Brush)FindResource("Ink100Brush"), TextTrimming = TextTrimming.CharacterEllipsis },
+                    new TextBlock { Text = status, FontSize = 11, Foreground = (Brush)FindResource("Ink400Brush") },
+                }
+            };
+            DownloadsRecentList.Items.Add(item);
+        }
+    }
+
+    private void DownloadsPopup_ViewAll(object sender, RoutedEventArgs e)
+    {
+        DownloadsPopup.IsOpen = false;
+        _vm.OpenAppTab(TabKind.Downloads);
+    }
+
+    private void PopulateExtensions()
+    {
+        ExtensionsList.Items.Clear();
+        var hosts = App.RequestContexts.GetProfileContext(Heco.Browser.Models.AppSettings.Global.CurrentProfile);
+        _ = hosts; // kept for future extension context reuse
+        var none = new ListBoxItem
+        {
+            Content = LanguageManager.Instance["Browser_NoExtensions"],
+            Padding = new Thickness(10, 5, 10, 5),
+        };
+        none.IsHitTestVisible = false;
+        ExtensionsList.Items.Add(none);
+    }
+
+    private void ExtensionsPopup_Manage(object sender, RoutedEventArgs e)
+    {
+        ExtensionsPopup.IsOpen = false;
+        HecoMessageBox.Show(LanguageManager.Instance["Browser_ExtensionsWIP"],
+            LanguageManager.Instance["Menu_Extensions"], HecoMessageBoxButton.OK, HecoMessageBoxImage.Information, Window.GetWindow(this));
     }
 }
 

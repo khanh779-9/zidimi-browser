@@ -23,6 +23,9 @@ SecurityTooltip=Thông tin trang web
 BookmarkTooltip=Lưu trang
 AvatarTooltip=Hồ sơ & chế độ khách
 MenuTooltip=Menu
+HistoryTooltip=Lịch sử (Ctrl+H)
+DownloadsTooltip=Tải xuống (Ctrl+J)
+ExtensionsTooltip=Tiện ích mở rộng
 
 [Page]
 EmptyHint=Chưa có tab nào
@@ -273,6 +276,14 @@ Tab_CloseTab=Đóng tab
 Browser_HecoBrowser=Trình duyệt Heco
 Browser_GuestInitial=K
 Browser_HecoInitial=H
+Browser_ViewAllHistory=Xem tất cả lịch sử
+Browser_ViewAllDownloads=Xem tất cả tải xuống
+Browser_ManageExtensions=Quản lý tiện ích mở rộng
+Browser_NoExtensions=Không tìm thấy tiện ích mở rộng
+Browser_DlComplete=Đã hoàn tất
+Browser_DlCancelled=Đã hủy
+Browser_DlInProgress=Đang tải
+Menu_Extensions=Tiện ích mở rộng
 Perm_Camera=Máy ảnh
 Perm_Microphone=Micrô
 Perm_Location=Vị trí

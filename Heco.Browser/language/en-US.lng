@@ -23,6 +23,9 @@ SecurityTooltip=Site Information
 BookmarkTooltip=Bookmark this page
 AvatarTooltip=Profile & Guest Mode
 MenuTooltip=Menu
+HistoryTooltip=History (Ctrl+H)
+DownloadsTooltip=Downloads (Ctrl+J)
+ExtensionsTooltip=Extensions
 
 [Page]
 EmptyHint=No tabs open
@@ -273,6 +276,15 @@ Tab_CloseTab=Close tab
 Browser_HecoBrowser=Heco Browser
 Browser_GuestInitial=G
 Browser_HecoInitial=H
+Browser_ViewAllHistory=View all history
+Browser_ViewAllDownloads=View all downloads
+Browser_ManageExtensions=Manage extensions
+Browser_NoExtensions=No extensions installed
+Browser_ExtensionsWIP=Extension support is not available yet.
+Browser_DlComplete=Completed
+Browser_DlCancelled=Cancelled
+Browser_DlInProgress=In progress
+Menu_Extensions=Extensions
 Perm_Camera=Camera
 Perm_Microphone=Microphone
 Perm_Location=Location
