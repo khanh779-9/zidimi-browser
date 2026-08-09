@@ -1,0 +1,19 @@
+<ctrl:ZidimiWindow x:Class="Zidimi.Browser.MainWindow"
+                 xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                 xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                 xmlns:ctrl="clr-namespace:Zidimi.Browser.Controls"
+                 xmlns:views="clr-namespace:Zidimi.Browser.Views"
+                 Title="Zidimi Browser"
+                 
+                 BrandText="Zidimi Browser"
+                 Icon="/zidimi-icon.ico"
+                 Height="481" Width="683">
+
+    <ctrl:ZidimiWindow.TabStripContent>
+        <views:TabStrip x:Name="TheTabStrip" Margin="0,3,0,0" />
+    </ctrl:ZidimiWindow.TabStripContent>
+
+    <Grid Background="{DynamicResource ContentBackgroundBrush}">
+        <ContentControl x:Name="PageHost" Margin="1,0,1,1"/>
+    </Grid>
+</ctrl:ZidimiWindow>

@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+<OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+<Version>1.4.4</Version>
+    <AssemblyVersion>1.4.4.0</AssemblyVersion>
+    <FileVersion>1.4.4.0</FileVersion>
+    <InformationalVersion>1.4.4</InformationalVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>Zidimi.Browser</RootNamespace>
+    <AssemblyName>Zidimi.Browser</AssemblyName>
+    <!-- CefSharp hỗ trợ x86 và x64. Chạy nền 32 bit: chọn x86 -->
+    <PlatformTarget>x86</PlatformTarget>
+    <Platforms>x86</Platforms>
+    <RuntimeIdentifier>win-x86</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <!-- Cho phép chạy trên .NET 9 nếu .NET 8 chưa cài -->
+    <RollForward>Major</RollForward>
+    <CefSharpAnyCpu>false</CefSharpAnyCpu>
+    <ApplicationIcon>zidimi-icon.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="zidimi-icon.ico">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CefSharp.Wpf.NETCore" Version="150.0.110" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.11" />
+    <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.142" />
+  </ItemGroup>
+
+  <!-- NotifyIcon (system tray) dùng WinForms nhưng không bật UseWindowsForms global
+       để tránh xung đột tên type giữa WPF và WinForms. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="language\*.lng">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>

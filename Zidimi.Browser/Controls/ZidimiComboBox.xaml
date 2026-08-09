@@ -1,0 +1,176 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:local="clr-namespace:Zidimi.Browser.Controls">
+
+    <Geometry x:Key="ZidimiChevronDownGeometry">M3,5 L9,5 L6,8.5 Z</Geometry>
+
+    
+    <DataTemplate DataType="{x:Type local:ZidimiComboBoxItem}">
+        <TextBlock Text="{Binding Content}"
+                   Foreground="{DynamicResource Ink200Brush}"
+                   FontSize="13" />
+    </DataTemplate>
+
+    
+    <Style TargetType="{x:Type local:ZidimiComboBox}">
+        <Setter Property="Foreground" Value="{DynamicResource Ink100Brush}" />
+        <Setter Property="FontSize" Value="13" />
+        <Setter Property="MinHeight" Value="38" />
+        <Setter Property="Cursor" Value="Hand" />
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        
+        
+        <Setter Property="ItemContainerStyle">
+            <Setter.Value>
+                <Style TargetType="{x:Type ComboBoxItem}">
+                    <Setter Property="Foreground" Value="{DynamicResource Ink200Brush}" />
+                    <Setter Property="Background" Value="Transparent" />
+                    <Setter Property="BorderThickness" Value="0" />
+                    <Setter Property="Padding" Value="0" />
+                    <Setter Property="Cursor" Value="Hand" />
+                    <Setter Property="SnapsToDevicePixels" Value="True" />
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="{x:Type ComboBoxItem}">
+                                <Grid>
+                                    <Rectangle x:Name="Accent" Width="3" HorizontalAlignment="Left"
+                                               Fill="Transparent" RadiusX="1.5" RadiusY="1.5" />
+                                    <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                            Padding="12,8">
+                                        <ContentPresenter VerticalAlignment="Center"
+                                                          Content="{TemplateBinding Content}"
+                                                          ContentTemplate="{TemplateBinding ContentTemplate}"
+                                                          TextBlock.Foreground="{TemplateBinding Foreground}" />
+                                    </Border>
+                                </Grid>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="bd" Property="Background" Value="{DynamicResource ZidimiBgHoverBrush}" />
+                                    </Trigger>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter TargetName="bd" Property="Background" Value="{DynamicResource SidebarActiveBrush}" />
+                                        <Setter TargetName="Accent" Property="Fill" Value="{DynamicResource ZidimiPurpleLightBrush}" />
+                                    </Trigger>
+                                    <Trigger Property="IsEnabled" Value="False">
+                                        <Setter Property="Opacity" Value="0.45" />
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </Setter.Value>
+        </Setter>
+
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type local:ZidimiComboBox}">
+                    <Grid>
+                        <ToggleButton x:Name="PART_Toggle"
+                                      Focusable="False"
+                                      ClickMode="Press"
+                                      IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}">
+                            <ToggleButton.Template>
+                                <ControlTemplate TargetType="{x:Type ToggleButton}">
+                                    <Border x:Name="bd"
+                                            Background="{DynamicResource ZidimiBgSurfaceBrush}"
+                                            BorderBrush="{DynamicResource StrokeBrush}"
+                                            BorderThickness="1"
+                                            CornerRadius="8">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            <Path Grid.Column="1"
+                                                  x:Name="PART_Chevron"
+                                                  Data="{DynamicResource ZidimiChevronDownGeometry}"
+                                                  Stroke="{DynamicResource Ink300Brush}"
+                                                  StrokeThickness="1.6"
+                                                  StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                                  Stretch="Uniform"
+                                                  Width="10" Height="6"
+                                                  VerticalAlignment="Center"
+                                                  Margin="10,0,12,0" />
+                                        </Grid>
+                                    </Border>
+                                    <ControlTemplate.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource StrokeLightBrush}" />
+                                        </Trigger>
+                                        <Trigger Property="IsChecked" Value="True">
+                                            <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource ZidimiPurpleBrush}" />
+                                            <Setter TargetName="PART_Chevron" Property="RenderTransform">
+                                                <Setter.Value>
+                                                    <RotateTransform Angle="180" />
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Trigger>
+                                    </ControlTemplate.Triggers>
+                                </ControlTemplate>
+                            </ToggleButton.Template>
+                        </ToggleButton>
+
+                        <TextBlock x:Name="PART_Placeholder"
+                                   Text="{TemplateBinding Placeholder}"
+                                   Foreground="{DynamicResource Ink400Brush}"
+                                   VerticalAlignment="Center"
+                                   Margin="12,0,32,0"
+                                   IsHitTestVisible="False"
+                                   Visibility="Collapsed" />
+                        
+                        <ContentPresenter x:Name="PART_Selection"
+                                          Content="{TemplateBinding SelectionBoxItem}"
+                                          ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                          ContentStringFormat="{TemplateBinding SelectionBoxItemStringFormat}"
+                                          VerticalAlignment="Center"
+                                          Margin="12,0,32,0"
+                                          IsHitTestVisible="False"
+                                          TextBlock.Foreground="{DynamicResource Ink100Brush}" />
+
+                        <Popup x:Name="PART_Popup"
+                               Placement="Bottom"
+                               IsOpen="{TemplateBinding IsDropDownOpen}"
+                               AllowsTransparency="True"
+                               Focusable="False"
+                               PopupAnimation="Fade">
+                            <Border BorderBrush="{DynamicResource StrokeBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="8"
+                                    MinWidth="{Binding ActualWidth, ElementName=PART_Toggle}"
+                                    Margin="0,6,0,0"
+                                    MaxHeight="320"
+                                    SnapsToDevicePixels="True">
+                                <Border.Effect>
+                                    <DropShadowEffect Color="#000000" BlurRadius="12" ShadowDepth="2" Opacity="0.15" />
+                                </Border.Effect>
+                                <Grid>
+                                    <Border x:Name="mask" Background="{DynamicResource ZidimiBgElevatedBrush}" CornerRadius="7" />
+                                    <ScrollViewer VerticalScrollBarVisibility="Auto" SnapsToDevicePixels="True">
+                                        <ScrollViewer.OpacityMask>
+                                            <VisualBrush Visual="{Binding ElementName=mask}" />
+                                        </ScrollViewer.OpacityMask>
+                                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained" />
+                                    </ScrollViewer>
+                                </Grid>
+                            </Border>
+                        </Popup>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        
+                        <Trigger Property="HasItems" Value="False">
+                            <Setter TargetName="PART_Popup" Property="MinHeight" Value="95" />
+                        </Trigger>
+                        <DataTrigger Binding="{Binding SelectionBoxItem, RelativeSource={RelativeSource Self}}" Value="{x:Null}">
+                            <Setter TargetName="PART_Placeholder" Property="Visibility" Value="Visible" />
+                        </DataTrigger>
+                        <Trigger Property="SelectedIndex" Value="-1">
+                            <Setter TargetName="PART_Placeholder" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+</ResourceDictionary>

@@ -1,0 +1,465 @@
+<UserControl x:Class="Zidimi.Browser.Views.BrowserView"
+             
+    
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             
+    
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             
+    
+    xmlns:cef="clr-namespace:CefSharp.Wpf;assembly=CefSharp.Wpf"
+    xmlns:ctrl="clr-namespace:Zidimi.Browser.Controls"
+    xmlns:infra="clr-namespace:Zidimi.Browser.Infrastructure"
+             x:Name="Root"
+             Background="{DynamicResource ContentBackgroundBrush}">
+    <UserControl.Resources>
+        <ctrl:BoolToVisibilityConverter x:Key="Bool2Vis" />
+        <ctrl:StringToUrlConverter x:Key="UrlConverter" />
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            
+            <RowDefinition Height="*" />
+            
+        </Grid.RowDefinitions>
+        
+        <Border Grid.Row="0" x:Name="ToolbarRow"
+                Background="{DynamicResource ToolbarBackgroundBrush}"
+                BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="0,0,0,1"
+                Padding="12,6,12,6">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="70" />
+                    
+                    <ColumnDefinition Width="Auto" />
+                    
+                    <ColumnDefinition Width="*" />
+                    
+                    <ColumnDefinition Width="Auto" />
+                    
+                    <ColumnDefinition Width="Auto" />
+                    
+                    <ColumnDefinition Width="Auto" />
+                    
+                </Grid.ColumnDefinitions>
+                
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,8,0">
+                    <Button x:Name="BackBtn" Style="{DynamicResource ToolIconButton}"
+                            Click="Back_Click" ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_BackTooltip]}"
+                            IsEnabled="{Binding ActiveTab.CanGoBack}">
+                        <Path Width="18" Height="18" Stretch="Uniform"
+                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                              StrokeThickness="1.5"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              StrokeLineJoin="Round"
+                              Data="M10.5 19.5 L3 12 L10.5 4.5 M3 12 H21" />
+                    </Button>
+                    <Button x:Name="FwdBtn" Style="{DynamicResource ToolIconButton}"
+                            Click="Forward_Click" ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_ForwardTooltip]}"
+                            IsEnabled="{Binding ActiveTab.CanGoForward}">
+                        <Path Width="18" Height="18" Stretch="Uniform"
+                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                              StrokeThickness="1.5"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              StrokeLineJoin="Round"
+                              Data="M13.5 4.5 L21 12 L13.5 19.5 M21 12 H3" />
+                    </Button>
+                </StackPanel>
+                
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="8,0,8,0">
+                    <Button x:Name="ReloadBtn" Style="{DynamicResource ToolIconButton}"
+                              Click="Reload_Click" ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_ReloadTooltip]}">
+                        <Path Width="18" Height="18" Stretch="Uniform"
+                          Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                          StrokeThickness="1.5"
+                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                          StrokeLineJoin="Round"
+                          Data="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8 M21 3v5h-5" /> 
+                    </Button>
+                    <Button x:Name="HomeBtn" Style="{DynamicResource ToolIconButton}"
+                            Click="Home_Click" ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_HomeTooltip]}">
+                        <Path Width="18" Height="18" Stretch="Uniform"
+                              Stroke="{Binding Foreground, RelativeSource={RelativeSource AncestorType=Button}}"
+                              StrokeThickness="1.5"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              StrokeLineJoin="Round"
+                              Data="M3 12 L12 3 L21 12 M5 10 V20 H19 V10" />
+                    </Button>
+                </StackPanel>
+                
+                <Grid Grid.Column="2" Margin="8,0,16,0" ClipToBounds="True">
+                    <Border Background="{DynamicResource ZidimiBgSurfaceBrush}"
+                            BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1"
+                            CornerRadius="19" Height="38"
+                            ClipToBounds="True"
+                            x:Name="AddressBarBorder">
+                        <Border.Style>
+                            <Style TargetType="Border">
+                                <Style.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="BorderBrush" Value="{DynamicResource StrokeLightBrush}" />
+                                    </Trigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Border.Style>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            
+                            <Button Grid.Column="0" x:Name="SecurityBtn"
+                                    Width="36" Height="36" Margin="5,0,0,0"
+                                    Style="{DynamicResource ToolIconButton}"
+                                    Click="SecurityBtn_Click"
+                                    ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_SecurityTooltip]}">
+                                <Path x:Name="SecurityIcon"
+                                      Width="16" Height="16" Stretch="Uniform" VerticalAlignment="Center"
+                                      Stroke="{DynamicResource SafeBrush}" StrokeThickness="1.5"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                      StrokeLineJoin="Round"
+                                      Data="M8 10 V7 a4 4 0 0 1 8 0 v3 M5 10 H19 V20 H5 Z" />
+                            </Button>
+                            
+                            <ctrl:ZidimiPopup x:Name="SiteInfoPopup"
+                                   StaysOpen="False" Placement="Bottom"
+                                   PlacementTarget="{Binding ElementName=SecurityBtn}"
+                                   CornerRadius="8"
+                                   MaxWidth="240">
+                                <StackPanel Margin="16,12">
+                                    
+                                    <StackPanel x:Name="ConnectionStatus" Orientation="Horizontal" Margin="0,0,0,12">
+                                        <Path x:Name="ConnIcon" Width="18" Height="18" Stretch="Uniform"
+                                              Stroke="{DynamicResource SafeBrush}" StrokeThickness="1.5"
+                                              VerticalAlignment="Center" Margin="0,0,8,0"
+                                              Data="M8 10 V7 a4 4 0 0 1 8 0 v3 M5 10 H19 V20 H5 Z" />
+                                        <StackPanel>
+                                            <TextBlock x:Name="ConnTitle" Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Security_SafeConn]}"
+                                                       FontSize="13" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource Ink100Brush}" />
+                                            <TextBlock x:Name="ConnDesc" Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Security_SafeDesc]}"
+                                                       FontSize="11" Foreground="{DynamicResource Ink400Brush}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <Border Height="1" Background="{DynamicResource StrokeBrush}" Margin="0,0,0,8" />
+                                    
+                                    <TextBlock Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Security_Perm]}" FontSize="11" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource Ink300Brush}" Margin="0,0,0,6" />
+                                    <StackPanel x:Name="PermissionsPanel" />
+                                    <Border Height="1" Background="{DynamicResource StrokeBrush}" Margin="0,8,0,8" />
+                                    
+                                    <ctrl:ZidimiMenuItem Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Security_Cookies]}"
+                                                       Click="SiteInfo_Cookies_Click" />
+                                    <ctrl:ZidimiMenuItem Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Security_Cert]}"
+                                                       Click="SiteInfo_Cert_Click" />
+                                    <Border Height="1" Background="{DynamicResource StrokeBrush}" Margin="0,8,0,0" />
+                                    <ctrl:ZidimiMenuItem Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Security_Settings]}"
+                                                       Click="SiteInfo_Settings_Click" />
+                                </StackPanel>
+                            </ctrl:ZidimiPopup>
+                            <TextBox Grid.Column="1" x:Name="AddressBox" 
+                         ClipToBounds="True"
+                   
+                         Margin="6,0,0,0"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         VerticalContentAlignment="Center"
+                         FontSize="14"
+                         Foreground="{DynamicResource Ink100Brush}"
+                         CaretBrush="{DynamicResource ZidimiPurpleLightBrush}"
+                         SelectionBrush="{DynamicResource ZidimiPurpleBrush}"
+                         KeyDown="Address_KeyDown"
+                         GotKeyboardFocus="Address_GotFocus"
+                         LostKeyboardFocus="Address_LostFocus"
+                         TextChanged="AddressBox_TextChanged" />
+                            
+                            <StackPanel Grid.Column="2" Orientation="Horizontal" Margin="0,0,6,0">
+                                <Button Style="{DynamicResource ToolIconButton}" Width="28" Height="28"
+                                        x:Name="StarBtn" Click="Star_Click" ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_BookmarkTooltip]}">
+                                    <Path Width="14" Height="14" Stretch="Uniform"
+                                          x:Name="StarIcon"
+                                          Stroke="{DynamicResource Ink300Brush}"
+                                          Fill="Transparent"
+                                          StrokeThickness="1.5"
+                                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                          StrokeLineJoin="Round"
+                                          Data="M12 2 L15.09 8.26 L22 9.27 L17 14.14 L18.18 21.02 L12 17.77 L5.82 21.02 L7 14.14 L2 9.27 L8.91 8.26 Z" />
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                    </Border>
+                    
+                    <ctrl:ZidimiPopup x:Name="AutocompletePopup"
+                           StaysOpen="False" Placement="Bottom"
+                           PlacementTarget="{Binding ElementName=AddressBarBorder}"
+                           CornerRadius="8"
+                           MinWidth="400" MaxHeight="300">
+                        <ctrl:ZidimiListBox x:Name="AutocompleteList"
+                                 SelectionChanged="Autocomplete_SelectionChanged">
+                            <ctrl:ZidimiListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Border Padding="12,8" Background="Transparent"
+                                            BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="0,0,0,1">
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" />
+                                                <ColumnDefinition Width="*" />
+                                                <ColumnDefinition Width="Auto" />
+                                            </Grid.ColumnDefinitions>
+                                            
+                                            <Path Grid.Column="0" Width="16" Height="16" Margin="0,0,8,0"
+                                                  Stretch="Uniform" VerticalAlignment="Center"
+                                                  Stroke="{DynamicResource Ink400Brush}" StrokeThickness="1.5"
+                                                  Data="{Binding IconPath}" />
+                                            <StackPanel Grid.Column="1" Margin="8,0,0,0" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Title}"
+                                                           FontSize="13" Foreground="{DynamicResource Ink100Brush}"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Subtitle}"
+                                                           FontSize="11" Foreground="{DynamicResource Ink400Brush}"
+                                                           TextTrimming="CharacterEllipsis" Visibility="{Binding Subtitle, Converter={StaticResource Bool2Vis}, ConverterParameter=notempty}" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="2" Text="{Binding TypeLabel}"
+                                                       FontSize="10" FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource ZidimiPurpleBrush}"
+                                                       VerticalAlignment="Center" Margin="8,0,12,0" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ctrl:ZidimiListBox.ItemTemplate>
+                        </ctrl:ZidimiListBox>
+                    </ctrl:ZidimiPopup>
+                    
+                    <ctrl:ZidimiProgressBar x:Name="LoadingProgress"
+                                 VerticalAlignment="Bottom"
+                                 HorizontalAlignment="Stretch"
+                                 Margin="2,0,2,0"
+                                 IsIndeterminate="True"
+                                 Visibility="Collapsed" />
+                </Grid>
+                
+<StackPanel Grid.Column="3" Orientation="Horizontal" Margin="4,0,0,0">
+                    <Button Style="{DynamicResource ToolIconButton}" Width="34" Height="34"
+                            x:Name="HistoryBtn" Click="HistoryBtn_Click"
+                            ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_HistoryTooltip]}">
+                        <Path Width="17" Height="17" Stretch="Uniform"
+                              Stroke="{DynamicResource Ink200Brush}" StrokeThickness="1.5"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              Data="M12 3 a9 9 0 1 0 9 9 M12 7 v5 l3 2" />
+                    </Button>
+                    <Button Style="{StaticResource ToolIconButton}" Width="34" Height="34"
+                            x:Name="DownloadsBtn" Click="DownloadsBtn_Click"
+                            ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_DownloadsTooltip]}">
+                        <Path Width="17" Height="17" Stretch="Uniform"
+                              Stroke="{DynamicResource Ink200Brush}" StrokeThickness="1.5"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              Data="M12 3 v12 m-5-5 l5 5 l5-5 M5 21 h14" />
+                    </Button>
+                    <Button Style="{DynamicResource ToolIconButton}" Width="34" Height="34"
+                            x:Name="ExtensionsBtn" Click="ExtensionsBtn_Click"
+                            ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_ExtensionsTooltip]}">
+                        <Path Width="17" Height="17" Stretch="Uniform" Fill="{DynamicResource Ink300Brush}"
+                              Data="M20.5 11H19V7a2 2 0 0 0-2-2h-4V3.5A2.5 2.5 0 0 0 10.5 1 2.5 2.5 0 0 0 8 3.5V5H4a2 2 0 0 0-2 2v4h1.5a2.5 2.5 0 0 1 0 5H2v3.8a2 2 0 0 0 2 2h4c0-1.55 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5h4a2 2 0 0 0 2-2v-4h1.5a2.5 2.5 0 0 1 0-5z" />
+                    </Button>
+                </StackPanel>
+
+                <Button Grid.Column="4" Style="{DynamicResource ToolIconButton}" SnapsToDevicePixels="True"
+                        x:Name="AvatarBtn" Click="Avatar_Click"
+                        ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_AvatarTooltip]}">
+                    <Grid Width="22" Height="22">
+                        <Ellipse x:Name="AvatarFallback" Fill="{DynamicResource ZidimiPurpleBrush}" SnapsToDevicePixels="True" />
+                        <TextBlock x:Name="AvatarInitial" Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Browser_ZidimiInitial]}"
+                                  Foreground="{DynamicResource OnAccentBrush}" FontSize="11" FontWeight="SemiBold"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        <Image x:Name="AvatarImage" Width="22" Height="22" Stretch="UniformToFill" Visibility="Collapsed" />
+                    </Grid>
+                </Button>
+
+                <Button Grid.Column="5" Style="{DynamicResource ToolIconButton}"
+                        x:Name="MenuBtn" Click="Menu_Click" ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_MenuTooltip]}">
+                    <Path Width="18" Height="18" Stretch="Uniform"
+                          Stroke="{DynamicResource Ink200Brush}"
+                          StrokeThickness="1.5"
+                          StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                          Data="M3 6 H21 M3 12 H21 M3 18 H21" />
+                </Button>
+                
+                <ctrl:ZidimiPopup x:Name="MenuPopup" StaysOpen="False" Placement="Bottom"
+                       PlacementTarget="{Binding ElementName=MenuBtn}"
+                       CornerRadius="8"
+                       MinWidth="20">
+                    <StackPanel Margin="6">
+                        <ctrl:ZidimiMenuItem Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Menu_NewTab]}" Click="Menu_NewTab" />
+                        <ctrl:ZidimiMenuItem Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Menu_CloseTab]}" Click="Menu_CloseTab" />
+                        <Border Height="1" Background="{DynamicResource StrokeBrush}" Margin="6,4" />
+                        <ctrl:ZidimiMenuItem Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Menu_History]}" Click="Menu_History" />
+                        <ctrl:ZidimiMenuItem Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Menu_Bookmarks]}" Click="Menu_Bookmarks" />
+                        <Border Height="1" Background="{DynamicResource StrokeBrush}" Margin="6,4" />
+                        <ctrl:ZidimiMenuItem Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Menu_FindInPage]}" Click="Menu_FindInPage" />
+                        <ctrl:ZidimiMenuItem Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Menu_DevTools]}" Click="Menu_DevTools" />
+                        <Border Height="1" Background="{DynamicResource StrokeBrush}" Margin="6,4" />
+                        
+                        <StackPanel Orientation="Horizontal" Margin="12,4,12,0">
+                            <Button Width="28" Height="28" Style="{DynamicResource ToolIconButton}"
+                                    Click="ZoomOut_Click" ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Menu_ZoomOut]}">
+                                <Path Width="14" Height="14" Stretch="Uniform"
+                                      Stroke="{DynamicResource Ink200Brush}" StrokeThickness="1.5"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                      Data="M4,12 H20" />
+                            </Button>
+                            <TextBlock x:Name="ZoomLevelText" Text="100%"
+                                       VerticalAlignment="Center" Margin="8,0"
+                                       Foreground="{DynamicResource Ink200Brush}"
+                                       FontSize="13" FontWeight="SemiBold" MinWidth="50" TextAlignment="Center" />
+                            <Button Width="28" Height="28" Style="{DynamicResource ToolIconButton}"
+                                    Click="ZoomIn_Click" ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Menu_ZoomIn]}">
+                                <Path Width="14" Height="14" Stretch="Uniform"
+                                      Stroke="{DynamicResource Ink200Brush}" StrokeThickness="1.5"
+                                      StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                                      Data="M12,4 V20 M4,12 H20" />
+                            </Button>
+                            <Button Width="28" Height="28" Style="{DynamicResource ToolIconButton}"
+                                    Click="ZoomReset_Click" ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Menu_ZoomReset]}">
+                                <TextBlock Text="100%" VerticalAlignment="Center" HorizontalAlignment="Center"
+                                           Foreground="{DynamicResource Ink200Brush}" FontSize="11" FontWeight="SemiBold" />
+                            </Button>
+                        </StackPanel>
+                        <Border Height="1" Background="{DynamicResource StrokeBrush}" Margin="6,4" />
+                        <ctrl:ZidimiMenuItem Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Menu_Preferences]}" Click="Menu_Preferences" />
+                    </StackPanel>
+                </ctrl:ZidimiPopup>
+                
+                <ctrl:ZidimiPopup x:Name="AvatarPopup" StaysOpen="False" Placement="Bottom"
+                       PlacementTarget="{Binding ElementName=AvatarBtn}"
+                       CornerRadius="8"
+                       MinWidth="40">
+                    <StackPanel Margin="6">
+                    <StackPanel Orientation="Horizontal" Margin="8,8,8,6">
+                            <Grid Width="32" Height="32">
+                                <Ellipse x:Name="AvatarFallback2" Fill="{DynamicResource ZidimiPurpleBrush}" />
+                                <TextBlock x:Name="AvatarInitial2" Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Browser_ZidimiInitial]}"
+                                           Foreground="{DynamicResource OnAccentBrush}" FontSize="14" FontWeight="SemiBold"
+                                           HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                <Image x:Name="AvatarImage2" Width="32" Height="32" Stretch="UniformToFill" Visibility="Collapsed" />
+                            </Grid>
+                            <StackPanel Margin="10,0,0,0" VerticalAlignment="Center">
+                                <TextBlock x:Name="ProfileNameText" Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Browser_ZidimiBrowser]}"
+                                           Foreground="{DynamicResource Ink100Brush}"
+                                           FontSize="14" FontWeight="SemiBold" />
+                                <TextBlock x:Name="ProfileModeText" Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Profile_Default]}"
+                                           Foreground="{DynamicResource Ink400Brush}" FontSize="12" />
+                            </StackPanel>
+                        </StackPanel>
+                        <Border Height="1" Background="{DynamicResource StrokeBrush}" Margin="6,2" />
+                        <ctrl:ZidimiCheckBox x:Name="GuestModeCheck" Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Profile_GuestMode]}"
+                                  Margin="8,8"
+                                  Checked="GuestMode_Changed" Unchecked="GuestMode_Changed" />
+                        <Border Height="1" Background="{DynamicResource StrokeBrush}" Margin="6,2" />
+                        <ctrl:ZidimiMenuItem Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Profile_Manage]}"
+                                    Click="Avatar_ManageProfiles" />
+                    </StackPanel>
+                </ctrl:ZidimiPopup>
+
+                <ctrl:ZidimiPopup x:Name="HistoryPopup" StaysOpen="False" Placement="Bottom"
+                       PlacementTarget="{Binding ElementName=HistoryBtn}"
+                       CornerRadius="8" Width="300">
+                    <StackPanel Margin="6">
+                        <TextBlock Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Menu_History]}"
+                                   FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource Ink100Brush}"
+                                   Margin="12,8,12,4" />
+                        <ListBox x:Name="HistoryRecentList" BorderThickness="0" Background="Transparent"
+                                 MaxHeight="260" ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 MouseLeftButtonUp="HistoryRecentList_LeftButtonUp" />
+                        <Border Height="1" Background="{DynamicResource StrokeBrush}" Margin="6,4" />
+                        <ctrl:ZidimiMenuItem Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Browser_ViewAllHistory]}"
+                                           Click="HistoryPopup_ViewAll" Margin="0,2" />
+                    </StackPanel>
+                </ctrl:ZidimiPopup>
+                <ctrl:ZidimiPopup x:Name="DownloadsPopup" StaysOpen="False" Placement="Bottom"
+                                                      PlacementTarget="{Binding ElementName=DownloadsBtn}"
+                                                      CornerRadius="8" Width="300">
+                    <StackPanel Margin="6">
+                        <TextBlock Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Downloads_Title]}"
+                                   FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource Ink100Brush}"
+                                   Margin="12,8,12,4" />
+                        <ListBox x:Name="DownloadsRecentList" BorderThickness="0" Background="Transparent"
+                                 MaxHeight="300" ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                        <Border Height="1" Background="{DynamicResource StrokeBrush}" Margin="6,4" />
+                        <ctrl:ZidimiMenuItem Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Browser_ViewAllDownloads]}"
+                                           Click="DownloadsPopup_ViewAll" Margin="6,2" />
+                    </StackPanel>
+                </ctrl:ZidimiPopup>
+                <ctrl:ZidimiPopup x:Name="ExtensionsPopup" StaysOpen="False" Placement="Bottom"
+                                                      PlacementTarget="{Binding ElementName=ExtensionsBtn}"
+                                                      CornerRadius="8" Width="320">
+                    <StackPanel Margin="6">
+                        <TextBlock Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Menu_Extensions]}"
+                                   FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource Ink100Brush}"
+                                   Margin="12,8,12,4" />
+                        <ListBox x:Name="ExtensionsList" BorderThickness="0" Background="Transparent"
+                                 MaxHeight="300" ScrollViewer.VerticalScrollBarVisibility="Auto" />
+                        <Border Height="1" Background="{DynamicResource StrokeBrush}" Margin="6,4" />
+                        <ctrl:ZidimiMenuItem Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Browser_ManageExtensions]}"
+                                           Click="ExtensionsPopup_Manage" Margin="6,2" />
+                    </StackPanel>
+                </ctrl:ZidimiPopup>
+            </Grid>
+        </Border>
+        
+        <Grid Grid.Row="1" Background="{DynamicResource ZidimiBgDarkestBrush}">
+            <ContentControl x:Name="BrowserHost" />
+            <TextBlock x:Name="EmptyHint"
+                       Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Page_EmptyHint]}"
+                       FontSize="15"
+                       Padding="10"
+                       Margin="10"
+                       Foreground="{DynamicResource Ink400Brush}"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" />
+            
+            <Border x:Name="FindBar"
+                    HorizontalAlignment="Right" VerticalAlignment="Top"
+                    Margin="0,8,8,0" Padding="8"
+                    Background="{DynamicResource ZidimiBgElevatedBrush}"
+                    BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1"
+                    CornerRadius="8" Visibility="Collapsed">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0" Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Page_Find]}" VerticalAlignment="Center"
+                               Foreground="{DynamicResource Ink200Brush}" Margin="0,0,6,0" />
+                    <TextBox Grid.Column="1" x:Name="FindBox" Width="200" Height="28"
+                         Background="{DynamicResource ZidimiBgSurfaceBrush}"
+                         BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1"
+                         Padding="6,2"
+                         VerticalContentAlignment="Center"
+                         Foreground="{DynamicResource Ink100Brush}"
+                         CaretBrush="{DynamicResource ZidimiPurpleLightBrush}"
+                         KeyDown="FindBox_KeyDown" />
+                    <TextBlock Grid.Column="2" x:Name="FindCount" VerticalAlignment="Center"
+                               Foreground="{DynamicResource Ink400Brush}" Margin="8,0,6,0" />
+                    <Button Grid.Column="3" Width="28" Height="28" Style="{DynamicResource ToolIconButton}"
+                            Click="FindPrev_Click" ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Browser_Prev]}">
+                        <Path Width="12" Height="12" Stretch="Uniform"
+                              Stroke="{DynamicResource Ink300Brush}" StrokeThickness="1.5"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              Data="M14,6 L8,12 L14,18" />
+                    </Button>
+                    <Button Grid.Column="4" Width="28" Height="28" Style="{DynamicResource ToolIconButton}"
+                            Click="FindNext_Click" ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Browser_Next]}">
+                        <Path Width="12" Height="12" Stretch="Uniform"
+                              Stroke="{DynamicResource Ink300Brush}" StrokeThickness="1.5"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round"
+                              Data="M10,6 L16,12 L10,18" />
+                    </Button>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

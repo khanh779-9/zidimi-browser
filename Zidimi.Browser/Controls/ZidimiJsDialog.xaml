@@ -1,0 +1,44 @@
+<Window x:Class="Zidimi.Browser.Controls.ZidimiJsDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:infra="clr-namespace:Zidimi.Browser.Infrastructure"
+        Title="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[JsDialog_DefaultTitle]}" Height="220" Width="400"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        WindowStartupLocation="CenterOwner" ShowInTaskbar="False" ResizeMode="NoResize">
+    <Border Background="{DynamicResource ZidimiBgElevatedBrush}"
+            BorderBrush="{DynamicResource StrokeBrush}" BorderThickness="1"
+            CornerRadius="12" Margin="10">
+        <Border.Effect>
+            <DropShadowEffect Color="#000000" BlurRadius="20" ShadowDepth="4" Opacity="0.2" />
+        </Border.Effect>
+        <Grid Margin="20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <TextBlock Text="{Binding DialogTitle}" FontSize="16" FontWeight="SemiBold" 
+                       Foreground="{DynamicResource Ink100Brush}" Margin="0,0,0,12" />
+            
+            <TextBlock Grid.Row="1" Text="{Binding MessageText}" FontSize="14" 
+                       Foreground="{DynamicResource Ink200Brush}" TextWrapping="Wrap" />
+
+            <TextBox Grid.Row="2" x:Name="InputBox" Margin="0,16,0,0"
+                     Visibility="{Binding IsPrompt, Converter={StaticResource Bool2Vis}}"
+                     Text="{Binding InputText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                     Padding="8" Background="{DynamicResource ZidimiBgSurfaceBrush}" 
+                     BorderBrush="{DynamicResource StrokeBrush}" Foreground="{DynamicResource Ink100Brush}" />
+
+            <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                <Button Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[JsDialog_Cancel]}" x:Name="CancelBtn" Width="80" Height="32" Margin="0,0,12,0"
+                        Visibility="{Binding ShowCancel, Converter={StaticResource Bool2Vis}}"
+                        Click="CancelBtn_Click" />
+                <Button Content="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[JsDialog_Ok]}" x:Name="OkBtn" Width="80" Height="32"
+                        Background="{DynamicResource ZidimiPurpleBrush}" Foreground="{DynamicResource OnAccentBrush}"
+                        Click="OkBtn_Click" IsDefault="True" />
+            </StackPanel>
+        </Grid>
+    </Border>
+</Window>
