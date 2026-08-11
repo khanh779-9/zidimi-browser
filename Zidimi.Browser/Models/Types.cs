@@ -22,6 +22,7 @@ public enum TabKind
     History,
     Bookmarks,
     Downloads,
+    Extensions,
 }
 
 /// <summary>Theme state.</summary>

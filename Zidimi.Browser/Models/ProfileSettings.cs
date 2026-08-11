@@ -17,4 +17,6 @@ public class ProfileSettings
     public bool ShowDownloadBar { get; set; } = true;
 
     public SitePermissions SitePermissions { get; set; } = new();
+
+    public List<ExtensionInfo> Extensions { get; set; } = new();
 }

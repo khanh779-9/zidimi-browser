@@ -429,6 +429,7 @@ public partial class BrowserView : UserControl
         TabKind.History => new HistoryView(),
         TabKind.Bookmarks => new BookmarksView(),
         TabKind.Downloads => new DownloadsView(),
+        TabKind.Extensions => new ExtensionsView(),
         _ => new TextBlock { Text = "?" },
     };
 
@@ -1176,22 +1177,55 @@ public partial class BrowserView : UserControl
     private void PopulateExtensions()
     {
         ExtensionsList.Items.Clear();
-        var hosts = App.RequestContexts.GetProfileContext(Zidimi.Browser.Models.AppSettings.Global.CurrentProfile);
-        _ = hosts; // kept for future extension context reuse
-        var none = new ListBoxItem
+        var extensions = ExtensionService.Instance.InstalledExtensions.ToList();
+        if (extensions.Count == 0)
         {
-            Content = LanguageManager.Instance["Browser_NoExtensions"],
-            Padding = new Thickness(10, 5, 10, 5),
-        };
-        none.IsHitTestVisible = false;
-        ExtensionsList.Items.Add(none);
+            var none = new ListBoxItem
+            {
+                Content = LanguageManager.Instance["Browser_NoExtensions"],
+                Padding = new Thickness(10, 5, 10, 5),
+            };
+            none.IsHitTestVisible = false;
+            ExtensionsList.Items.Add(none);
+        }
+        else
+        {
+            foreach (var ext in extensions)
+            {
+                var item = new ListBoxItem
+                {
+                    Padding = new Thickness(10, 6, 10, 6),
+                    Tag = ext
+                };
+                var sp = new StackPanel { Orientation = Orientation.Horizontal };
+                sp.Children.Add(new TextBlock
+                {
+                    Text = ext.Name,
+                    FontSize = 13,
+                    Foreground = (System.Windows.Media.Brush)FindResource("Ink100Brush"),
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                    VerticalAlignment = VerticalAlignment.Center
+                });
+                if (!ext.IsEnabled)
+                {
+                    sp.Children.Add(new TextBlock
+                    {
+                        Text = " (Off)",
+                        FontSize = 11,
+                        Foreground = (System.Windows.Media.Brush)FindResource("Ink400Brush"),
+                        VerticalAlignment = VerticalAlignment.Center
+                    });
+                }
+                item.Content = sp;
+                ExtensionsList.Items.Add(item);
+            }
+        }
     }
 
     private void ExtensionsPopup_Manage(object sender, RoutedEventArgs e)
     {
         ExtensionsPopup.IsOpen = false;
-        ZidimiMessageBox.Show(LanguageManager.Instance["Browser_ExtensionsWIP"],
-            LanguageManager.Instance["Menu_Extensions"], ZidimiMessageBoxButton.OK, ZidimiMessageBoxImage.Information, Window.GetWindow(this));
+        _vm.OpenAppTab(TabKind.Extensions);
     }
 }
 

@@ -59,6 +59,7 @@ public sealed class RequestContextFactory : IDisposable
                 PersistSessionCookies = true,
             });
             _profileContexts[profileName] = context;
+            ExtensionService.Instance.LoadProfileExtensions(context);
             return context;
         }
     }

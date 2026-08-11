@@ -230,6 +230,7 @@ ClearDownloadsCommand = new RelayCommand(_ => _downloads.Clear());
             TabKind.History => LanguageManager.Instance["Tab_HistoryTitle"],
             TabKind.Bookmarks => LanguageManager.Instance["Tab_BookmarksTitle"],
             TabKind.Downloads => LanguageManager.Instance["Tab_DownloadsTitle"],
+            TabKind.Extensions => LanguageManager.Instance["Tab_ExtensionsTitle"],
             _ => "New Tab",
         } };
         Tabs.Add(tab);
