@@ -272,6 +272,7 @@ public partial class BrowserView : UserControl
         };
         downloadHandler.DownloadUpdated += entry =>
         {
+            if (DownloadHandler.IsWebStoreCrx(entry.Url)) return;
             Dispatcher.BeginInvoke(() =>
             {
                 _vm.UpdateDownload(entry);
@@ -285,6 +286,10 @@ public partial class BrowserView : UserControl
                     existing.FullPath = entry.FullPath;
                 }
             });
+        };
+        downloadHandler.CrxInstallRequested += url =>
+        {
+            Dispatcher.BeginInvoke(() => HandleWebStoreCrxInstall(url));
         };
         browser.DownloadHandler = downloadHandler;
         browser.MenuHandler = new ContextMenuHandler();
@@ -1226,6 +1231,30 @@ public partial class BrowserView : UserControl
     {
         ExtensionsPopup.IsOpen = false;
         _vm.OpenAppTab(TabKind.Extensions);
+    }
+
+    /// <summary>
+    /// Fired when the user clicks "Add to Chrome" on the Web Store — a .crx download from
+    /// Google's update endpoint. Ask for confirmation, then install it via ExtensionService.
+    /// </summary>
+    private async void HandleWebStoreCrxInstall(string url)
+    {
+        var owner = Window.GetWindow(this);
+        var confirm = ZidimiMessageBox.Show(
+            LanguageManager.Instance["Ext_InstallFromStoreConfirm"],
+            LanguageManager.Instance["Ext_Title"],
+            ZidimiMessageBoxButton.YesNo,
+            ZidimiMessageBoxImage.Question,
+            owner);
+
+        if (confirm != ZidimiMessageBoxResult.Yes) return;
+
+        var context = _vm.GetRequestContext();
+        var res = await ExtensionService.Instance.DownloadAndInstallFromWebStoreAsync(url, context);
+
+        var icon = res.success ? ZidimiMessageBoxImage.Information : ZidimiMessageBoxImage.Warning;
+        ZidimiMessageBox.Show(res.message, LanguageManager.Instance["Ext_Title"],
+            ZidimiMessageBoxButton.OK, icon, owner);
     }
 }
 

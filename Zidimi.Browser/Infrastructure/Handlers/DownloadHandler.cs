@@ -14,6 +14,9 @@ public sealed class DownloadHandler : IDownloadHandler
     public event Action<DownloadEntry>? DownloadStarted;
     public event Action<DownloadEntry>? DownloadUpdated;
 
+    /// <summary>Raised when the user initiates a Chrome Web Store extension download (a .crx from Google's update endpoint).</summary>
+    public event Action<string>? CrxInstallRequested;
+
     public bool CanDownload(IWebBrowser browserControl, IBrowser browser, string url, string requestMethod)
     {
         return true;
@@ -32,9 +35,19 @@ public sealed class DownloadHandler : IDownloadHandler
             TotalBytes = downloadItem.TotalBytes,
             ReceivedBytes = downloadItem.ReceivedBytes,
         };
-        DownloadStarted?.Invoke(entry);
 
         if (callback.IsDisposed) return true;
+
+        // "Add to Chrome" on the Web Store downloads a .crx from Google's update endpoint.
+        // Intercept it so the browser installs the extension (v1.5.0) instead of saving a file.
+        if (IsWebStoreCrx(entry.Url))
+        {
+            CrxInstallRequested?.Invoke(entry.Url);
+            using (callback) callback.Continue("", showDialog: false);
+            return true;
+        }
+
+        DownloadStarted?.Invoke(entry);
 
         string finalPath = entry.FullPath;
 
@@ -48,33 +61,48 @@ public sealed class DownloadHandler : IDownloadHandler
             if (ctx.GetPreferenceSafe("download.default_directory") is string dir && !string.IsNullOrEmpty(dir)) defaultDir = dir;
         }
 
-        // If AppSettings asks where to save, show a SaveFileDialog (on the UI thread).
+        // Ask the user where to save on the UI thread, then continue the download on this thread.
+        // Continue() must be called exactly once — calling it inside the dialog lambda AND again
+        // below would double-execute the callback and crash the native download manager.
+        bool? accepted = false;
         if (askBeforeSave)
         {
-            System.Windows.Application.Current?.Dispatcher.Invoke(() =>
+            try
             {
-                var dlg = new Microsoft.Win32.SaveFileDialog
+                accepted = System.Windows.Application.Current?.Dispatcher.Invoke(() =>
                 {
-                    FileName = entry.SuggestedFileName,
-                    Title = LanguageManager.Instance["Download_ChooseLocation"],
-                    InitialDirectory = defaultDir,
-                };
-                var ok = dlg.ShowDialog() == true;
-                if (ok)
+                    var dlg = new Microsoft.Win32.SaveFileDialog
+                    {
+                        FileName = entry.SuggestedFileName,
+                        Title = LanguageManager.Instance["Download_ChooseLocation"],
+                        InitialDirectory = defaultDir,
+                    };
+                    if (dlg.ShowDialog() == true)
+                    {
+                        finalPath = dlg.FileName;
+                        return true;
+                    }
+                    return false;
+                });
+            }
+            catch
+            {
+                accepted = false;
+            }
+
+            if (accepted != true)
+            {
+                // User cancelled (or no UI was available) — cancel the download with a single Continue().
+                if (!callback.IsDisposed)
                 {
-                    finalPath = dlg.FileName;
-                }
-                else
-                {
-                    // Cancel
                     using (callback) callback.Continue("", showDialog: false);
-                    return;
                 }
-            });
+                return true;
+            }
         }
         else
         {
-            // Save straight into DownloadPath using the suggested file name.
+            // Save straight into the default download folder using the suggested file name.
             try
             {
                 System.IO.Directory.CreateDirectory(defaultDir);
@@ -88,6 +116,12 @@ public sealed class DownloadHandler : IDownloadHandler
             callback.Continue(finalPath, showDialog: false);
         }
         return true;
+    }
+
+    public static bool IsWebStoreCrx(string url)
+    {
+        return !string.IsNullOrEmpty(url)
+            && url.Contains("clients2.google.com/service/update2/crx", StringComparison.OrdinalIgnoreCase);
     }
 
     public void OnDownloadUpdated(IWebBrowser browserControl, IBrowser browser, DownloadItem downloadItem,

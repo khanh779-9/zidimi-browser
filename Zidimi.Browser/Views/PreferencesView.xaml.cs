@@ -697,6 +697,26 @@ public partial class PreferencesView : UserControl
         proxyCheck.Unchecked += (s, e) => { AppSettings.Global.UseSystemProxy = false; AppSettings.SaveAll(); };
         panel.Children.Add(CreateSettingRow("", "", proxyCheck));
 
+        var stableCheck = MakeCheck(LanguageManager.Instance["Pref_StableRendering"], AppSettings.Global.StableRendering);
+        stableCheck.Checked += (s, e) => { AppSettings.Global.StableRendering = true; AppSettings.SaveAll(); };
+        stableCheck.Unchecked += (s, e) => { AppSettings.Global.StableRendering = false; AppSettings.SaveAll(); };
+        panel.Children.Add(CreateSettingRow("", "", stableCheck));
+
+        var throttlingCheck = MakeCheck(LanguageManager.Instance["Pref_DisableBackgroundThrottling"], AppSettings.Global.DisableBackgroundThrottling);
+        throttlingCheck.Checked += (s, e) => { AppSettings.Global.DisableBackgroundThrottling = true; AppSettings.SaveAll(); };
+        throttlingCheck.Unchecked += (s, e) => { AppSettings.Global.DisableBackgroundThrottling = false; AppSettings.SaveAll(); };
+        panel.Children.Add(CreateSettingRow("", "", throttlingCheck));
+
+        var sandboxCheck = MakeCheck(LanguageManager.Instance["Pref_DisableSandbox"], AppSettings.Global.DisableSandbox);
+        sandboxCheck.Checked += (s, e) => { AppSettings.Global.DisableSandbox = true; AppSettings.SaveAll(); };
+        sandboxCheck.Unchecked += (s, e) => { AppSettings.Global.DisableSandbox = false; AppSettings.SaveAll(); };
+        panel.Children.Add(CreateSettingRow("", "", sandboxCheck));
+
+        var cefLogCheck = MakeCheck(LanguageManager.Instance["Pref_CefLog"], AppSettings.Global.CefLogEnabled);
+        cefLogCheck.Checked += (s, e) => { AppSettings.Global.CefLogEnabled = true; AppSettings.SaveAll(); };
+        cefLogCheck.Unchecked += (s, e) => { AppSettings.Global.CefLogEnabled = false; AppSettings.SaveAll(); };
+        panel.Children.Add(CreateSettingRow("", "", cefLogCheck));
+
         var btnProxy = MakeButton(LanguageManager.Instance["Pref_OpenProxySettings"], 200);
         btnProxy.Click += (s, e) => 
         {

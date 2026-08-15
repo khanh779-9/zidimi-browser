@@ -10,11 +10,22 @@ namespace Zidimi.Browser.Infrastructure.Handlers;
 
 public class RequestHandler : CefSharp.Handler.RequestHandler
 {
-    protected override bool OnBeforeBrowse(IWebBrowser chromiumWebBrowser, IBrowser browser, IFrame frame,
+protected override bool OnBeforeBrowse(IWebBrowser chromiumWebBrowser, IBrowser browser, IFrame frame,
         IRequest request, bool userGesture, bool isRedirect)
     {
         // DNT is handled natively by CefSharp via enable_do_not_track preference.
         return false;
+    }
+
+    protected override void OnRenderProcessTerminated(IWebBrowser chromiumWebBrowser, IBrowser browser,
+        CefTerminationStatus status, int errorCode, string errorMessage)
+    {
+        try
+        {
+            AppLogger.Log("CefCrash",
+                $"Renderer process terminated. Status={status}, ErrorCode={errorCode}, Error={errorMessage}, BrowserId={browser?.Identifier}, Url={browser?.MainFrame?.Url}");
+        }
+        catch { }
     }
 
     protected override bool OnCertificateError(IWebBrowser chromiumWebBrowser, IBrowser browser, CefErrorCode errorCode, string requestUrl, ISslInfo sslInfo, IRequestCallback callback)

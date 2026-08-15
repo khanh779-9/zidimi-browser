@@ -4,8 +4,6 @@ using CefSharp;
 using CefSharp.Wpf;
 using Zidimi.Browser.Controls;
 using Zidimi.Browser.Infrastructure;
-using Zidimi.Browser.Infrastructure.Handlers;
-
 using Zidimi.Browser.Models;
 
 namespace Zidimi.Browser;
@@ -27,6 +25,7 @@ public partial class App : Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        AppLogger.Init();
         AppSettings.Load();
         UserDataPaths.RegisterProfiles(AppSettings.Global.Profiles);
         ThemeManager.EnsureLoaded();
@@ -90,6 +89,7 @@ public partial class App : Application
         var mainWindow = new MainWindow();
         Application.Current.MainWindow = mainWindow;
         mainWindow.Show();
+        AppLogger.Log("Lifecycle", "Main window shown.");
 
         Dispatcher.BeginInvoke(InitializeCefAfterStart,
             System.Windows.Threading.DispatcherPriority.ApplicationIdle);
@@ -101,6 +101,8 @@ public partial class App : Application
         {
             InitializeCef();
             CefReady = true;
+            AppLogger.Log("Lifecycle",
+                $"CEF initialized. CefSharp={Cef.CefSharpVersion}, Chromium={Cef.ChromiumVersion}.");
 
             try
             {
@@ -125,8 +127,7 @@ public partial class App : Application
         }
         catch (Exception ex)
         {
-            File.AppendAllText("zidimi-browser-crash.log",
-                $"[{DateTime.Now:O}] [CefInit] {ex}\n\n");
+            AppLogger.Log("CefInit", ex);
             throw;
         }
     }
@@ -155,50 +156,24 @@ public partial class App : Application
         }
         catch { }
 
+        try
+        {
+            AppLogger.Log("Lifecycle", $"Exiting with {ViewModel?.Tabs.Count ?? 0} tab(s).");
+        }
+        catch { }
+        AppLogger.MarkCleanExit();
+
         base.OnExit(e);
     }
 
     private static void InitializeCef()
     {
         // CefSharp must be initialized before using any ChromiumWebBrowser control.
-        var cachePath = UserDataPaths.SharedCacheDir;
-        Directory.CreateDirectory(cachePath);
+        // All CEF tuning (GPU, proxy, stability switches, locale, DevTools, ...) is
+        // centralized in CefConfigurator and driven by GlobalSettings.
+        var settings = CefConfigurator.BuildSettings();
 
-var settings = new CefSettings
-        {
-            CachePath = cachePath,
-            LogSeverity = LogSeverity.Error,
-        };
-        // Custom scheme "zidimi://" (spec 11.2 — ISchemeHandlerFactory): lightweight internal pages.
-        settings.RegisterScheme(new CefCustomScheme
-        {
-            SchemeName = "zidimi",
-            IsStandard = true,
-            IsSecure = true,
-            IsCorsEnabled = true,
-            IsLocal = true,
-            SchemeHandlerFactory = new ZidimiSchemeHandlerFactory(),
-        });
-// Bypass the GPU blacklist so it runs stably across many GPUs.
-        // CefSharp 150 adds some default switches itself, so use the indexer to avoid duplicate keys.
-        if (!AppSettings.Global.EnableGpu)
-        {
-            settings.CefCommandLineArgs["disable-gpu"] = "1";
-            settings.CefCommandLineArgs["disable-gpu-compositing"] = "1";
-        }
-        
-        if (AppSettings.Global.EnhanceVideos)
-        {
-            // Enable Chromium's optimized video decoding flag
-            settings.CefCommandLineArgs["enable-features"] = "HardwareSecureDecryption,Vulkan";
-        }
-
-        if (!AppSettings.Global.UseSystemProxy)
-        {
-            settings.CefCommandLineArgs["no-proxy-server"] = "1";
-        }
-
-        // Profile-specific settings like cookies and Do-Not-Track are now managed dynamically 
+        // Profile-specific settings like cookies and Do-Not-Track are managed dynamically
         // via CefSharp RequestContext preferences in PreferencesView.xaml.cs.
 
         var ok = Cef.Initialize(settings, performDependencyCheck: true, browserProcessHandler: null);
@@ -209,16 +184,15 @@ var settings = new CefSettings
 
     private void OnUnhandled(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)
     {
-        File.AppendAllText("zidimi-browser-crash.log",
-            $"[{DateTime.Now:O}] [Dispatcher] {e.Exception}\n\n");
+        AppLogger.Log("Dispatcher", e.Exception, "Unhandled UI-thread exception.");
         e.Handled = true;
     }
 
     private void OnDomainException(object sender, UnhandledExceptionEventArgs e)
     {
         if (e.ExceptionObject is Exception ex)
-            File.AppendAllText("zidimi-browser-crash.log",
-                $"[{DateTime.Now:O}] [AppDomain] {ex}\n\n");
+            AppLogger.Log("AppDomain", ex,
+                $"Unhandled exception on {(e.IsTerminating ? "terminating" : "non-terminating")} AppDomain event.");
     }
 }
 
