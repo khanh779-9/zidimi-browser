@@ -25,15 +25,30 @@ public sealed class RequestContextFactory : IDisposable
     /// <summary>In-memory context (guest mode).</summary>
     public IRequestContext GetGuestContext()
     {
-        if (_guestContext == null || _guestContext.IsDisposed)
+        lock (Lock)
         {
-            _guestContext = new RequestContext(new RequestContextSettings
+            if (_guestContext == null || _guestContext.IsDisposed)
             {
-                CachePath = string.Empty,
-                PersistSessionCookies = false,
-            });
+                _guestContext = new RequestContext(new RequestContextSettings
+                {
+                    CachePath = string.Empty,
+                    PersistSessionCookies = false,
+                });
+            }
+            return _guestContext;
         }
-        return _guestContext;
+    }
+
+    public void ResetGuestContext()
+    {
+        lock (Lock)
+        {
+            if (_guestContext != null)
+            {
+                try { _guestContext.Dispose(); } catch { }
+                _guestContext = null;
+            }
+        }
     }
 
 /// <summary>
@@ -59,6 +74,10 @@ public sealed class RequestContextFactory : IDisposable
                 PersistSessionCookies = true,
             });
             _profileContexts[profileName] = context;
+
+            // Chromium only exposes unpacked extension loading when developer mode is enabled
+            // for this profile. Set it before the first tab starts loading extensions.
+            context.SetPreferenceSafe("extensions.ui.developer_mode", true);
             ExtensionService.Instance.LoadProfileExtensions(context);
             return context;
         }

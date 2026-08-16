@@ -23,6 +23,8 @@ public partial class App : Application
 
     public static bool ShowPickerOnStartupPreference { get; set; } = true;
 
+    private bool _browserInitialized;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         AppLogger.Init();
@@ -78,21 +80,40 @@ public partial class App : Application
 
     public void InitializeBrowser()
     {
-        var history = new HistoryService();
-        var bookmarks = new BookmarkService();
-        var downloads = new DownloadService();
-        RequestContexts = new RequestContextFactory();
-        ViewModel = new MainViewModel(history, bookmarks, downloads);
+        if (_browserInitialized)
+        {
+            if (MainWindow is { IsLoaded: true } window)
+            {
+                if (!window.IsVisible) window.Show();
+                window.Activate();
+            }
+            return;
+        }
 
-        TrayIcon = new TrayIconManager();
+        _browserInitialized = true;
+        try
+        {
+            var history = new HistoryService();
+            var bookmarks = new BookmarkService();
+            var downloads = new DownloadService();
+            RequestContexts = new RequestContextFactory();
+            ViewModel = new MainViewModel(history, bookmarks, downloads);
 
-        var mainWindow = new MainWindow();
-        Application.Current.MainWindow = mainWindow;
-        mainWindow.Show();
-        AppLogger.Log("Lifecycle", "Main window shown.");
+            TrayIcon = new TrayIconManager();
 
-        Dispatcher.BeginInvoke(InitializeCefAfterStart,
-            System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+            var mainWindow = new MainWindow();
+            Application.Current.MainWindow = mainWindow;
+            mainWindow.Show();
+            AppLogger.Log("Lifecycle", "Main window shown.");
+
+            Dispatcher.BeginInvoke(InitializeCefAfterStart,
+                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
+        }
+        catch
+        {
+            _browserInitialized = false;
+            throw;
+        }
     }
 
     private static void InitializeCefAfterStart()

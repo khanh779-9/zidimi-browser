@@ -31,6 +31,12 @@ public sealed class LifeSpanHandler : ILifeSpanHandler
         if (string.IsNullOrEmpty(targetUrl))
             return false;
 
+        // Extension action/default_popup windows belong to Chromium's extension runtime.
+        // Do not redirect them into a normal Zidimi tab and do not apply the site's popup
+        // blocker to them; Chrome runtime needs to create/own this popup itself.
+        if (targetUrl.StartsWith("chrome-extension://", StringComparison.OrdinalIgnoreCase))
+            return false;
+
         // When pop-ups are blocked entirely by the profile's site settings, drop the request.
         if (Models.AppSettings.Profile.SitePermissions.BlockPopups)
             return true;

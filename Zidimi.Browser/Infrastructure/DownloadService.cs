@@ -46,7 +46,7 @@ public sealed class DownloadService
             EnsureSchema(conn);
             SqliteHelper.Exec(conn,
                 """
-                INSERT INTO downloads(guid, url, file_name, full_path, is_cancelled, is_complete, total_bytes, received_bytes, start_time)
+                INSERT INTO downloads(guid, url, title, full_path, is_cancelled, is_complete, total_bytes, received_bytes, start_time)
                 VALUES ($g, $u, $n, $p, $c, $d, $t, $r, $s);
                 """,
                 ("$g", entry.Guid), ("$u", entry.Url), ("$n", entry.SuggestedFileName),
@@ -57,7 +57,7 @@ public sealed class DownloadService
         catch { }
     }
 
-    /// <summary>Updates a download's state by URL+filename (DownloadUpdated) and saves it back.</summary>
+    /// <summary>Updates a download's state by its stable GUID and saves it back.</summary>
     public void Update(DownloadEntry entry)
     {
         if (entry == null) return;
@@ -67,8 +67,7 @@ public sealed class DownloadService
             using var conn = SqliteHelper.Open(DbPath);
             EnsureSchema(conn);
 
-// Update the existing row matching the URL + filename; if none exists, insert it (to
-                // compensate for a missed DownloadStarted).
+            // If DownloadStarted was missed, insert the update as a new row.
             var affected = UpdateExisting(conn, entry);
 
             if (affected == 0)
@@ -87,15 +86,16 @@ public sealed class DownloadService
         catch { }
     }
 
-    /// <summary>Updates the row matching the URL + filename; returns the number of affected rows.</summary>
+    /// <summary>Updates the row matching the stable download GUID.</summary>
     private static int UpdateExisting(SqliteConnection conn, DownloadEntry entry)
     {
         using var cmd = conn.CreateCommand();
         cmd.CommandText = """
-            UPDATE downloads SET full_path=$p, is_cancelled=$c, is_complete=$d,
+            UPDATE downloads SET url=$u, title=$n, full_path=$p, is_cancelled=$c, is_complete=$d,
                    total_bytes=$t, received_bytes=$r
-            WHERE url=$u AND title=$n;
+            WHERE guid=$g;
             """;
+        cmd.Parameters.AddWithValue("$g", entry.Guid);
         cmd.Parameters.AddWithValue("$p", (object?)entry.FullPath ?? DBNull.Value);
         cmd.Parameters.AddWithValue("$c", entry.IsCancelled ? 1 : 0);
         cmd.Parameters.AddWithValue("$d", entry.IsComplete ? 1 : 0);
@@ -114,8 +114,8 @@ public sealed class DownloadService
         try
         {
             using var conn = SqliteHelper.Open(DbPath);
-            SqliteHelper.Exec(conn, "DELETE FROM downloads WHERE url=$u AND title=$n;",
-                ("$u", entry.Url), ("$n", entry.SuggestedFileName));
+            SqliteHelper.Exec(conn, "DELETE FROM downloads WHERE guid=$g;",
+                ("$g", entry.Guid));
         }
         catch { }
     }

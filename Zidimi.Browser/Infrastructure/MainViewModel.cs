@@ -140,10 +140,22 @@ ClearDownloadsCommand = new RelayCommand(_ => _downloads.Clear());
 /// <summary>Switches the current profile — reloads history, bookmarks and downloads for the new profile.</summary>
     public void SwitchProfile(string profileName)
     {
+        // Selecting a normal profile always leaves Guest mode. Otherwise new tabs
+        // would keep using the in-memory guest RequestContext even after the UI
+        // says another profile is active.
+        IsGuestMode = false;
+
         _history.SwitchProfile(profileName);
         _bookmarks.SwitchProfile(profileName);
         _downloads.SwitchProfile(profileName);
         AutofillManager.Load();
+        ExtensionService.Instance.RefreshForCurrentProfile();
+
+        // Existing ChromiumWebBrowser instances keep the RequestContext they were
+        // created with. Recreate the tabs so the newly selected profile cannot
+        // accidentally continue browsing with the previous profile's cookies/cache.
+        ResetTabsForBrowsingContext();
+        App.RequestContexts?.ResetGuestContext();
     }
 
     public PageId ActivePage
@@ -300,8 +312,24 @@ ClearDownloadsCommand = new RelayCommand(_ => _downloads.Clear());
     /// <summary>Turns guest mode on/off. When enabled, closes all tabs (unsaved) and opens a new in-memory tab.</summary>
     public void ToggleGuestMode()
     {
-        IsGuestMode = !IsGuestMode;
-        while (Tabs.Count > 0) CloseTab(Tabs[0]);
+        var wasGuest = IsGuestMode;
+        if (!wasGuest) App.RequestContexts?.ResetGuestContext();
+
+        IsGuestMode = !wasGuest;
+        ResetTabsForBrowsingContext();
+
+        if (wasGuest) App.RequestContexts?.ResetGuestContext();
+    }
+
+    private void ResetTabsForBrowsingContext()
+    {
+        // Do not call CloseTab() here: it automatically creates a replacement
+        // tab when the last tab closes, which makes a close-all loop endless.
+        ActiveTab = null;
+        while (Tabs.Count > 0)
+        {
+            Tabs.RemoveAt(Tabs.Count - 1);
+        }
         NewTab();
     }
 

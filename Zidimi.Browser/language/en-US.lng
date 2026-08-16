@@ -486,3 +486,10 @@ Ext_DownloadFailed=Failed to download extension from Google Web Store. Please tr
 Ext_UnpackFailed=Failed to extract .crx file or invalid file format.
 Ext_InvalidId=Could not find a valid Extension ID from the entered URL.
 Ext_InstallFromStoreConfirm=Install this extension from the Chrome Web Store?
+
+; Extension toolbar pinning
+Ext_Pin=Pin to toolbar
+Ext_Unpin=Unpin from toolbar
+Ext_Pinned=Pinned on toolbar
+Ext_NotPinned=Not pinned
+Browser_ExtensionOff=Off

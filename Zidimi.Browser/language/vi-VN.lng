@@ -480,3 +480,10 @@ Ext_DownloadFailed=Không thể tải file tiện ích từ Google Web Store. Vu
 Ext_UnpackFailed=Gỡ nén file .crx thất bại hoặc định dạng file không hợp lệ.
 Ext_InvalidId=Không tìm thấy Extension ID hợp lệ từ đường dẫn đã nhập.
 Ext_InstallFromStoreConfirm=Cài đặt tiện ích này từ Chrome Web Store?
+
+; Extension toolbar pinning
+Ext_Pin=Ghim lên thanh công cụ
+Ext_Unpin=Bỏ ghim khỏi thanh công cụ
+Ext_Pinned=Đã ghim trên thanh công cụ
+Ext_NotPinned=Chưa ghim
+Browser_ExtensionOff=Tắt

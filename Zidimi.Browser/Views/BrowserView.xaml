@@ -257,12 +257,27 @@
                               StrokeStartLineCap="Round" StrokeEndLineCap="Round"
                               Data="M12 3 v12 m-5-5 l5 5 l5-5 M5 21 h14" />
                     </Button>
-                    <Button Style="{DynamicResource ToolIconButton}" Width="34" Height="34"
-                            x:Name="ExtensionsBtn" Click="ExtensionsBtn_Click"
-                            ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_ExtensionsTooltip]}">
-                        <Path Width="17" Height="17" Stretch="Uniform" Fill="{DynamicResource Ink300Brush}"
-                              Data="M20.5 11H19V7a2 2 0 0 0-2-2h-4V3.5A2.5 2.5 0 0 0 10.5 1 2.5 2.5 0 0 0 8 3.5V5H4a2 2 0 0 0-2 2v4h1.5a2.5 2.5 0 0 1 0 5H2v3.8a2 2 0 0 0 2 2h4c0-1.55 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5h4a2 2 0 0 0 2-2v-4h1.5a2.5 2.5 0 0 1 0-5z" />
-                    </Button>
+                    <Border x:Name="ExtensionsToolbarGroup"
+                            Background="{DynamicResource ZidimiBgElevatedBrush}"
+                            BorderBrush="{DynamicResource StrokeBrush}"
+                            BorderThickness="1"
+                            CornerRadius="10"
+                            Margin="4,0,0,0"
+                            Padding="4,2">
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <StackPanel x:Name="PinnedExtensionsHost" Orientation="Horizontal" VerticalAlignment="Center" />
+                            <Border x:Name="ExtensionsToolbarSeparator" Width="1" Height="18"
+                                    Margin="2,0,4,0"
+                                    Background="{DynamicResource StrokeBrush}"
+                                    Visibility="Collapsed" />
+                            <Button Style="{DynamicResource ToolIconButton}" Width="30" Height="30"
+                                    x:Name="ExtensionsBtn" Click="ExtensionsBtn_Click"
+                                    ToolTip="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Toolbar_ExtensionsTooltip]}">
+                                <Path Width="17" Height="17" Stretch="Uniform" Fill="{DynamicResource Ink300Brush}"
+                                      Data="M20.5 11H19V7a2 2 0 0 0-2-2h-4V3.5A2.5 2.5 0 0 0 10.5 1 2.5 2.5 0 0 0 8 3.5V5H4a2 2 0 0 0-2 2v4h1.5a2.5 2.5 0 0 1 0 5H2v3.8a2 2 0 0 0 2 2h4c0-1.55 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5h4a2 2 0 0 0 2-2v-4h1.5a2.5 2.5 0 0 1 0-5z" />
+                            </Button>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
 
                 <Button Grid.Column="4" Style="{DynamicResource ToolIconButton}" SnapsToDevicePixels="True"
@@ -393,7 +408,7 @@
                 </ctrl:ZidimiPopup>
                 <ctrl:ZidimiPopup x:Name="ExtensionsPopup" StaysOpen="False" Placement="Bottom"
                                                       PlacementTarget="{Binding ElementName=ExtensionsBtn}"
-                                                      CornerRadius="8" Width="320">
+                                                      CornerRadius="8" Width="360">
                     <StackPanel Margin="6">
                         <TextBlock Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Menu_Extensions]}"
                                    FontSize="13" FontWeight="SemiBold" Foreground="{DynamicResource Ink100Brush}"

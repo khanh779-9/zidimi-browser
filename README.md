@@ -39,9 +39,10 @@
 - **Supported languages**: English, Vietnamese, Simplified Chinese, French, German, Italian, and Russian.
 - **Auto-translate** — optionally route non-Vietnamese pages through Google Translate.
 
-### Productivity Tools
+### Productivity Tools & Extensions
+- **Extensions Support** — Full Chromium extension support: install directly from Chrome Web Store (CRX auto-unpacking & instant runtime loading) or load unpacked developer extensions. Pin/unpin extensions to the main toolbar, click extension icons to open action popups, and manage extensions in the internal Extensions view (`zidimi://extensions`).
 - **Tabs** — open, close, reorder by drag-and-drop, pin (mini icon tabs at the front), duplicate, mute, and reload. Audio-playing tabs show a speaker indicator.
-- **Internal App Tabs** — built-in pages like Settings, History, Bookmarks, and Downloads open seamlessly as regular browser tabs for a unified experience.
+- **Internal App Tabs** — built-in pages like Settings, History, Bookmarks, Downloads, and Extensions open seamlessly as regular browser tabs for a unified experience.
 - **Bookmarks** — save pages with the star button (`Ctrl + D`) or manage them in the Bookmarks view; persisted to JSON.
 - **History** — every visited page is grouped intuitively by date and listed in the History view with search filtering. Built-in confirmation dialogues prevent accidental deletions.
 - **Download manager** — track progress, open files, and reveal them in Explorer from the Downloads view. Choose a custom download folder or be asked before each save.
@@ -58,8 +59,8 @@
 ## A Quick Tour of the Interface
 
 - **Title bar** — custom `ZidimiWindow` frame with the brand name and a **tab strip** below it.
-- **Tab strip** — one tab per open page; internal pages (Settings, History, Bookmarks, Downloads) open as their own tabs too. Right-click a tab for pin/mute/duplicate/close actions. Click the chevrons or scroll to browse many tabs, and use the tab-list button to jump anywhere.
-- **Toolbar** — Back / Forward / Reload (which turns into Stop while loading), a security icon (site info), the omnibox with autocomplete, a star (bookmark), a zoom indicator, and the **menu (≡)** for History, Bookmarks, Find in page, DevTools, and Preferences.
+- **Tab strip** — one tab per open page; internal pages (Settings, History, Bookmarks, Downloads, Extensions) open as their own tabs too. Right-click a tab for pin/mute/duplicate/close actions. Click the chevrons or scroll to browse many tabs, and use the tab-list button to jump anywhere.
+- **Toolbar** — Back / Forward / Reload (which turns into Stop while loading), a security icon (site info), the omnibox with autocomplete, a star (bookmark), pinned extension buttons, the Extensions popup button, a zoom indicator, and the **menu (≡)** for History, Bookmarks, Downloads, Extensions, Find in page, DevTools, and Preferences.
 - **Avatar / profile menu** — toggle Guest Mode or jump to Profile settings.
 - **Status area** — a slim loading progress bar under the toolbar while pages load.
 

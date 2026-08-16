@@ -457,3 +457,10 @@ Scheme_NewTabBody=You just opened a new tab. Type an address or search query to 
 Scheme_NotFoundTitle=Page not found
 Scheme_NotFoundBody=The internal page '{0}' does not exist.
 Ext_InstallFromStoreConfirm=Installare questa estensione dal Chrome Web Store?
+
+; Extension toolbar pinning
+Ext_Pin=Aggiungi alla barra strumenti
+Ext_Unpin=Rimuovi dalla barra strumenti
+Ext_Pinned=Aggiunta alla barra strumenti
+Ext_NotPinned=Non aggiunta
+Browser_ExtensionOff=Disattivata

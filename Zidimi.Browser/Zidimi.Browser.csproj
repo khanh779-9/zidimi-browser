@@ -3,16 +3,16 @@
   <PropertyGroup>
 <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
-<Version>1.6.0</Version>
-    <AssemblyVersion>1.6.0.0</AssemblyVersion>
-    <FileVersion>1.6.0.0</FileVersion>
-    <InformationalVersion>1.6.0</InformationalVersion>
+<Version>1.7.0</Version>
+    <AssemblyVersion>1.7.0.0</AssemblyVersion>
+    <FileVersion>1.7.0.0</FileVersion>
+    <InformationalVersion>1.7.0</InformationalVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <RootNamespace>Zidimi.Browser</RootNamespace>
     <AssemblyName>Zidimi.Browser</AssemblyName>
-    <!-- CefSharp hỗ trợ x86 và x64. Chạy nền 32 bit: chọn x86 -->
+    <!-- Khóa toàn bộ ứng dụng ở nền tảng x86 (32-bit). -->
     <PlatformTarget>x86</PlatformTarget>
     <Platforms>x86</Platforms>
     <RuntimeIdentifier>win-x86</RuntimeIdentifier>
@@ -21,6 +21,7 @@
     <RollForward>Major</RollForward>
     <CefSharpAnyCpu>false</CefSharpAnyCpu>
     <ApplicationIcon>zidimi-icon.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
 
   <ItemGroup>
@@ -31,6 +32,8 @@
 
   <ItemGroup>
     <PackageReference Include="CefSharp.Wpf.NETCore" Version="150.0.110" />
+    <!-- Chrome-runtime/HWND host: required for real Chromium extension support. -->
+    <PackageReference Include="CefSharp.Wpf.HwndHost" Version="150.0.110" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.11" />
     <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.142" />
   </ItemGroup>

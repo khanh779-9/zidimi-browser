@@ -1,3 +1,4 @@
+using System;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
@@ -8,7 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Windows.Media.Imaging;
 using CefSharp;
-using CefSharp.Wpf;
+using CefSharp.Wpf.HwndHost;
 using Zidimi.Browser.Controls;
 using Zidimi.Browser.Infrastructure;
 using Zidimi.Browser.Infrastructure.Handlers;
@@ -27,6 +28,77 @@ public partial class BrowserView : UserControl
     private bool _suppressAddressUpdate;
     private readonly System.Collections.Generic.List<Models.AutocompleteSuggestion> _allSuggestions = new();
     private readonly LoadingSpinner _loadingSpinner = new();
+    private bool _extensionInstallInProgress;
+
+    private const string WebStoreInstallMessagePrefix = "zidimi:webstore-install:";
+
+    // Zidimi intercepts the Web Store CTA before the site's native installer runs.
+    // The tab uses Chrome-runtime HwndHost, then Zidimi loads the validated/unpacked
+    // package into Chromium's real extension runtime.
+    private const string WebStoreInstallBridgeScript = """
+        (() => {
+            if (window.__zidimiWebStoreInstallHook) return;
+            window.__zidimiWebStoreInstallHook = true;
+
+            const isStore = () => location.hostname === 'chromewebstore.google.com';
+            const isDetail = () => /^\/detail\//i.test(location.pathname);
+            const installLabels = [
+                'add to chrome', 'install extension',
+                'thêm vào chrome', 'cài đặt tiện ích',
+                'ajouter à chrome', 'zu chrome hinzufügen',
+                'aggiungi a chrome', 'añadir a chrome',
+                'adicionar ao chrome', 'добавить в chrome'
+            ];
+
+            let lastIntercept = 0;
+            const findInstallTarget = event => {
+                const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+                const target = path.find(node =>
+                    node instanceof Element && node.matches('button,[role="button"],a'))
+                    || (event.target instanceof Element
+                        ? event.target.closest('button,[role="button"],a')
+                        : null);
+                if (!target) return null;
+
+                const label = [
+                    target.innerText || '',
+                    target.getAttribute('aria-label') || '',
+                    target.getAttribute('title') || ''
+                ].join(' ').replace(/\s+/g, ' ').trim().toLowerCase();
+
+                return installLabels.some(text => label.includes(text)) ? target : null;
+            };
+
+            const intercept = event => {
+                if (!isStore() || !isDetail() || !findInstallTarget(event)) return;
+
+                event.preventDefault();
+                event.stopPropagation();
+                event.stopImmediatePropagation();
+
+                // pointerdown/mousedown/click can all fire for one press. Notify C# once.
+                const now = Date.now();
+                if (now - lastIntercept < 750) return;
+                lastIntercept = now;
+
+                if (window.CefSharp && typeof CefSharp.PostMessage === 'function') {
+                    CefSharp.PostMessage('zidimi:webstore-install:' + location.href);
+                }
+            };
+
+            // Catch the interaction before the Web Store can enter Chromium's native
+            // extension installer. click alone is too late on some Web Store builds.
+            for (const name of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
+                window.addEventListener(name, intercept, true);
+            }
+
+            window.addEventListener('keydown', event => {
+                if ((event.key === 'Enter' || event.key === ' ') && findInstallTarget(event)) {
+                    intercept(event);
+                }
+            }, true);
+        })();
+        """;
 
     public BrowserView()
     {
@@ -55,12 +127,22 @@ public partial class BrowserView : UserControl
     {
         var win = Window.GetWindow(this);
         if (win != null) win.PreviewKeyDown += OnPreviewKeyDown;
+
+        ExtensionService.Instance.ExtensionsChanged -= OnExtensionsChanged;
+        ExtensionService.Instance.ExtensionsChanged += OnExtensionsChanged;
+        ExtensionService.Instance.RefreshForCurrentProfile();
+        RefreshExtensionSurfaces();
+
+        if (_currentBrowser?.IsBrowserInitialized == true)
+            _ = ExtensionService.Instance.EnsureProfileRuntimeLoadedAsync(_currentBrowser);
     }
 
     private void OnUnloaded(object sender, RoutedEventArgs e)
     {
         var win = Window.GetWindow(this);
         if (win != null) win.PreviewKeyDown -= OnPreviewKeyDown;
+
+        ExtensionService.Instance.ExtensionsChanged -= OnExtensionsChanged;
     }
 
     private void OnPreviewKeyDown(object sender, KeyEventArgs e)
@@ -255,6 +337,19 @@ public partial class BrowserView : UserControl
             BrowserSettings = BuildBrowserSettings()
         };
 
+        browser.IsBrowserInitializedChanged += async (_, _) =>
+        {
+            if (!browser.IsBrowserInitialized || browser.IsDisposed || _vm.IsGuestMode) return;
+            try
+            {
+                await ExtensionService.Instance.EnsureProfileRuntimeLoadedAsync(browser);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Log("ExtensionRuntime", ex, "Loading profile extensions after browser initialization.");
+            }
+        };
+
         // Zoom level is handled automatically by CEF's partition.default_zoom_level
 
         // CEF handlers (spec 11.2)
@@ -276,7 +371,7 @@ public partial class BrowserView : UserControl
             Dispatcher.BeginInvoke(() =>
             {
                 _vm.UpdateDownload(entry);
-                var existing = _vm.Downloads.FirstOrDefault(d => d.Url == entry.Url && d.SuggestedFileName == entry.SuggestedFileName);
+                var existing = _vm.Downloads.FirstOrDefault(d => d.Guid == entry.Guid);
                 if (existing != null)
                 {
                     existing.IsCancelled = entry.IsCancelled;
@@ -355,6 +450,35 @@ public partial class BrowserView : UserControl
 
         ZidimiJsBinding.Bind(browser);
 
+        browser.JavascriptMessageReceived += (_, e) =>
+        {
+            if (e.Message is not string message ||
+                !message.StartsWith(WebStoreInstallMessagePrefix, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            var url = message[WebStoreInstallMessagePrefix.Length..];
+            if (!IsChromeWebStoreDetailUrl(url)) return;
+
+            AppLogger.Log("WebStoreBridge", $"Intercepted Add to Chrome before native install flow. Url={url}");
+            Dispatcher.BeginInvoke(() => HandleWebStoreCrxInstall(url));
+        };
+
+        browser.FrameLoadEnd += (_, e) =>
+        {
+            if (!e.Frame.IsMain || !IsChromeWebStoreUrl(e.Url)) return;
+
+            try
+            {
+                e.Frame.ExecuteJavaScriptAsync(WebStoreInstallBridgeScript);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Log("WebStoreBridge", ex);
+            }
+        };
+
         browser.TitleChanged += (s, args) =>
         {
             Dispatcher.BeginInvoke(() =>
@@ -366,11 +490,19 @@ public partial class BrowserView : UserControl
             });
         };
 
-        browser.AddressChanged += (s, args) =>
+        // CefSharp.Wpf.HwndHost exposes Address as a DependencyProperty, but unlike
+        // CefSharp.Wpf it does not expose a public AddressChanged event. Observe the
+        // dependency property directly so SPA/history navigations still update the tab
+        // and address bar without falling back to LoadingStateChanged.
+        var addressDescriptor = DependencyPropertyDescriptor.FromProperty(
+            ChromiumWebBrowser.AddressProperty, typeof(ChromiumWebBrowser));
+        addressDescriptor?.AddValueChanged(browser, (_, _) =>
         {
             Dispatcher.BeginInvoke(() =>
             {
-                var newUrl = (string?)args.NewValue ?? "";
+                if (browser.IsDisposed) return;
+
+                var newUrl = browser.Address ?? "";
                 tab.Address = newUrl;
                 if (ReferenceEquals(_currentTab, tab) && !_suppressAddressUpdate)
                 {
@@ -378,7 +510,7 @@ public partial class BrowserView : UserControl
                     UpdateSecurityIcon(newUrl);
                 }
             });
-        };
+        });
 
         return browser;
     }
@@ -1179,10 +1311,158 @@ public partial class BrowserView : UserControl
         _vm.OpenAppTab(TabKind.Downloads);
     }
 
+    private void OnExtensionsChanged(object? sender, EventArgs e)
+    {
+        Dispatcher.BeginInvoke(new Action(RefreshExtensionSurfaces));
+    }
+
+    private void RefreshExtensionSurfaces()
+    {
+        PopulatePinnedExtensionsToolbar();
+        PopulateExtensions();
+    }
+
+    private void PopulatePinnedExtensionsToolbar()
+    {
+        PinnedExtensionsHost.Children.Clear();
+
+        var pinned = ExtensionService.Instance.InstalledExtensions
+            .Where(ext => ext.IsPinned)
+            .OrderBy(ext => ext.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+
+        foreach (var ext in pinned)
+        {
+            var button = new Button
+            {
+                Style = (Style)FindResource("ToolIconButton"),
+                Width = 30,
+                Height = 30,
+                Margin = new Thickness(0, 0, 2, 0),
+                Tag = ext,
+                ToolTip = ext.IsEnabled ? ext.Name : $"{ext.Name} ({ResolveLang("Browser_ExtensionOff", "Off")})",
+                Opacity = ext.IsEnabled ? 1.0 : 0.5,
+                Content = CreateExtensionIconElement(ext, 16)
+            };
+            button.Click += PinnedExtensionButton_Click;
+            PinnedExtensionsHost.Children.Add(button);
+        }
+
+        ExtensionsToolbarSeparator.Visibility = pinned.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private FrameworkElement CreateExtensionIconElement(ExtensionInfo ext, double size)
+    {
+        var bitmap = TryLoadExtensionBitmap(ext.IconPath);
+        if (bitmap != null)
+        {
+            return new Image
+            {
+                Source = bitmap,
+                Width = size,
+                Height = size,
+                Stretch = Stretch.Uniform,
+                SnapsToDevicePixels = true
+            };
+        }
+
+        return new Path
+        {
+            Width = size,
+            Height = size,
+            Stretch = Stretch.Uniform,
+            Fill = (Brush)FindResource("Ink300Brush"),
+            Data = Geometry.Parse("M20.5 11H19V7a2 2 0 0 0-2-2h-4V3.5A2.5 2.5 0 0 0 10.5 1 2.5 2.5 0 0 0 8 3.5V5H4a2 2 0 0 0-2 2v4h1.5a2.5 2.5 0 0 1 0 5H2v3.8a2 2 0 0 0 2 2h4c0-1.55 1.12-2.5 2.5-2.5s2.5 1.12 2.5 2.5h4a2 2 0 0 0 2-2v-4h1.5a2.5 2.5 0 0 1 0-5z")
+        };
+    }
+
+    private BitmapSource? TryLoadExtensionBitmap(string? iconPath)
+    {
+        if (string.IsNullOrWhiteSpace(iconPath) || !File.Exists(iconPath)) return null;
+
+        try
+        {
+            // Stream-based WIC decoding avoids Uri escaping issues for extension folders
+            // containing #, %, spaces, non-ASCII characters, etc. BitmapCacheOption.OnLoad
+            // releases the extension file immediately so updates can replace it later.
+            using var stream = new FileStream(iconPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+            var decoder = BitmapDecoder.Create(stream, BitmapCreateOptions.PreservePixelFormat, BitmapCacheOption.OnLoad);
+            var frame = decoder.Frames.FirstOrDefault();
+            if (frame == null) return null;
+            frame.Freeze();
+            return frame;
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Log("ExtensionIcon", ex, iconPath);
+            return null;
+        }
+    }
+
+    private string ResolveLang(string key, string fallback)
+    {
+        var value = LanguageManager.Instance[key];
+        return string.IsNullOrWhiteSpace(value) || value == key ? fallback : value;
+    }
+
+    private void TogglePin_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is ExtensionInfo ext)
+        {
+            ExtensionService.Instance.TogglePinned(ext, !ext.IsPinned);
+        }
+    }
+
+    private FrameworkElement CreatePinIconElement(bool isPinned)
+    {
+        // Vector push-pin keeps the icon consistent with the current Zidimi theme.
+        return new Path
+        {
+            Width = 15,
+            Height = 15,
+            Stretch = Stretch.Uniform,
+            Stroke = (Brush)FindResource(isPinned ? "ZidimiPurpleLightBrush" : "Ink300Brush"),
+            Fill = isPinned ? (Brush)FindResource("ZidimiPurpleLightBrush") : Brushes.Transparent,
+            StrokeThickness = 1.5,
+            StrokeStartLineCap = PenLineCap.Round,
+            StrokeEndLineCap = PenLineCap.Round,
+            StrokeLineJoin = PenLineJoin.Round,
+            Data = Geometry.Parse("M8 2 H16 L15 7 L19 11 V13 H13 V21 L12 23 L11 21 V13 H5 V11 L9 7 Z")
+        };
+    }
+
+    private async void PinnedExtensionButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement fe || fe.Tag is not ExtensionInfo ext) return;
+        if (_currentBrowser == null || !_currentBrowser.IsBrowserInitialized || _currentBrowser.IsDisposed)
+        {
+            PopulateExtensions();
+            ExtensionsPopup.PlacementTarget = fe;
+            ExtensionsPopup.IsOpen = true;
+            return;
+        }
+
+        // This is the real Chromium equivalent of clicking an extension toolbar action.
+        // If the manifest has action.default_popup/browser_action.default_popup Chromium
+        // opens that exact popup; otherwise the extension's onClicked handler is invoked.
+        var result = await ExtensionService.Instance.TriggerDefaultActionAsync(ext, _currentBrowser);
+        if (!result.success)
+        {
+            AppLogger.Log("ExtensionAction", $"{ext.Name}: {result.message}");
+            ZidimiMessageBox.Show(
+                string.IsNullOrWhiteSpace(result.message) ? "Unable to open the extension action." : result.message,
+                ext.Name, ZidimiMessageBoxButton.OK, ZidimiMessageBoxImage.Warning, Window.GetWindow(this));
+        }
+    }
+
     private void PopulateExtensions()
     {
         ExtensionsList.Items.Clear();
-        var extensions = ExtensionService.Instance.InstalledExtensions.ToList();
+        var extensions = ExtensionService.Instance.InstalledExtensions
+            .OrderByDescending(e => e.IsPinned)
+            .ThenBy(e => e.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+
         if (extensions.Count == 0)
         {
             var none = new ListBoxItem
@@ -1192,38 +1472,71 @@ public partial class BrowserView : UserControl
             };
             none.IsHitTestVisible = false;
             ExtensionsList.Items.Add(none);
+            return;
         }
-        else
+
+        foreach (var ext in extensions)
         {
-            foreach (var ext in extensions)
+            var item = new ListBoxItem
             {
-                var item = new ListBoxItem
-                {
-                    Padding = new Thickness(10, 6, 10, 6),
-                    Tag = ext
-                };
-                var sp = new StackPanel { Orientation = Orientation.Horizontal };
-                sp.Children.Add(new TextBlock
-                {
-                    Text = ext.Name,
-                    FontSize = 13,
-                    Foreground = (System.Windows.Media.Brush)FindResource("Ink100Brush"),
-                    TextTrimming = TextTrimming.CharacterEllipsis,
-                    VerticalAlignment = VerticalAlignment.Center
-                });
-                if (!ext.IsEnabled)
-                {
-                    sp.Children.Add(new TextBlock
-                    {
-                        Text = " (Off)",
-                        FontSize = 11,
-                        Foreground = (System.Windows.Media.Brush)FindResource("Ink400Brush"),
-                        VerticalAlignment = VerticalAlignment.Center
-                    });
-                }
-                item.Content = sp;
-                ExtensionsList.Items.Add(item);
-            }
+                Padding = new Thickness(8, 6, 8, 6),
+                Tag = ext
+            };
+
+            var grid = new Grid();
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var iconBorder = new Border
+            {
+                Width = 28,
+                Height = 28,
+                CornerRadius = new CornerRadius(6),
+                Background = (Brush)FindResource("ZidimiBgElevatedBrush"),
+                Margin = new Thickness(0, 0, 10, 0),
+                Child = CreateExtensionIconElement(ext, 16)
+            };
+            Grid.SetColumn(iconBorder, 0);
+            grid.Children.Add(iconBorder);
+
+            var textPanel = new StackPanel
+            {
+                Orientation = Orientation.Vertical,
+                VerticalAlignment = VerticalAlignment.Center
+            };
+            textPanel.Children.Add(new TextBlock
+            {
+                Text = ext.Name,
+                FontSize = 13,
+                Foreground = (Brush)FindResource("Ink100Brush"),
+                TextTrimming = TextTrimming.CharacterEllipsis
+            });
+            textPanel.Children.Add(new TextBlock
+            {
+                Text = ext.IsEnabled ? (ext.IsPinned ? ResolveLang("Ext_Pinned", "Pinned on toolbar") : ResolveLang("Ext_NotPinned", "Not pinned"))
+                                     : $"{ResolveLang("Browser_ExtensionOff", "Off")} • {(ext.IsPinned ? ResolveLang("Ext_Pinned", "Pinned on toolbar") : ResolveLang("Ext_NotPinned", "Not pinned"))}",
+                FontSize = 11,
+                Foreground = (Brush)FindResource("Ink400Brush")
+            });
+            Grid.SetColumn(textPanel, 1);
+            grid.Children.Add(textPanel);
+
+            var pinButton = new Button
+            {
+                Style = (Style)FindResource("ToolIconButton"),
+                Width = 28,
+                Height = 28,
+                Tag = ext,
+                ToolTip = ext.IsPinned ? ResolveLang("Ext_Unpin", "Unpin from toolbar") : ResolveLang("Ext_Pin", "Pin to toolbar"),
+                Content = CreatePinIconElement(ext.IsPinned)
+            };
+            pinButton.Click += TogglePin_Click;
+            Grid.SetColumn(pinButton, 2);
+            grid.Children.Add(pinButton);
+
+            item.Content = grid;
+            ExtensionsList.Items.Add(item);
         }
     }
 
@@ -1233,28 +1546,74 @@ public partial class BrowserView : UserControl
         _vm.OpenAppTab(TabKind.Extensions);
     }
 
+    private static bool IsChromeWebStoreUrl(string? url)
+    {
+        return Uri.TryCreate(url, UriKind.Absolute, out var uri)
+            && uri.Scheme.Equals(Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
+            && uri.Host.Equals("chromewebstore.google.com", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsChromeWebStoreDetailUrl(string? url)
+    {
+        if (!IsChromeWebStoreUrl(url) || !Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            return false;
+
+        return uri.AbsolutePath.StartsWith("/detail/", StringComparison.OrdinalIgnoreCase)
+            && ExtensionService.ExtractExtensionId(url!) != null;
+    }
+
     /// <summary>
-    /// Fired when the user clicks "Add to Chrome" on the Web Store — a .crx download from
-    /// Google's update endpoint. Ask for confirmation, then install it via ExtensionService.
+    /// Fired when the user clicks "Add to Chrome" on the Web Store. Zidimi bypasses the
+    /// Web Store native installer, validates/unpacks the CRX, then loads the unpacked folder
+    /// into Chromium's extension runtime.
     /// </summary>
     private async void HandleWebStoreCrxInstall(string url)
     {
+        if (_extensionInstallInProgress) return;
+        _extensionInstallInProgress = true;
+
+        AppLogger.Log("ExtensionInstallUi", $"Starting Web Store install. Input={url}");
         var owner = Window.GetWindow(this);
-        var confirm = ZidimiMessageBox.Show(
-            LanguageManager.Instance["Ext_InstallFromStoreConfirm"],
-            LanguageManager.Instance["Ext_Title"],
-            ZidimiMessageBoxButton.YesNo,
-            ZidimiMessageBoxImage.Question,
-            owner);
+        try
+        {
+            var confirm = ZidimiMessageBox.Show(
+                LanguageManager.Instance["Ext_InstallFromStoreConfirm"],
+                LanguageManager.Instance["Ext_Title"],
+                ZidimiMessageBoxButton.YesNo,
+                ZidimiMessageBoxImage.Question,
+                owner);
 
-        if (confirm != ZidimiMessageBoxResult.Yes) return;
+            if (confirm != ZidimiMessageBoxResult.Yes) return;
 
-        var context = _vm.GetRequestContext();
-        var res = await ExtensionService.Instance.DownloadAndInstallFromWebStoreAsync(url, context);
+            var context = _vm.GetRequestContext();
+            var res = await ExtensionService.Instance.DownloadAndInstallFromWebStoreAsync(url, context);
 
-        var icon = res.success ? ZidimiMessageBoxImage.Information : ZidimiMessageBoxImage.Warning;
-        ZidimiMessageBox.Show(res.message, LanguageManager.Instance["Ext_Title"],
-            ZidimiMessageBoxButton.OK, icon, owner);
+            // The browser is already initialized in the common install flow, so make the
+            // extension live immediately. This also makes action.default_popup available
+            // without requiring a browser restart.
+            if (res.success && res.ext != null && _currentBrowser is { IsBrowserInitialized: true, IsDisposed: false })
+            {
+                var runtime = await ExtensionService.Instance.EnsureExtensionRuntimeLoadedAsync(res.ext, _currentBrowser);
+                if (!runtime.success)
+                    AppLogger.Log("ExtensionRuntime", $"Installed {res.ext.Name}, but runtime load failed: {runtime.message}");
+            }
+
+            RefreshExtensionSurfaces();
+
+            var icon = res.success ? ZidimiMessageBoxImage.Information : ZidimiMessageBoxImage.Warning;
+            ZidimiMessageBox.Show(res.message, LanguageManager.Instance["Ext_Title"],
+                ZidimiMessageBoxButton.OK, icon, owner);
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Log("ExtensionInstallUi", ex);
+            ZidimiMessageBox.Show(ex.Message, LanguageManager.Instance["Ext_Title"],
+                ZidimiMessageBoxButton.OK, ZidimiMessageBoxImage.Warning, owner);
+        }
+        finally
+        {
+            _extensionInstallInProgress = false;
+        }
     }
 }
 

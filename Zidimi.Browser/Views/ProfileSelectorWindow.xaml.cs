@@ -160,7 +160,8 @@ public partial class ProfileSelectorWindow : ZidimiWindow
         if (sender is System.Windows.Controls.MenuItem mi && mi.Parent is System.Windows.Controls.ContextMenu cm && 
             cm.PlacementTarget is FrameworkElement b && b.Tag is ProfileSelectorItem p)
         {
-            if (AppSettings.Global.Profiles.Count <= 1)
+            if (AppSettings.Global.Profiles.Count <= 1 ||
+                string.Equals(AppSettings.Global.CurrentProfile, p.Name, StringComparison.OrdinalIgnoreCase))
             {
                 ZidimiMessageBox.Show(
                     LanguageManager.Instance["ProfileManager_CantDeleteActiveMsg"],
@@ -181,11 +182,6 @@ public partial class ProfileSelectorWindow : ZidimiWindow
             if (res == ZidimiMessageBoxResult.Yes)
             {
                 AppSettings.Global.Profiles.Remove(p.Name);
-                if (AppSettings.Global.CurrentProfile == p.Name)
-                {
-                    AppSettings.Global.CurrentProfile = AppSettings.Global.Profiles.FirstOrDefault() ?? UserDataPaths.DefaultProfileName;
-                    AppSettings.LoadProfile(AppSettings.Global.CurrentProfile);
-                }
                 AppSettings.SaveAll();
 
                 UserDataPaths.UpdateLocalState(root =>
@@ -218,12 +214,16 @@ public partial class ProfileSelectorWindow : ZidimiWindow
 
     private void Guest_Click(object sender, RoutedEventArgs e)
     {
-        ((App)Application.Current).InitializeBrowser();
-        if (!App.ViewModel.IsGuestMode)
+        if (App.ViewModel is null)
+        {
+            ((App)Application.Current).InitializeBrowser();
+        }
+
+        if (App.ViewModel is not null && !App.ViewModel.IsGuestMode)
         {
             App.ViewModel.ToggleGuestMode();
         }
-        this.Close();
+        Close();
     }
 
     private void ShowOnStartup_Toggled(object sender, RoutedEventArgs e)
@@ -247,12 +247,28 @@ public partial class ProfileSelectorWindow : ZidimiWindow
 
     private void LaunchProfile(string profileName)
     {
+        var alreadyRunning = App.ViewModel is not null;
+        var profileChanged = !string.Equals(
+            AppSettings.Global.CurrentProfile, profileName, StringComparison.OrdinalIgnoreCase);
+
         AppSettings.Global.CurrentProfile = profileName;
         AppSettings.SaveGlobal();
         AppSettings.LoadProfile(profileName);
 
-        ((App)Application.Current).InitializeBrowser();
-        this.Close();
+        if (alreadyRunning && App.ViewModel is not null)
+        {
+            if (profileChanged || App.ViewModel.IsGuestMode)
+            {
+                App.ViewModel.SwitchProfile(profileName);
+                ThemeManager.ApplyFromSettings(AppSettings.Profile.Theme);
+            }
+        }
+        else
+        {
+            ((App)Application.Current).InitializeBrowser();
+        }
+
+        Close();
     }
 }
 

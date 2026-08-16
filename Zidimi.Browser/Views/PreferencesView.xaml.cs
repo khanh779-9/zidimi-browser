@@ -390,7 +390,7 @@ public partial class PreferencesView : UserControl
                 var activeTab = App.ViewModel?.ActiveTab;
                 if (activeTab != null)
                 {
-                    var b = App.ViewModel?.GetBrowser(activeTab) as CefSharp.Wpf.ChromiumWebBrowser;
+                    var b = App.ViewModel?.GetBrowser(activeTab) as CefSharp.Wpf.HwndHost.ChromiumWebBrowser;
                     b?.SetZoomLevel(newZoom);
                 }
             }

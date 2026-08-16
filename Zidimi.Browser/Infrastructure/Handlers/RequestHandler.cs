@@ -10,25 +10,60 @@ namespace Zidimi.Browser.Infrastructure.Handlers;
 
 public class RequestHandler : CefSharp.Handler.RequestHandler
 {
-protected override bool OnBeforeBrowse(IWebBrowser chromiumWebBrowser, IBrowser browser, IFrame frame,
+    private DateTime _lastRendererRecoveryUtc = DateTime.MinValue;
+    private int _rendererRecoveryBurst;
+
+    protected override bool OnBeforeBrowse(IWebBrowser chromiumWebBrowser, IBrowser browser, IFrame frame,
         IRequest request, bool userGesture, bool isRedirect)
     {
-        // DNT is handled natively by CefSharp via enable_do_not_track preference.
         return false;
     }
 
     protected override void OnRenderProcessTerminated(IWebBrowser chromiumWebBrowser, IBrowser browser,
         CefTerminationStatus status, int errorCode, string errorMessage)
     {
-        try
+        string url = string.Empty;
+        try { url = browser?.MainFrame?.Url ?? string.Empty; } catch { }
+
+        AppLogger.Log("CefCrash",
+            $"Renderer terminated. Status={status}, ErrorCode={errorCode}, Error={errorMessage}, BrowserId={browser?.Identifier}, Url={url}");
+
+        // A dead renderer leaves the WPF shell alive but the browser surface frozen.
+        // Recover once or twice automatically; avoid an endless crash/reload loop.
+        var now = DateTime.UtcNow;
+        if ((now - _lastRendererRecoveryUtc) > TimeSpan.FromSeconds(20))
+            _rendererRecoveryBurst = 0;
+
+        _lastRendererRecoveryUtc = now;
+        _rendererRecoveryBurst++;
+
+        if (_rendererRecoveryBurst > 2)
         {
-            AppLogger.Log("CefCrash",
-                $"Renderer process terminated. Status={status}, ErrorCode={errorCode}, Error={errorMessage}, BrowserId={browser?.Identifier}, Url={browser?.MainFrame?.Url}");
+            AppLogger.Log("CefCrash", "Renderer recovery stopped after repeated crashes within 20 seconds.");
+            return;
         }
-        catch { }
+
+        Application.Current?.Dispatcher.BeginInvoke(() =>
+        {
+            try
+            {
+                if (chromiumWebBrowser == null || chromiumWebBrowser.IsDisposed) return;
+
+                AppLogger.Log("CefCrash", $"Recovering renderer by reloading. Attempt={_rendererRecoveryBurst}, Url={url}");
+                if (!string.IsNullOrWhiteSpace(url))
+                    chromiumWebBrowser.Load(url);
+                else
+                    chromiumWebBrowser.Reload();
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Log("CefCrash", ex, "Renderer recovery failed.");
+            }
+        });
     }
 
-    protected override bool OnCertificateError(IWebBrowser chromiumWebBrowser, IBrowser browser, CefErrorCode errorCode, string requestUrl, ISslInfo sslInfo, IRequestCallback callback)
+    protected override bool OnCertificateError(IWebBrowser chromiumWebBrowser, IBrowser browser,
+        CefErrorCode errorCode, string requestUrl, ISslInfo sslInfo, IRequestCallback callback)
     {
         bool warn = true;
         var ctx = chromiumWebBrowser?.GetBrowserHost()?.RequestContext;
@@ -37,7 +72,6 @@ protected override bool OnBeforeBrowse(IWebBrowser chromiumWebBrowser, IBrowser 
             if (ctx.GetPreferenceSafe("safebrowsing.enabled") is bool sb) warn = sb;
         }
 
-        // Safe Browsing: if the user disabled dangerous-site warnings, don't show a dialog and just block.
         if (!warn)
         {
             callback.Continue(false);
@@ -46,26 +80,22 @@ protected override bool OnBeforeBrowse(IWebBrowser chromiumWebBrowser, IBrowser 
 
         Application.Current.Dispatcher.BeginInvoke(() =>
         {
-            var msg = string.Format(LanguageManager.Instance["Security_CertWarning"],
-                requestUrl, errorCode);
-            var result = ZidimiMessageBox.Show(
-                msg,
-                LanguageManager.Instance["Security_CertTitle"],
-                ZidimiMessageBoxButton.YesNo,
-                ZidimiMessageBoxImage.Warning);
+            using (callback)
+            {
+                if (callback.IsDisposed) return;
 
-            if (result == ZidimiMessageBoxResult.Yes)
-            {
-                callback.Continue(true);
-            }
-            else
-            {
-                callback.Continue(false);
+                var msg = string.Format(LanguageManager.Instance["Security_CertWarning"],
+                    requestUrl, errorCode);
+                var result = ZidimiMessageBox.Show(
+                    msg,
+                    LanguageManager.Instance["Security_CertTitle"],
+                    ZidimiMessageBoxButton.YesNo,
+                    ZidimiMessageBoxImage.Warning);
+
+                callback.Continue(result == ZidimiMessageBoxResult.Yes);
             }
         });
 
-        // Return true to indicate we are handling it asynchronously with the callback
-        return true; 
+        return true;
     }
 }
-

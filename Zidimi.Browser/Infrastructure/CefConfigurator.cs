@@ -18,6 +18,14 @@ public static class CefConfigurator
     public static CefSettings BuildSettings()
     {
         var g = AppSettings.Global;
+
+        // Real Chromium extension support (MV2/MV3 action popups, background/service workers,
+        // content scripts) requires Chrome runtime and a windowed host. BrowserView uses
+        // CefSharp.Wpf.HwndHost, which is explicitly supported by CefSharp for this mode.
+        CefSharpSettings.RuntimeStyle = CefRuntimeStyle.Chrome;
+        // Zidimi owns the shutdown order in App.OnExit; avoid the HwndHost static shutdown hook
+        // racing our RequestContext/profile cleanup.
+        CefSharpSettings.ShutdownOnExit = false;
         var args = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         var cachePath = UserDataPaths.SharedCacheDir;
         Directory.CreateDirectory(cachePath);
@@ -79,10 +87,10 @@ public static class CefConfigurator
         // ------------------------------------------------------------------
         // Video enhancement
         // ------------------------------------------------------------------
-        if (g.EnhanceVideos)
-        {
-            AppendCommaValue(args, "enable-features", "HardwareSecureDecryption,Vulkan");
-        }
+        // Do not inject enable-features/disable-features while using Chrome style.
+        // CEF already owns those feature lists and duplicate switches can conflict
+        // with the Chrome runtime. Keep the user setting for future safe tuning,
+        // but let Chromium negotiate video acceleration from the GPU settings.
 
         // ------------------------------------------------------------------
         // Proxy
@@ -100,9 +108,12 @@ public static class CefConfigurator
         // re-declaring disable-features, so nothing important gets re-enabled.
         if (g.StableRendering)
         {
+            // Safe as a standalone Chromium switch.
             args["disable-gpu-process-crash-limit"] = "1";
-            AppendCommaValue(args, "disable-features",
-                "BackForwardCache,CalculateNativeWinOcclusion,WinUseBrowserSpellChecker");
+
+            // IMPORTANT: never add --disable-features in Chrome Runtime mode.
+            // CefSharp/CEF already provides its own feature list and a second
+            // disable-features switch can crash during ChromiumWebBrowser creation.
         }
 
         // We do our own crash logging (AppLogger) — Chromium's crash reporter
@@ -144,12 +155,24 @@ public static class CefConfigurator
         }
 
         // ------------------------------------------------------------------
+        // Extensions (Chrome runtime)
+        // ------------------------------------------------------------------
+        // Required by Chromium DevTools Extensions.loadUnpacked. The packages are first
+        // downloaded/validated by Zidimi; this only enables the local unpacked load step.
+        args["enable-unsafe-extension-debugging"] = "1";
+
+        // ------------------------------------------------------------------
         // DevTools debugging
         // ------------------------------------------------------------------
         if (g.RemoteDebuggingPort is >= 1024 and <= 65535)
         {
             settings.RemoteDebuggingPort = g.RemoteDebuggingPort;
         }
+
+        // Chrome Runtime owns its feature lists. Defensive removal here prevents
+        // a future setting from accidentally re-introducing the native startup crash.
+        args.Remove("enable-features");
+        args.Remove("disable-features");
 
         foreach (var kv in args)
         {

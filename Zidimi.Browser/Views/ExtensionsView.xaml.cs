@@ -17,17 +17,33 @@ public partial class ExtensionsView : UserControl
     {
         InitializeComponent();
         Loaded += ExtensionsView_Loaded;
+        Unloaded += ExtensionsView_Unloaded;
     }
 
     private void ExtensionsView_Loaded(object sender, RoutedEventArgs e)
     {
+        ExtensionService.Instance.ExtensionsChanged -= ExtensionService_ExtensionsChanged;
+        ExtensionService.Instance.ExtensionsChanged += ExtensionService_ExtensionsChanged;
         RefreshList();
+    }
+
+    private void ExtensionsView_Unloaded(object sender, RoutedEventArgs e)
+    {
+        ExtensionService.Instance.ExtensionsChanged -= ExtensionService_ExtensionsChanged;
+    }
+
+    private void ExtensionService_ExtensionsChanged(object? sender, EventArgs e)
+    {
+        Dispatcher.BeginInvoke(new Action(RefreshList));
     }
 
     public void RefreshList()
     {
         var filter = SearchBox.Text?.Trim() ?? string.Empty;
-        _items = ExtensionService.Instance.InstalledExtensions.ToList();
+        _items = ExtensionService.Instance.InstalledExtensions
+            .OrderByDescending(x => x.IsPinned)
+            .ThenBy(x => x.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
 
         if (!string.IsNullOrEmpty(filter))
         {
@@ -79,6 +95,7 @@ public partial class ExtensionsView : UserControl
 
                 if (res.success)
                 {
+                    await ActivateInCurrentBrowserAsync(res.ext);
                     ZidimiMessageBox.Show(res.message, LanguageManager.Instance["Ext_Title"],
                         ZidimiMessageBoxButton.OK, ZidimiMessageBoxImage.Information, Window.GetWindow(this));
                     RefreshList();
@@ -99,7 +116,7 @@ public partial class ExtensionsView : UserControl
         }
     }
 
-    private void LoadUnpackedBtn_Click(object sender, RoutedEventArgs e)
+    private async void LoadUnpackedBtn_Click(object sender, RoutedEventArgs e)
     {
         try
         {
@@ -114,6 +131,7 @@ public partial class ExtensionsView : UserControl
                 var res = ExtensionService.Instance.LoadUnpackedExtension(dialog.FolderName, context);
                 if (res.success)
                 {
+                    await ActivateInCurrentBrowserAsync(res.ext);
                     ZidimiMessageBox.Show(res.message, LanguageManager.Instance["Ext_Title"],
                         ZidimiMessageBoxButton.OK, ZidimiMessageBoxImage.Information, Window.GetWindow(this));
                     RefreshList();
@@ -132,12 +150,37 @@ public partial class ExtensionsView : UserControl
         }
     }
 
+    private static async System.Threading.Tasks.Task ActivateInCurrentBrowserAsync(ExtensionInfo? ext)
+    {
+        if (ext == null) return;
+        var vm = App.ViewModel;
+        var activeTab = vm?.ActiveTab;
+        if (vm == null || activeTab == null) return;
+
+        if (vm.GetBrowser(activeTab) is CefSharp.IChromiumWebBrowserBase browser &&
+            !browser.IsDisposed && browser.BrowserCore != null)
+        {
+            var runtime = await ExtensionService.Instance.EnsureExtensionRuntimeLoadedAsync(ext, browser);
+            if (!runtime.success)
+                AppLogger.Log("ExtensionRuntime", $"Installed {ext.Name}, but runtime load failed: {runtime.message}");
+        }
+    }
+
     private void Toggle_Click(object sender, RoutedEventArgs e)
     {
         if (sender is FrameworkElement fe && fe.Tag is ExtensionInfo ext)
         {
             var context = App.ViewModel?.GetRequestContext();
             ExtensionService.Instance.ToggleExtension(ext, ext.IsEnabled, context);
+        }
+    }
+
+    private void Pin_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement fe && fe.Tag is ExtensionInfo ext)
+        {
+            ExtensionService.Instance.TogglePinned(ext, !ext.IsPinned);
+            RefreshList();
         }
     }
 

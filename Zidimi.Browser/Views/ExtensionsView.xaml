@@ -150,6 +150,40 @@
 
                                 <!-- Actions -->
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                    <!-- Pin / Unpin -->
+                                    <ctrl:ZidimiButton Height="32" Width="32"
+                                                       Padding="0" CornerRadius="6"
+                                                       Tag="{Binding}" Click="Pin_Click"
+                                                       Margin="0,0,8,0">
+                                        <ctrl:ZidimiButton.Style>
+                                            <Style TargetType="{x:Type ctrl:ZidimiButton}"
+                                                   BasedOn="{StaticResource {x:Type ctrl:ZidimiButton}}">
+                                                <Setter Property="ToolTip" Value="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Ext_Pin]}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsPinned}" Value="True">
+                                                        <Setter Property="ToolTip" Value="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Ext_Unpin]}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </ctrl:ZidimiButton.Style>
+                                        <Path Width="15" Height="15" Stretch="Uniform" StrokeThickness="1.5"
+                                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                                              Data="M8 2 H16 L15 7 L19 11 V13 H13 V21 L12 23 L11 21 V13 H5 V11 L9 7 Z">
+                                            <Path.Style>
+                                                <Style TargetType="Path">
+                                                    <Setter Property="Stroke" Value="{DynamicResource Ink300Brush}" />
+                                                    <Setter Property="Fill" Value="Transparent" />
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsPinned}" Value="True">
+                                                            <Setter Property="Stroke" Value="{DynamicResource ZidimiPurpleLightBrush}" />
+                                                            <Setter Property="Fill" Value="{DynamicResource ZidimiPurpleLightBrush}" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Path.Style>
+                                        </Path>
+                                    </ctrl:ZidimiButton>
+
                                     <!-- Toggle Enable/Disable -->
                                     <ctrl:ZidimiCheckBox IsChecked="{Binding IsEnabled, Mode=TwoWay}"
                                                          Tag="{Binding}"

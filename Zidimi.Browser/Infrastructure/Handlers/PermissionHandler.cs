@@ -56,17 +56,31 @@ public sealed class ZidimiPermissionHandler : CefSharp.Handler.PermissionHandler
 
         var name = DescribeMedia(requestedPermissions);
         var question = Localize("Perm_Dialog_Media", requestingOrigin, name);
-        var allowed = AskUser(requestingOrigin, question, Localize("Perm_MediaTitle"));
+        var title = Localize("Perm_MediaTitle");
 
-        PersistException(chromiumWebBrowser, requestingOrigin, GetCefPrefKey(requestedPermissions), allowed);
-
-        if (!allowed)
+        // Never wait synchronously on WPF from a CEF callback thread. The CEF callback
+        // is designed to be completed later, so return immediately and show our UI async.
+        Application.Current?.Dispatcher.BeginInvoke(() =>
         {
-            using (callback) callback.Cancel();
-            return true;
-        }
+            using (callback)
+            {
+                try
+                {
+                    var allowed = ShowPermissionDialog(question, title);
+                    PersistException(chromiumWebBrowser, requestingOrigin,
+                        GetCefPrefKey(requestedPermissions), allowed);
 
-        using (callback) callback.Continue(requestedPermissions);
+                    if (allowed) callback.Continue(requestedPermissions);
+                    else callback.Cancel();
+                }
+                catch (ObjectDisposedException)
+                {
+                    // The request may have been dismissed by CEF while the WPF dialog
+                    // was queued (for example because the frame navigated/closed).
+                }
+            }
+        });
+
         return true;
     }
 
@@ -80,52 +94,49 @@ public sealed class ZidimiPermissionHandler : CefSharp.Handler.PermissionHandler
         bool allow = false;
         bool unresolved = false;
 
-        Action<PermissionRequestType, ContentPermission> check = (flag, p) =>
+        void Check(PermissionRequestType flag, ContentPermission permission)
         {
             if ((requestedPermissions & flag) == 0) return;
-            if (p == ContentPermission.Block) block = true;
-            else if (p == ContentPermission.Allow) allow = true;
+            if (permission == ContentPermission.Block) block = true;
+            else if (permission == ContentPermission.Allow) allow = true;
             else unresolved = true;
-        };
+        }
 
-        check(PermissionRequestType.Geolocation, policy.Geolocation);
-        check(PermissionRequestType.Notifications, policy.Notifications);
-        check(PermissionRequestType.CameraStream, policy.Camera);
-        check(PermissionRequestType.MicStream, policy.Microphone);
-        check(PermissionRequestType.Clipboard, policy.Clipboard);
-        check(PermissionRequestType.PointerLock, policy.PointerLock);
-        check(PermissionRequestType.MidiSysex, policy.MidiSysex);
-        check(PermissionRequestType.FileSystemAccess, policy.FileSystemAccess);
-        check(PermissionRequestType.IdleDetection, policy.IdleDetection);
-        check(PermissionRequestType.LocalFonts, policy.LocalFonts);
-        check(PermissionRequestType.MultipleDownloads, policy.MultipleDownloads);
-        check(PermissionRequestType.WindowManagement, policy.WindowManagement);
-        check(PermissionRequestType.KeyboardLock, policy.KeyboardLock);
-        check(PermissionRequestType.ProtectedMediaIdentifier, policy.ProtectedMedia);
-        check(PermissionRequestType.HandTracking, policy.HandTracking);
-        check(PermissionRequestType.CameraPanTiltZoom, policy.CameraPanTiltZoom);
-        check(PermissionRequestType.CapturedSurfaceControl, policy.CapturedSurfaceControl);
-        check(PermissionRequestType.StorageAccess, policy.StorageAccess);
-        check(PermissionRequestType.TopLevelStorageAccess, policy.TopLevelStorageAccess);
-        check(PermissionRequestType.DiskQuota, policy.DiskQuota);
-        check(PermissionRequestType.VrSession, policy.VrSession);
-        check(PermissionRequestType.ArSession, policy.ArSession);
-        check(PermissionRequestType.RegisterProtocolHandler, policy.RegisterProtocolHandler);
-        check(PermissionRequestType.WebAppInstallation, policy.WebAppInstallation);
-        check(PermissionRequestType.IdentityProvider, policy.IdentityProvider);
-        check(PermissionRequestType.LocalNetworkAccess, policy.LocalNetworkAccess);
-        check(PermissionRequestType.LocalNetwork, policy.LocalNetwork);
-        check(PermissionRequestType.LoopbackNetwork, policy.LoopbackNetwork);
+        Check(PermissionRequestType.Geolocation, policy.Geolocation);
+        Check(PermissionRequestType.Notifications, policy.Notifications);
+        Check(PermissionRequestType.CameraStream, policy.Camera);
+        Check(PermissionRequestType.MicStream, policy.Microphone);
+        Check(PermissionRequestType.Clipboard, policy.Clipboard);
+        Check(PermissionRequestType.PointerLock, policy.PointerLock);
+        Check(PermissionRequestType.MidiSysex, policy.MidiSysex);
+        Check(PermissionRequestType.FileSystemAccess, policy.FileSystemAccess);
+        Check(PermissionRequestType.IdleDetection, policy.IdleDetection);
+        Check(PermissionRequestType.LocalFonts, policy.LocalFonts);
+        Check(PermissionRequestType.MultipleDownloads, policy.MultipleDownloads);
+        Check(PermissionRequestType.WindowManagement, policy.WindowManagement);
+        Check(PermissionRequestType.KeyboardLock, policy.KeyboardLock);
+        Check(PermissionRequestType.ProtectedMediaIdentifier, policy.ProtectedMedia);
+        Check(PermissionRequestType.HandTracking, policy.HandTracking);
+        Check(PermissionRequestType.CameraPanTiltZoom, policy.CameraPanTiltZoom);
+        Check(PermissionRequestType.CapturedSurfaceControl, policy.CapturedSurfaceControl);
+        Check(PermissionRequestType.StorageAccess, policy.StorageAccess);
+        Check(PermissionRequestType.TopLevelStorageAccess, policy.TopLevelStorageAccess);
+        Check(PermissionRequestType.DiskQuota, policy.DiskQuota);
+        Check(PermissionRequestType.VrSession, policy.VrSession);
+        Check(PermissionRequestType.ArSession, policy.ArSession);
+        Check(PermissionRequestType.RegisterProtocolHandler, policy.RegisterProtocolHandler);
+        Check(PermissionRequestType.WebAppInstallation, policy.WebAppInstallation);
+        Check(PermissionRequestType.IdentityProvider, policy.IdentityProvider);
+        Check(PermissionRequestType.LocalNetworkAccess, policy.LocalNetworkAccess);
+        Check(PermissionRequestType.LocalNetwork, policy.LocalNetwork);
+        Check(PermissionRequestType.LoopbackNetwork, policy.LoopbackNetwork);
 
-        // If any requested capability is set to Block, deny the whole request.
         if (block)
         {
             using (callback) callback.Continue(PermissionRequestResult.Deny);
             return true;
         }
 
-        // If every requested capability is explicitly Allow, grant without prompting.
-        // If any requested capability is still Ask (unresolved), fall through to the prompt.
         if (allow && !unresolved)
         {
             using (callback) callback.Continue(PermissionRequestResult.Accept);
@@ -134,17 +145,30 @@ public sealed class ZidimiPermissionHandler : CefSharp.Handler.PermissionHandler
 
         var names = DescribeRequestedTypes(requestedPermissions);
         var question = Localize("Perm_Dialog_Prompt", requestingOrigin, names);
-        var allowed = AskUser(requestingOrigin, question, Localize("Perm_GenericTitle"));
+        var title = Localize("Perm_GenericTitle");
 
-        PersistException(chromiumWebBrowser, requestingOrigin, GetCefPrefKey(requestedPermissions), allowed);
+        AppLogger.Log("Permission",
+            $"Prompt requested. Origin={requestingOrigin}, Types={requestedPermissions}, PromptId={promptId}");
 
-        if (!allowed)
+        Application.Current?.Dispatcher.BeginInvoke(() =>
         {
-            using (callback) callback.Continue(PermissionRequestResult.Deny);
-            return true;
-        }
+            using (callback)
+            {
+                try
+                {
+                    var allowed = ShowPermissionDialog(question, title);
+                    PersistException(chromiumWebBrowser, requestingOrigin,
+                        GetCefPrefKey(requestedPermissions), allowed);
+                    callback.Continue(allowed ? PermissionRequestResult.Accept : PermissionRequestResult.Deny);
+                }
+                catch (ObjectDisposedException)
+                {
+                    // The prompt may have been dismissed by CEF while the WPF dialog
+                    // was queued (for example because the frame navigated/closed).
+                }
+            }
+        });
 
-        using (callback) callback.Continue(PermissionRequestResult.Accept);
         return true;
     }
 
@@ -154,18 +178,14 @@ public sealed class ZidimiPermissionHandler : CefSharp.Handler.PermissionHandler
         // The UI has closed — nothing more to handle.
     }
 
-    private static bool AskUser(string origin, string question, string title)
+    private static bool ShowPermissionDialog(string question, string title)
     {
-        var result = ZidimiMessageBoxResult.No;
-        Application.Current?.Dispatcher.Invoke(() =>
-        {
-            result = ZidimiMessageBox.Show(
-                question,
-                title,
-                ZidimiMessageBoxButton.YesNo,
-                ZidimiMessageBoxImage.Question,
-                Application.Current.MainWindow);
-        });
+        var result = ZidimiMessageBox.Show(
+            question,
+            title,
+            ZidimiMessageBoxButton.YesNo,
+            ZidimiMessageBoxImage.Question,
+            Application.Current?.MainWindow);
         return result == ZidimiMessageBoxResult.Yes;
     }
 
@@ -264,10 +284,10 @@ public sealed class ZidimiPermissionHandler : CefSharp.Handler.PermissionHandler
             var ctx = browser.GetBrowserHost().RequestContext;
             if (ctx == null) return;
             var fullKey = "profile.content_settings.exceptions." + prefKey;
-            
+
             var exceptions = ctx.GetPreferenceSafe(fullKey);
             var dict = exceptions as IDictionary<string, object> ?? new System.Dynamic.ExpandoObject() as IDictionary<string, object>;
-            
+
             var uri = new Uri(origin);
             string port = uri.Port > 0 ? uri.Port.ToString() : (uri.Scheme == "https" ? "443" : "80");
             string originPattern = $"{uri.Scheme}://{uri.Host}:{port},*";
