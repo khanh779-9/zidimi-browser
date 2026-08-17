@@ -23,7 +23,7 @@
                                 Margin="0,6,0,0"
                                 SnapsToDevicePixels="True">
                             <Border.Effect>
-                                <DropShadowEffect Color="#000000" BlurRadius="24" ShadowDepth="0" Opacity="0.55" />
+                                <DropShadowEffect Color="{DynamicResource ShadowColor}" BlurRadius="24" ShadowDepth="0" Opacity="0.55" />
                             </Border.Effect>
                             <Grid>
                                 <Border x:Name="mask" Background="{DynamicResource ZidimiBgElevatedBrush}" CornerRadius="9" />

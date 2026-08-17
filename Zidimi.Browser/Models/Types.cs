@@ -1,20 +1,10 @@
-using System.ComponentModel;
+using System.Globalization;
+using System.Windows.Media;
+using Zidimi.Browser.Infrastructure;
 
 namespace Zidimi.Browser.Models;
 
-/// <summary>
-/// Identifies the pages shown in the sidebar.
-/// </summary>
-public enum PageId
-{
-    Browser,
-    History,
-    Bookmarks,
-    Preferences,
-    Downloads,
-}
-
-/// <summary>Tab kind: web (ChromiumWebBrowser) or an internal app tab (Settings/History/...).</summary>
+/// <summary>Tab kind: Chromium web content or one of Zidimi's internal app pages.</summary>
 public enum TabKind
 {
     Web,
@@ -25,17 +15,24 @@ public enum TabKind
     Extensions,
 }
 
-/// <summary>Theme state.</summary>
-public enum Theme { Classic, Dark, Light }
-
-/// <summary>Browsing history entry.</summary>
-public sealed class HistoryEntry : INotifyPropertyChanged
+/// <summary>WPF projection of a Chromium browsing-history entry.</summary>
+public sealed class HistoryEntry : ViewModelBase
 {
-    private string _title = "";
-    private string _url = "";
+    private string _title = string.Empty;
+    private string _url = string.Empty;
+    private DateTime _visitedAt = DateTime.Now;
 
     public long Id { get; set; }
-    public DateTime VisitedAt { get; set; } = DateTime.Now;
+
+    public DateTime VisitedAt
+    {
+        get => _visitedAt;
+        set
+        {
+            if (!Set(ref _visitedAt, value)) return;
+            OnPropertyChanged(nameof(GroupDateText));
+        }
+    }
 
     public string GroupDateText
     {
@@ -43,16 +40,15 @@ public sealed class HistoryEntry : INotifyPropertyChanged
         {
             try
             {
-                var code = Zidimi.Browser.Infrastructure.LanguageManager.Instance.CurrentLanguage?.Code ?? "vi-VN";
-                var culture = new System.Globalization.CultureInfo(code);
-                var text = VisitedAt.ToString("dddd, dd/MM/yyyy", culture);
-                if (!string.IsNullOrEmpty(text))
-                    return char.ToUpper(text[0]) + text.Substring(1);
-                return text;
+                var code = LanguageManager.Instance.CurrentLanguage?.Code ?? "vi-VN";
+                var text = VisitedAt.ToString("dddd, dd/MM/yyyy", CultureInfo.GetCultureInfo(code));
+                return string.IsNullOrEmpty(text)
+                    ? text
+                    : char.ToUpper(text[0], CultureInfo.CurrentCulture) + text[1..];
             }
-            catch
+            catch (CultureNotFoundException)
             {
-                return VisitedAt.ToString("dddd, dd/MM/yyyy");
+                return VisitedAt.ToString("dddd, dd/MM/yyyy", CultureInfo.CurrentCulture);
             }
         }
     }
@@ -60,47 +56,44 @@ public sealed class HistoryEntry : INotifyPropertyChanged
     public string Title
     {
         get => _title;
-        set { _title = value; OnPropertyChanged(nameof(Title)); }
+        set => Set(ref _title, value ?? string.Empty);
     }
 
     public string Url
     {
         get => _url;
-        set { _url = value; OnPropertyChanged(nameof(Url)); }
+        set => Set(ref _url, value ?? string.Empty);
     }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-    private void OnPropertyChanged(string n) => PropertyChanged?.Invoke(this, new(n));
 }
 
-/// <summary>Bookmark (folder_bookmark).</summary>
-public sealed class Bookmark : INotifyPropertyChanged
+/// <summary>WPF projection of a Chromium bookmark.</summary>
+public sealed class Bookmark : ViewModelBase
 {
-    private string _title = "";
-    private string _url = "";
+    private string _title = string.Empty;
+    private string _url = string.Empty;
+
     public string Title
     {
         get => _title;
-        set { _title = value; OnPropertyChanged(nameof(Title)); }
+        set => Set(ref _title, value ?? string.Empty);
     }
+
     public string Url
     {
         get => _url;
-        set { _url = value; OnPropertyChanged(nameof(Url)); }
+        set => Set(ref _url, value ?? string.Empty);
     }
-    public DateTime CreatedAt { get; set; } = DateTime.Now;
 
-    public event PropertyChangedEventHandler? PropertyChanged;
-    private void OnPropertyChanged(string n) => PropertyChanged?.Invoke(this, new(n));
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
 }
 
-/// <summary>Download entry for the Downloads panel.</summary>
-public sealed class DownloadEntry : INotifyPropertyChanged
+/// <summary>WPF projection of Chromium/CEF download state.</summary>
+public sealed class DownloadEntry : ViewModelBase
 {
     private string _guid = System.Guid.NewGuid().ToString();
-    private string _url = "";
-    private string _suggestedFileName = "";
-    private string _fullPath = "";
+    private string _url = string.Empty;
+    private string _suggestedFileName = string.Empty;
+    private string _fullPath = string.Empty;
     private bool _isCancelled;
     private bool _isComplete;
     private long _totalBytes = -1;
@@ -110,174 +103,269 @@ public sealed class DownloadEntry : INotifyPropertyChanged
     public string Guid
     {
         get => _guid;
-        set { _guid = value; OnPropertyChanged(nameof(Guid)); }
+        set => Set(ref _guid, value ?? string.Empty);
     }
 
     public DateTime StartedAt
     {
         get => _startedAt;
-        set { _startedAt = value; OnPropertyChanged(nameof(StartedAt)); }
+        set => Set(ref _startedAt, value);
     }
 
     public string Url
     {
         get => _url;
-        set { _url = value; OnPropertyChanged(nameof(Url)); }
+        set => Set(ref _url, value ?? string.Empty);
     }
+
     public string SuggestedFileName
     {
         get => _suggestedFileName;
-        set { _suggestedFileName = value; OnPropertyChanged(nameof(SuggestedFileName)); }
+        set => Set(ref _suggestedFileName, value ?? string.Empty);
     }
+
     public string FullPath
     {
         get => _fullPath;
-        set { _fullPath = value; OnPropertyChanged(nameof(FullPath)); }
+        set => Set(ref _fullPath, value ?? string.Empty);
     }
+
     public bool IsCancelled
     {
         get => _isCancelled;
-        set { _isCancelled = value; OnPropertyChanged(nameof(IsCancelled)); }
+        set => Set(ref _isCancelled, value);
     }
+
     public bool IsComplete
     {
         get => _isComplete;
-        set { _isComplete = value; OnPropertyChanged(nameof(IsComplete)); }
+        set => Set(ref _isComplete, value);
     }
+
     public long TotalBytes
     {
         get => _totalBytes;
-        set { _totalBytes = value; OnPropertyChanged(nameof(TotalBytes)); }
+        set => Set(ref _totalBytes, value);
     }
+
     public long ReceivedBytes
     {
         get => _receivedBytes;
-        set { _receivedBytes = value; OnPropertyChanged(nameof(ReceivedBytes)); }
+        set => Set(ref _receivedBytes, value);
     }
+}
 
-public event PropertyChangedEventHandler? PropertyChanged;
-        public void OnPropertyChanged(string n) => PropertyChanged?.Invoke(this, new(n));
-    }
+/// <summary>Autocomplete suggestion for the omnibox.</summary>
+public sealed class AutocompleteSuggestion : ViewModelBase
+{
+    private string _title = string.Empty;
+    private string _subtitle = string.Empty;
+    private string _iconPath = string.Empty;
+    private string _typeLabel = string.Empty;
+    private string _targetUrl = string.Empty;
 
-    /// <summary>Autocomplete suggestion for the omnibox (History/Bookmark/Search).</summary>
-    public sealed class AutocompleteSuggestion : INotifyPropertyChanged
+    public string Title
     {
-        private string _title = "";
-        private string _subtitle = "";
-        private string _iconPath = "";
-        private string _typeLabel = "";
-        private string _targetUrl = "";
-
-        public string Title
-        {
-            get => _title;
-            set { _title = value; OnPropertyChanged(nameof(Title)); }
-        }
-        public string Subtitle
-        {
-            get => _subtitle;
-            set { _subtitle = value; OnPropertyChanged(nameof(Subtitle)); }
-        }
-        public string IconPath
-        {
-            get => _iconPath;
-            set { _iconPath = value; OnPropertyChanged(nameof(IconPath)); }
-        }
-        public string TypeLabel
-        {
-            get => _typeLabel;
-            set { _typeLabel = value; OnPropertyChanged(nameof(TypeLabel)); }
-        }
-        public string TargetUrl
-        {
-            get => _targetUrl;
-            set { _targetUrl = value; OnPropertyChanged(nameof(TargetUrl)); }
-        }
-
-        public event PropertyChangedEventHandler? PropertyChanged;
-        public void OnPropertyChanged(string n) => PropertyChanged?.Invoke(this, new(n));
+        get => _title;
+        set => Set(ref _title, value ?? string.Empty);
     }
 
-    /// <summary>ViewModel for one browser tab.</summary>
-    public sealed class TabViewModel : INotifyPropertyChanged
+    public string Subtitle
+    {
+        get => _subtitle;
+        set => Set(ref _subtitle, value ?? string.Empty);
+    }
+
+    public string IconPath
+    {
+        get => _iconPath;
+        set => Set(ref _iconPath, value ?? string.Empty);
+    }
+
+    public string TypeLabel
+    {
+        get => _typeLabel;
+        set => Set(ref _typeLabel, value ?? string.Empty);
+    }
+
+    public string TargetUrl
+    {
+        get => _targetUrl;
+        set => Set(ref _targetUrl, value ?? string.Empty);
+    }
+}
+
+/// <summary>View model for one browser tab.</summary>
+public sealed class TabViewModel : ViewModelBase
 {
     private string _title = "New Tab";
-    private string _address = "";
+    private string _address = string.Empty;
     private bool _isLoading;
     private bool _canGoBack;
     private bool _canGoForward;
     private bool _isActive;
-    private System.Windows.Media.ImageSource? _favicon;
+    private ImageSource? _favicon;
     private bool _isAudioPlaying;
     private bool _isMuted;
     private bool _isPinned;
+    private TabKind _kind = TabKind.Web;
+    private int _tabId;
 
+    // Shell identity is available before Chromium finishes creating the native browser.
+    // Web tabs then receive their real CEF/extension tab id through TabId.
     public Guid Id { get; } = Guid.NewGuid();
-    public TabKind Kind { get; set; } = TabKind.Web;
+
+    /// <summary>
+    /// Native Chromium tab id for a web tab. CEF exposes the browser Identifier as the same id
+    /// consumed by extension APIs. A value of 0 means the browser is still being created or this
+    /// is a Zidimi-native tab with no Chromium browser.
+    /// </summary>
+    public int TabId
+    {
+        get => _tabId;
+        internal set
+        {
+            if (!Set(ref _tabId, value)) return;
+            OnPropertyChanged(nameof(HasNativeTabId));
+        }
+    }
+
+    public bool HasNativeTabId => _tabId > 0;
+
+    public TabKind Kind
+    {
+        get => _kind;
+        set => Set(ref _kind, value);
+    }
+
     public string Title
     {
         get => _title;
-        set { _title = value; OnPropertyChanged(nameof(Title)); }
+        set => Set(ref _title, value ?? string.Empty);
     }
 
     public string Address
     {
         get => _address;
-        set { _address = value; OnPropertyChanged(nameof(Address)); }
+        set => Set(ref _address, value ?? string.Empty);
     }
 
     public bool IsLoading
     {
         get => _isLoading;
-        set { _isLoading = value; OnPropertyChanged(nameof(IsLoading)); }
+        set => Set(ref _isLoading, value);
     }
 
     public bool CanGoBack
     {
         get => _canGoBack;
-        set { _canGoBack = value; OnPropertyChanged(nameof(CanGoBack)); }
+        set => Set(ref _canGoBack, value);
     }
 
     public bool CanGoForward
     {
         get => _canGoForward;
-        set { _canGoForward = value; OnPropertyChanged(nameof(CanGoForward)); }
+        set => Set(ref _canGoForward, value);
     }
 
     public bool IsActive
     {
         get => _isActive;
-        set { _isActive = value; OnPropertyChanged(nameof(IsActive)); }
+        set => Set(ref _isActive, value);
     }
 
-    /// <summary>The page's favicon, loaded asynchronously (null = fallback).</summary>
-    public System.Windows.Media.ImageSource? Favicon
+    /// <summary>The page's favicon, or null to show the fallback icon.</summary>
+    public ImageSource? Favicon
     {
         get => _favicon;
-        set { _favicon = value; OnPropertyChanged(nameof(Favicon)); }
+        set => Set(ref _favicon, value);
     }
 
-    /// <summary>Tab is currently playing audio.</summary>
     public bool IsAudioPlaying
     {
         get => _isAudioPlaying;
-        set { _isAudioPlaying = value; OnPropertyChanged(nameof(IsAudioPlaying)); }
+        set => Set(ref _isAudioPlaying, value);
     }
 
-    /// <summary>Tab is muted.</summary>
     public bool IsMuted
     {
         get => _isMuted;
-        set { _isMuted = value; OnPropertyChanged(nameof(IsMuted)); }
+        set => Set(ref _isMuted, value);
     }
 
-    /// <summary>Tab is pinned (icon-only, at the top of the list).</summary>
     public bool IsPinned
     {
         get => _isPinned;
-        set { _isPinned = value; OnPropertyChanged(nameof(IsPinned)); }
+        set => Set(ref _isPinned, value);
     }
 
-    public event PropertyChangedEventHandler? PropertyChanged;
-    public void OnPropertyChanged(string n) => PropertyChanged?.Invoke(this, new(n));
+    // Shell navigation only bridges transitions between Chromium pages and Zidimi-native pages.
+    // Keep a browser-like bounded list so one long-lived tab cannot grow memory without limit.
+    private const int MaxShellNavigationEntries = 256;
+    private readonly List<string> _navigationHistory = new();
+    private int _navigationIndex = -1;
+
+    public bool HasNavigationHistory => _navigationIndex >= 0;
+
+    /// <summary>
+    /// Records a top-level location in Zidimi's tab history. Keeping this history at
+    /// the shell level lets Back/Forward work across Chromium pages and native
+    /// zidimi:// pages without registering a fake network scheme in CEF.
+    /// </summary>
+    public void RecordNavigation(string? address)
+    {
+        var value = address?.Trim() ?? string.Empty;
+        if (value.Length == 0) return;
+
+        if (_navigationIndex >= 0 &&
+            string.Equals(_navigationHistory[_navigationIndex], value, StringComparison.OrdinalIgnoreCase))
+        {
+            UpdateNavigationAvailability();
+            return;
+        }
+
+        if (_navigationIndex + 1 < _navigationHistory.Count)
+            _navigationHistory.RemoveRange(_navigationIndex + 1, _navigationHistory.Count - _navigationIndex - 1);
+
+        _navigationHistory.Add(value);
+        _navigationIndex = _navigationHistory.Count - 1;
+
+        if (_navigationHistory.Count > MaxShellNavigationEntries)
+        {
+            var removeCount = _navigationHistory.Count - MaxShellNavigationEntries;
+            _navigationHistory.RemoveRange(0, removeCount);
+            _navigationIndex = Math.Max(0, _navigationIndex - removeCount);
+        }
+
+        UpdateNavigationAvailability();
+    }
+
+    public void ResetNavigation(string? address)
+    {
+        _navigationHistory.Clear();
+        _navigationIndex = -1;
+        RecordNavigation(address);
+    }
+
+    public string? MoveBack()
+    {
+        if (_navigationIndex <= 0) return null;
+        _navigationIndex--;
+        UpdateNavigationAvailability();
+        return _navigationHistory[_navigationIndex];
+    }
+
+    public string? MoveForward()
+    {
+        if (_navigationIndex < 0 || _navigationIndex >= _navigationHistory.Count - 1) return null;
+        _navigationIndex++;
+        UpdateNavigationAvailability();
+        return _navigationHistory[_navigationIndex];
+    }
+
+    private void UpdateNavigationAvailability()
+    {
+        CanGoBack = _navigationIndex > 0;
+        CanGoForward = _navigationIndex >= 0 && _navigationIndex < _navigationHistory.Count - 1;
+    }
 }

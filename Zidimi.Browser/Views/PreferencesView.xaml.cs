@@ -1,3 +1,4 @@
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -11,15 +12,32 @@ namespace Zidimi.Browser.Views;
 public partial class PreferencesView : UserControl
 {
     private string _currentSection = "General";
+    private bool _syncingSection;
+
+    /// <summary>Raised when the user changes the Settings sidebar section.</summary>
+    public event Action<string>? SectionChanged;
 
     public PreferencesView()
     {
         InitializeComponent();
         // Rebuild the section being viewed when the theme changes so code-built labels pick up the new brushes.
         ThemeManager.ThemeChanged += OnThemeChanged;
-        Unloaded += (s, e) => ThemeManager.ThemeChanged -= OnThemeChanged;
+        Loaded += PreferencesView_Loaded;
+        Unloaded += (s, e) =>
+        {
+            ThemeManager.ThemeChanged -= OnThemeChanged;
+            Loaded -= PreferencesView_Loaded;
+        };
         if (SettingsContent.Content == null)
             LoadSettingsSection("General");
+    }
+
+    private async void PreferencesView_Loaded(object sender, RoutedEventArgs e)
+    {
+        // After CEF starts, the live RequestContext is the source of truth. Refresh once when the
+        // settings surface opens so changes made by Chromium/internal pages/extensions are visible.
+        await AppSettings.RefreshCurrentProfileFromCefAsync();
+        if (IsLoaded) LoadSettingsSection(_currentSection);
     }
 
     private void OnThemeChanged(ThemeManager.AppTheme theme)
@@ -32,19 +50,47 @@ public partial class PreferencesView : UserControl
 
     private void NavItem_Checked(object sender, RoutedEventArgs e)
     {
-        if (SettingsContent == null) return;
+        if (_syncingSection || SettingsContent == null) return;
         if (sender is RadioButton rb && rb.Tag is string tag)
-            LoadSettingsSection(tag);
+            NavigateToSection(tag, notifyRoute: true);
     }
 
     private void NavItem_Click(object sender, RoutedEventArgs e)
     {
+        if (_syncingSection || SettingsContent == null) return;
+        // Checked already performs navigation when the selected radio changes.
+        // Only handle Click when a custom radio implementation did not check itself.
+        if (sender is RadioButton rb && rb.IsChecked != true && rb.Tag is string tag)
+            NavigateToSection(tag, notifyRoute: true);
+    }
+
+    /// <summary>
+    /// Selects a Settings sidebar section. BrowserView calls this for
+    /// zidimi://settings/&lt;section&gt; navigation; sidebar clicks can optionally
+    /// notify BrowserView so the omnibox URL stays in sync.
+    /// </summary>
+    public void NavigateToSection(string section, bool notifyRoute = false)
+    {
         if (SettingsContent == null) return;
-        if (sender is RadioButton rb && rb.Tag is string tag)
+
+        var normalized = string.IsNullOrWhiteSpace(section) ? "Profiles" : section.Trim();
+        _syncingSection = true;
+        try
         {
-            rb.IsChecked = true;
-            LoadSettingsSection(tag);
+            foreach (var child in NavPanel.Children)
+            {
+                if (child is RadioButton rb && rb.Tag is string tag)
+                    rb.IsChecked = string.Equals(tag, normalized, StringComparison.OrdinalIgnoreCase);
+            }
         }
+        finally
+        {
+            _syncingSection = false;
+        }
+
+        LoadSettingsSection(normalized);
+        if (notifyRoute)
+            SectionChanged?.Invoke(normalized);
     }
 
     private void LoadSettingsSection(string section)
@@ -113,23 +159,38 @@ public partial class PreferencesView : UserControl
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_GeneralDesc"], Foreground = (Brush)FindResource("Ink400Brush"), Margin = new Thickness(0, 0, 0, 24) });
 
         var tbHome = new TextBox { Width = 320, Text = AppSettings.Profile.HomePageUrl, FontSize = 13 };
-        tbHome.TextChanged += (s, e) => { AppSettings.Profile.HomePageUrl = tbHome.Text; AppSettings.SaveAll(); };
+        tbHome.LostKeyboardFocus += (s, e) =>
+        {
+            var value = tbHome.Text.Trim();
+            if (string.Equals(value.TrimEnd('/'), "chrome://newtab", StringComparison.OrdinalIgnoreCase))
+            {
+                AppSettings.Profile.HomePageUrl = "chrome://newtab/";
+                tbHome.Text = AppSettings.Profile.HomePageUrl;
+                AppSettings.SaveProfile();
+                return;
+            }
+            if (!Uri.TryCreate(value, UriKind.Absolute, out var uri) ||
+                (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))
+            {
+                tbHome.Text = AppSettings.Profile.HomePageUrl;
+                return;
+            }
+
+            AppSettings.Profile.HomePageUrl = uri.AbsoluteUri;
+            tbHome.Text = AppSettings.Profile.HomePageUrl;
+            AppSettings.SaveProfile();
+        };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_StartupPage"], LanguageManager.Instance["Pref_HomeUrl"], tbHome));
 
-        var engines = SearchEngines.All;
-        var idxEngine = SearchEngines.IndexOf(AppSettings.Profile.SearchEngine);
-        var searchCombo = MakeCombo(200, idxEngine, engines);
-        searchCombo.SelectionChanged += (s, e) =>
-        {
-            AppSettings.Profile.SearchEngine = searchCombo.SelectedItem is ZidimiComboBoxItem hcbi
-                ? SearchEngines.Normalize(hcbi.Content?.ToString())
-                : SearchEngines.Default;
-            AppSettings.SaveAll();
-        };
-        panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_DefaultEngine"], LanguageManager.Instance["Pref_SelectEngine"], searchCombo));
+        var searchButton = MakeButton(LanguageManager.Instance["Pref_SearchEngineTitle"], 200);
+        searchButton.Click += (s, e) => OpenChromiumSettings("chrome://settings/searchEngines");
+        panel.Children.Add(CreateSettingRow(
+            LanguageManager.Instance["Pref_DefaultEngine"],
+            AppSettings.Profile.SearchEngine,
+            searchButton));
 
         var startupCombo = MakeCombo(280, AppSettings.Profile.StartupBehavior, LanguageManager.Instance["Pref_StartupNewPage"], LanguageManager.Instance["Pref_StartupContinue"], LanguageManager.Instance["Pref_StartupSpecific"]);
-        startupCombo.SelectionChanged += (s, e) => { AppSettings.Profile.StartupBehavior = startupCombo.SelectedIndex; AppSettings.SaveAll(); };
+        startupCombo.SelectionChanged += (s, e) => { AppSettings.Profile.StartupBehavior = startupCombo.SelectedIndex; AppSettings.SaveProfile(); };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_OnStartup"], LanguageManager.Instance["Pref_StartupAction"], startupCombo));
 
         var tbPages = new TextBox
@@ -142,14 +203,16 @@ public partial class PreferencesView : UserControl
             FontSize = 13,
             Text = string.Join("\n", AppSettings.Profile.StartupPages),
         };
-        tbPages.TextChanged += (s, e) =>
+        tbPages.LostKeyboardFocus += (s, e) =>
         {
+            // Persist once after editing instead of rewriting JSON on every keystroke in the
+            // multi-line startup-page editor.
             AppSettings.Profile.StartupPages = tbPages.Text
                 .Split(new[] { '\n' }, System.StringSplitOptions.RemoveEmptyEntries)
                 .Select(x => x.Trim())
                 .Where(x => x.Length > 0)
                 .ToList();
-            AppSettings.SaveAll();
+            AppSettings.SaveProfile();
         };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_SpecificPages"], LanguageManager.Instance["Pref_OnePerLine"], tbPages));
 
@@ -159,114 +222,181 @@ public partial class PreferencesView : UserControl
     private UIElement BuildProfilesSection()
     {
         var panel = new StackPanel { MinWidth = 600, HorizontalAlignment = HorizontalAlignment.Stretch };
-        panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_Profile"], FontSize = 20, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("Ink100Brush"), Margin = new Thickness(0, 0, 0, 16) });
-        panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_ProfileDesc"], Foreground = (Brush)FindResource("Ink400Brush"), Margin = new Thickness(0, 0, 0, 24) });
-
-        var isLoggedIn = !string.IsNullOrEmpty(AppSettings.Global.LoggedInUser);
-        var btnLogin = new ZidimiButton { Content = isLoggedIn ? LanguageManager.Instance["Pref_Logout"] : LanguageManager.Instance["Login_SignIn"], Style = (Style)FindResource("ZidimiButtonPrimary"), Padding = new Thickness(16,8,16,8) };
-        btnLogin.Click += (s, e) => 
+        panel.Children.Add(new TextBlock
         {
-            if (!string.IsNullOrEmpty(AppSettings.Global.LoggedInUser))
-            {
-                var res = ZidimiMessageBox.Show(LanguageManager.Instance["Pref_ConfirmLogout"], "Zidimi Browser", ZidimiMessageBoxButton.YesNo, ZidimiMessageBoxImage.Question, Window.GetWindow(this));
-                if (res == ZidimiMessageBoxResult.Yes)
-                {
-                    AppSettings.Global.LoggedInUser = null;
-                    AppSettings.SaveAll();
-                    LoadSettingsSection("Profiles"); // Reload UI
-                }
-            }
-            else
-            {
-                var window = new LoginWindow { Owner = Window.GetWindow(this) };
-                if (window.ShowDialog() == true)
-                {
-                    LoadSettingsSection("Profiles"); // Reload UI
-                }
-            }
-        };
-        var syncTitle = isLoggedIn ? $"{LanguageManager.Instance["Pref_SyncTitle"]} ({AppSettings.Global.LoggedInUser})" : LanguageManager.Instance["Pref_SyncTitle"];
-        panel.Children.Add(CreateSettingRow(syncTitle, LanguageManager.Instance["Pref_SyncDataBeta"], btnLogin));
+            Text = LanguageManager.Instance["Pref_Profile"],
+            FontSize = 20,
+            FontWeight = FontWeights.Bold,
+            Foreground = (Brush)FindResource("Ink100Brush"),
+            Margin = new Thickness(0, 0, 0, 8),
+        });
+        panel.Children.Add(new TextBlock
+        {
+            Text = LanguageManager.Instance["Pref_ProfileDesc"],
+            Foreground = (Brush)FindResource("Ink400Brush"),
+            Margin = new Thickness(0, 0, 0, 20),
+        });
 
-        var profiles = AppSettings.Global.Profiles.ToArray();
-        var idxProfile = Array.IndexOf(profiles, AppSettings.Global.CurrentProfile);
-        var profileCombo = MakeCombo(200, Math.Max(0, idxProfile), profiles);
+        // The Chromium folder id (Default/Profile N) is the profile identity. Friendly
+        // names are presentation only; settings never use localized names as folder keys.
+        var profiles = ChromiumProfileCatalog.GetProfiles(AppSettings.Global.Profiles).ToArray();
+        var currentIndex = Array.FindIndex(profiles, p =>
+            string.Equals(p.Id, AppSettings.Global.CurrentProfile, StringComparison.OrdinalIgnoreCase));
+        if (currentIndex < 0) currentIndex = 0;
+        var current = profiles[currentIndex];
+
+        var identityCard = new Border
+        {
+            Background = (Brush)FindResource("ZidimiBgSurfaceBrush"),
+            BorderBrush = (Brush)FindResource("StrokeBrush"),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(14),
+            Padding = new Thickness(18),
+            Margin = new Thickness(0, 0, 0, 16),
+        };
+        var identityGrid = new Grid();
+        identityGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+        identityGrid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+
+        var avatar = new Border
+        {
+            Width = 48,
+            Height = 48,
+            CornerRadius = new CornerRadius(24),
+            Background = (Brush)FindResource("CtaBrush"),
+            VerticalAlignment = VerticalAlignment.Center,
+            Child = new TextBlock
+            {
+                Text = string.IsNullOrWhiteSpace(current.DisplayName) ? "Z" : current.DisplayName[..1].ToUpperInvariant(),
+                FontWeight = FontWeights.SemiBold,
+                FontSize = 18,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                VerticalAlignment = VerticalAlignment.Center,
+                Foreground = (Brush)FindResource("OnAccentBrush"),
+            },
+        };
+        identityGrid.Children.Add(avatar);
+
+        var identityText = new StackPanel { Margin = new Thickness(14, 0, 0, 0), VerticalAlignment = VerticalAlignment.Center };
+        identityText.Children.Add(new TextBlock
+        {
+            Text = current.DisplayName,
+            FontSize = 15,
+            FontWeight = FontWeights.SemiBold,
+            Foreground = (Brush)FindResource("Ink100Brush"),
+        });
+        if (!string.IsNullOrWhiteSpace(current.UserName))
+        {
+            identityText.Children.Add(new TextBlock
+            {
+                Text = current.UserName,
+                FontSize = 12,
+                Foreground = (Brush)FindResource("Ink400Brush"),
+                Margin = new Thickness(0, 2, 0, 0),
+            });
+        }
+        identityText.Children.Add(new TextBlock
+        {
+            Text = $@"User Data\{current.Id}",
+            FontSize = 11,
+            Foreground = (Brush)FindResource("Ink500Brush"),
+            Margin = new Thickness(0, 3, 0, 0),
+        });
+        Grid.SetColumn(identityText, 1);
+        identityGrid.Children.Add(identityText);
+        identityCard.Child = identityGrid;
+        panel.Children.Add(identityCard);
+
+        var profileLabels = profiles.Select(FormatProfileLabel).ToArray();
+        var profileCombo = MakeCombo(260, currentIndex, profileLabels);
         profileCombo.SelectionChanged += (s, e) =>
         {
-            if (profileCombo.SelectedItem is ZidimiComboBoxItem hcbi)
-            {
-                var name = hcbi.Content?.ToString() ?? LanguageManager.Instance["Pref_PersonalProfile"];
-                if (AppSettings.Global.CurrentProfile != name)
-                {
-                    AppSettings.Global.CurrentProfile = name;
-                    AppSettings.LoadProfile(name);
-                    AppSettings.SaveAll();
-                    App.ViewModel?.SwitchProfile(name);
-                    Infrastructure.ThemeManager.ApplyFromSettings(AppSettings.Profile.Theme);
-                }
-            }
+            if (profileCombo.SelectedIndex < 0 || profileCombo.SelectedIndex >= profiles.Length) return;
+            var selected = profiles[profileCombo.SelectedIndex];
+            if (string.Equals(AppSettings.Global.CurrentProfile, selected.Id, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            AppSettings.Global.CurrentProfile = selected.Id;
+            AppSettings.LoadProfile(selected.Id);
+            AppSettings.SaveAll();
+            App.ViewModel?.SwitchProfile(selected.Id);
+            ThemeManager.ApplyFromSettings(AppSettings.Profile.Theme);
+            LoadSettingsSection("Profiles");
         };
 
-        var btnManageProfile = new ZidimiButton { Content = LanguageManager.Instance["Pref_ManageProfile"] ?? "Quản lý hồ sơ", Padding = new Thickness(16,8,16,8) };
+        var btnManageProfile = new ZidimiButton
+        {
+            Content = LanguageManager.Instance["Pref_ManageProfile"],
+            Padding = new Thickness(16, 8, 16, 8),
+        };
         btnManageProfile.Click += (s, e) =>
         {
-            var owner = Window.GetWindow(this);
-            var ps = new ProfileSelectorWindow { Owner = owner };
-            ps.ShowDialog();
-            LoadSettingsSection("Profiles"); // Reload UI
+            new ProfileSelectorWindow { Owner = Window.GetWindow(this) }.ShowDialog();
+            LoadSettingsSection("Profiles");
         };
 
         var profilePanel = new StackPanel { Orientation = Orientation.Horizontal };
         profilePanel.Children.Add(profileCombo);
         profilePanel.Children.Add(new Border { Width = 8 });
         profilePanel.Children.Add(btnManageProfile);
+        panel.Children.Add(CreateSettingRow(
+            LanguageManager.Instance["Pref_CurrentProfile"],
+            LanguageManager.Instance["Pref_ProfileApplyDesc"],
+            profilePanel));
 
-        panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_CurrentProfile"], LanguageManager.Instance["Pref_ProfileApplyDesc"], profilePanel));
-
-        // Copy data from another profile
-        var otherProfiles = AppSettings.Global.Profiles
-            .Where(p => p != AppSettings.Global.CurrentProfile).ToArray();
+        var otherProfiles = profiles
+            .Where(p => !string.Equals(p.Id, AppSettings.Global.CurrentProfile, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
 
         if (otherProfiles.Length > 0)
         {
-            var copyFromCombo = MakeCombo(200, 0, otherProfiles);
-            var btnCopyFrom = new ZidimiButton { Content = LanguageManager.Instance["Pref_CopyFromProfile"] ?? "Copy From", Padding = new Thickness(16,8,16,8) };
+            var copyFromCombo = MakeCombo(260, 0, otherProfiles.Select(FormatProfileLabel).ToArray());
+            var btnCopyFrom = new ZidimiButton
+            {
+                Content = LanguageManager.Instance["Pref_CopyFromProfile"],
+                Padding = new Thickness(16, 8, 16, 8),
+            };
             btnCopyFrom.Click += async (s, e) =>
             {
-                var selectedProfile = (copyFromCombo.SelectedItem as ZidimiComboBoxItem)?.Content?.ToString();
-                if (string.IsNullOrEmpty(selectedProfile)) return;
+                if (copyFromCombo.SelectedIndex < 0 || copyFromCombo.SelectedIndex >= otherProfiles.Length) return;
+                var selectedProfile = otherProfiles[copyFromCombo.SelectedIndex];
 
-                var sourceCtx = App.RequestContexts.GetProfileContext(selectedProfile);
+                var sourceCtx = App.RequestContexts.GetProfileContext(selectedProfile.Id);
                 var targetCtx = App.RequestContexts.GetProfileContext(AppSettings.Global.CurrentProfile)
                                 ?? Cef.GetGlobalRequestContext();
-                if (sourceCtx == null) return;
+                if (sourceCtx is null) return;
 
                 var result = ZidimiMessageBox.Show(
-                    string.Format(LanguageManager.Instance["Pref_ConfirmCopyData"] ?? "Copy Preferences & Cookies from '{0}' to the current profile?", selectedProfile),
-                    "Zidimi Browser", ZidimiMessageBoxButton.YesNo, ZidimiMessageBoxImage.Question, Window.GetWindow(this));
+                    string.Format(LanguageManager.Instance["Pref_ConfirmCopyData"], selectedProfile.DisplayName),
+                    "Zidimi Browser", ZidimiMessageBoxButton.YesNo, ZidimiMessageBoxImage.Question,
+                    Window.GetWindow(this));
 
-                if (result == ZidimiMessageBoxResult.Yes)
-                {
-                    await CefProfileDataHelper.CopyAllAsync(sourceCtx, targetCtx);
-                    ZidimiMessageBox.Show(
-                        LanguageManager.Instance["Pref_CopyComplete"] ?? "Profile data copied successfully!",
-                        "Zidimi Browser", ZidimiMessageBoxButton.OK, ZidimiMessageBoxImage.Information, Window.GetWindow(this));
-                }
+                if (result != ZidimiMessageBoxResult.Yes) return;
+
+                await CefProfileDataHelper.CopyAllAsync(sourceCtx, targetCtx);
+                ZidimiMessageBox.Show(
+                    LanguageManager.Instance["Pref_CopyComplete"],
+                    "Zidimi Browser", ZidimiMessageBoxButton.OK, ZidimiMessageBoxImage.Information,
+                    Window.GetWindow(this));
             };
 
             var copyPanel = new StackPanel { Orientation = Orientation.Horizontal };
             copyPanel.Children.Add(copyFromCombo);
             copyPanel.Children.Add(new Border { Width = 8 });
             copyPanel.Children.Add(btnCopyFrom);
-
             panel.Children.Add(CreateSettingRow(
-                LanguageManager.Instance["Pref_CopyProfileData"] ?? "Copy Profile Data",
-                LanguageManager.Instance["Pref_CopyProfileDesc"] ?? "Copy Preferences & Cookies from another profile",
+                LanguageManager.Instance["Pref_CopyProfileData"],
+                LanguageManager.Instance["Pref_CopyProfileDesc"],
                 copyPanel));
         }
 
         return panel;
     }
+
+    private static string FormatProfileLabel(ChromiumProfileCatalog.ProfileInfo profile)
+        => string.Equals(profile.DisplayName, profile.Id, StringComparison.OrdinalIgnoreCase)
+            ? profile.DisplayName
+            : $"{profile.DisplayName}  ·  {profile.Id}";
 
     private UIElement BuildAutofillSection()
     {
@@ -274,16 +404,18 @@ public partial class PreferencesView : UserControl
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_Autofill"], FontSize = 20, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("Ink100Brush"), Margin = new Thickness(0, 0, 0, 16) });
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_AutofillDesc"], Foreground = (Brush)FindResource("Ink400Brush"), Margin = new Thickness(0, 0, 0, 24) });
 
-        var btnPasswords = new ZidimiButton { Content = LanguageManager.Instance["Pref_ManagePasswords"], Padding = new Thickness(16,8,16,8) };
-        btnPasswords.Click += (s, e) => { var w = new DataManagerWindow("passwords") { Owner = Window.GetWindow(this) }; w.ShowDialog(); };
+        // Chromium owns encryption and schema migrations for passwords/autofill.
+        // Use its native UI for real CRUD instead of editing Web Data/Login Data directly.
+        var btnPasswords = new ZidimiButton { Content = LanguageManager.Instance["Pref_ManagePasswords"], Padding = new Thickness(16, 8, 16, 8) };
+        btnPasswords.Click += (s, e) => OpenChromiumSettings("chrome://password-manager/passwords");
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_PasswordManager"], LanguageManager.Instance["Pref_PasswordDesc"], btnPasswords));
 
-        var btnCards = new ZidimiButton { Content = LanguageManager.Instance["Pref_ManagePayments"], Padding = new Thickness(16,8,16,8) };
-        btnCards.Click += (s, e) => { var w = new DataManagerWindow("cards") { Owner = Window.GetWindow(this) }; w.ShowDialog(); };
+        var btnCards = new ZidimiButton { Content = LanguageManager.Instance["Pref_ManagePayments"], Padding = new Thickness(16, 8, 16, 8) };
+        btnCards.Click += (s, e) => OpenChromiumSettings("chrome://settings/payments");
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_PaymentMethods"], LanguageManager.Instance["Pref_PaymentDesc"], btnCards));
 
-        var btnAddress = new ZidimiButton { Content = LanguageManager.Instance["Pref_ManageAddresses"], Padding = new Thickness(16,8,16,8) };
-        btnAddress.Click += (s, e) => { var w = new DataManagerWindow("addresses") { Owner = Window.GetWindow(this) }; w.ShowDialog(); };
+        var btnAddress = new ZidimiButton { Content = LanguageManager.Instance["Pref_ManageAddresses"], Padding = new Thickness(16, 8, 16, 8) };
+        btnAddress.Click += (s, e) => OpenChromiumSettings("chrome://settings/addresses");
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_AddressAndMore"], LanguageManager.Instance["Pref_AddressDesc"], btnAddress));
 
         return panel;
@@ -311,7 +443,10 @@ public partial class PreferencesView : UserControl
                 }
             }
         };
-        panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_DefaultBrowser"], LanguageManager.Instance["Pref_NotDefault"], btnDefault));
+        panel.Children.Add(CreateSettingRow(
+            LanguageManager.Instance["Pref_DefaultBrowser"],
+            LanguageManager.Instance["Pref_DefaultBrowserManaged"],
+            btnDefault));
 
         return panel;
     }
@@ -324,10 +459,9 @@ public partial class PreferencesView : UserControl
 
         var themeOptions = new[]
         {
-            (Key: "classic", Label: LanguageManager.Instance["Pref_ThemeClassic"]),
+            (Key: "system", Label: LanguageManager.Instance["Pref_SystemTitle"]),
             (Key: "light", Label: LanguageManager.Instance["Pref_ThemeLight"]),
             (Key: "dark", Label: LanguageManager.Instance["Pref_ThemeDark"]),
-            (Key: "system", Label: LanguageManager.Instance["Pref_SystemTitle"]),
         };
         var currentTheme = Infrastructure.ThemeManager.NormalizeThemeKey(AppSettings.Profile.Theme);
         var idxTheme = Array.FindIndex(themeOptions, o => o.Key == currentTheme);
@@ -337,8 +471,9 @@ public partial class PreferencesView : UserControl
             if (themeCombo.SelectedIndex >= 0 && themeCombo.SelectedIndex < themeOptions.Length)
             {
                 AppSettings.Profile.Theme = themeOptions[themeCombo.SelectedIndex].Key;
-                AppSettings.SaveAll();
                 Infrastructure.ThemeManager.ApplyFromSettings(AppSettings.Profile.Theme);
+                // browser.theme.color_scheme2 is a real Chromium profile preference.
+                AppSettings.SaveProfile();
             }
         };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_Theme"], LanguageManager.Instance["Pref_SelectTheme"], themeCombo));
@@ -346,22 +481,22 @@ public partial class PreferencesView : UserControl
         var ctx = App.RequestContexts.GetProfileContext(AppSettings.Global.CurrentProfile) ?? Cef.GetGlobalRequestContext();
 
         var fontSizes = new[] { LanguageManager.Instance["Pref_SizeSmall"], LanguageManager.Instance["Pref_SizeMedium"], LanguageManager.Instance["Pref_SizeLarge"], LanguageManager.Instance["Pref_SizeExtraLarge"] };
-        var currentFontSize = ctx.GetPreferenceSafe("webkit.webprefs.default_font_size");
+        var currentFontSize = ctx.GetPreferenceSafe(ChromiumPreferenceKeys.DefaultFontSize);
         int size = 16;
         if (currentFontSize is int i) size = i;
         var idxFont = size switch { <= 12 => 0, 16 => 1, 20 => 2, >= 24 => 3, _ => 1 };
         var fontCombo = MakeCombo(180, idxFont, fontSizes);
-        fontCombo.SelectionChanged += (s, e) => 
-        { 
+        fontCombo.SelectionChanged += async (s, e) =>
+        {
             int newSize = fontCombo.SelectedIndex switch { 0 => 12, 1 => 16, 2 => 20, 3 => 24, _ => 16 };
-            ctx.SetPreferenceSafe("webkit.webprefs.default_font_size", newSize);
-            ctx.SetPreferenceSafe("webkit.webprefs.default_fixed_font_size", newSize - 3);
+            await ctx.SetPreferenceSafeAsync(ChromiumPreferenceKeys.DefaultFontSize, newSize);
+            await ctx.SetPreferenceSafeAsync(ChromiumPreferenceKeys.DefaultFixedFontSize, newSize - 3);
         };
         panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_FontSize"], LanguageManager.Instance["Pref_DefaultFontSize"], fontCombo));
 
         var zooms = new[] { "25%", "50%", "75%", "90%", "100%", "110%", "125%", "150%", "200%" };
         var zoomLevels = new[] { -1.5, -1.0, -0.5, -0.2, 0.0, 0.5, 1.0, 1.5, 2.0 }; // CefSharp ZoomLevels are approx these values
-        var currentZoomPref = ctx.GetPreferenceSafe("partition.default_zoom_level");
+        var currentZoomPref = ctx.GetPreferenceSafe(ChromiumPreferenceKeys.DefaultZoomLevel);
         double z = 0.0;
         if (currentZoomPref is double d) z = d;
         
@@ -379,13 +514,13 @@ public partial class PreferencesView : UserControl
         }
 
         var zoomCombo = MakeCombo(140, idxZoom, zooms);
-        zoomCombo.SelectionChanged += (s, e) => 
+        zoomCombo.SelectionChanged += async (s, e) =>
         {
             if (zoomCombo.SelectedIndex >= 0 && zoomCombo.SelectedIndex < zoomLevels.Length)
             {
                 double newZoom = zoomLevels[zoomCombo.SelectedIndex];
-                ctx.SetPreferenceSafe("partition.default_zoom_level", newZoom);
-                
+                await ctx.SetPreferenceSafeAsync(ChromiumPreferenceKeys.DefaultZoomLevel, newZoom);
+
                 // Apply immediately to the active web tab (if any).
                 var activeTab = App.ViewModel?.ActiveTab;
                 if (activeTab != null)
@@ -406,21 +541,16 @@ public partial class PreferencesView : UserControl
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_Search"], FontSize = 20, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("Ink100Brush"), Margin = new Thickness(0, 0, 0, 16) });
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_SearchSettings"], Foreground = (Brush)FindResource("Ink400Brush"), Margin = new Thickness(0, 0, 0, 24) });
 
-        var engines = SearchEngines.All;
-        var idxEngine = SearchEngines.IndexOf(AppSettings.Profile.SearchEngine);
-        var searchCombo = MakeCombo(200, idxEngine, engines);
-        searchCombo.SelectionChanged += (s, e) =>
-        {
-            AppSettings.Profile.SearchEngine = searchCombo.SelectedItem is ZidimiComboBoxItem hcbi
-                ? SearchEngines.Normalize(hcbi.Content?.ToString())
-                : SearchEngines.Default;
-            AppSettings.SaveAll();
-        };
-        panel.Children.Add(CreateSettingRow(LanguageManager.Instance["Pref_DefaultEngine"], LanguageManager.Instance["Pref_SearchEngineTitle"], searchCombo));
+        var searchButton = MakeButton(LanguageManager.Instance["Pref_SearchEngineTitle"], 200);
+        searchButton.Click += (s, e) => OpenChromiumSettings("chrome://settings/searchEngines");
+        panel.Children.Add(CreateSettingRow(
+            LanguageManager.Instance["Pref_DefaultEngine"],
+            AppSettings.Profile.SearchEngine,
+            searchButton));
 
         var suggestCheck = MakeCheck(LanguageManager.Instance["Pref_ShowSearchSuggestions"], AppSettings.Profile.SearchSuggestEnabled);
-        suggestCheck.Checked += (s, e) => { AppSettings.Profile.SearchSuggestEnabled = true; AppSettings.SaveAll(); };
-        suggestCheck.Unchecked += (s, e) => { AppSettings.Profile.SearchSuggestEnabled = false; AppSettings.SaveAll(); };
+        suggestCheck.Checked += (s, e) => { AppSettings.Profile.SearchSuggestEnabled = true; AppSettings.SaveProfile(); };
+        suggestCheck.Unchecked += (s, e) => { AppSettings.Profile.SearchSuggestEnabled = false; AppSettings.SaveProfile(); };
         panel.Children.Add(CreateSettingRow("", "", suggestCheck));
 
         return panel;
@@ -435,31 +565,30 @@ public partial class PreferencesView : UserControl
         var ctx = App.RequestContexts.GetProfileContext(AppSettings.Global.CurrentProfile) ?? Cef.GetGlobalRequestContext();
 
         bool block3rd = false;
-        if (ctx.GetPreferenceSafe("profile.cookie_controls_mode") is int c) block3rd = c == 1;
+        if (ctx.GetPreferenceSafe(ChromiumPreferenceKeys.CookieControlsMode) is int c) block3rd = c == 1;
         var chkCookie = MakeCheck(LanguageManager.Instance["Pref_BlockThirdPartyCookies"], block3rd);
-        chkCookie.Checked += (s, e) => { ctx.SetPreferenceSafe("profile.cookie_controls_mode", 1); };
-        chkCookie.Unchecked += (s, e) => { ctx.SetPreferenceSafe("profile.cookie_controls_mode", 0); };
+        chkCookie.Checked += async (s, e) => { await ctx.SetPreferenceSafeAsync(ChromiumPreferenceKeys.CookieControlsMode, 1); };
+        chkCookie.Unchecked += async (s, e) => { await ctx.SetPreferenceSafeAsync(ChromiumPreferenceKeys.CookieControlsMode, 0); };
         panel.Children.Add(CreateSettingRow("", "", chkCookie));
 
         bool doNotTrack = false;
-        if (ctx.GetPreferenceSafe("enable_do_not_track") is bool dnt) doNotTrack = dnt;
+        if (ctx.GetPreferenceSafe(ChromiumPreferenceKeys.EnableDoNotTrack) is bool dnt) doNotTrack = dnt;
         var chkDnt = MakeCheck(LanguageManager.Instance["Pref_DoNotTrack"], doNotTrack);
-        chkDnt.Checked += (s, e) => { ctx.SetPreferenceSafe("enable_do_not_track", true); };
-        chkDnt.Unchecked += (s, e) => { ctx.SetPreferenceSafe("enable_do_not_track", false); };
+        chkDnt.Checked += async (s, e) => { await ctx.SetPreferenceSafeAsync(ChromiumPreferenceKeys.EnableDoNotTrack, true); };
+        chkDnt.Unchecked += async (s, e) => { await ctx.SetPreferenceSafeAsync(ChromiumPreferenceKeys.EnableDoNotTrack, false); };
         panel.Children.Add(CreateSettingRow("", "", chkDnt));
 
         bool safeBrowsing = true;
-        if (ctx.GetPreferenceSafe("safebrowsing.enabled") is bool sb) safeBrowsing = sb;
+        if (ctx.GetPreferenceSafe(ChromiumPreferenceKeys.SafeBrowsingEnabled) is bool sb) safeBrowsing = sb;
         var chkSafe = MakeCheck(LanguageManager.Instance["Pref_SafeBrowsing"], safeBrowsing);
-        chkSafe.Checked += (s, e) => { ctx.SetPreferenceSafe("safebrowsing.enabled", true); };
-        chkSafe.Unchecked += (s, e) => { ctx.SetPreferenceSafe("safebrowsing.enabled", false); };
+        chkSafe.Checked += async (s, e) => { await ctx.SetPreferenceSafeAsync(ChromiumPreferenceKeys.SafeBrowsingEnabled, true); };
+        chkSafe.Unchecked += async (s, e) => { await ctx.SetPreferenceSafeAsync(ChromiumPreferenceKeys.SafeBrowsingEnabled, false); };
         panel.Children.Add(CreateSettingRow("", "", chkSafe));
 
         var btnClear = MakeButton(LanguageManager.Instance["Pref_ClearBrowsingDataBtn"], 200);
-        btnClear.Click += (s, e) => 
+        btnClear.Click += (s, e) =>
         {
-            var window = new ClearDataWindow { Owner = Window.GetWindow(this) };
-            window.ShowDialog();
+            App.ViewModel.NewTab("chrome://settings/clearBrowserData");
         };
         panel.Children.Add(CreateSettingRow("", "", btnClear));
 
@@ -473,58 +602,60 @@ public partial class PreferencesView : UserControl
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_SitePermissionsDesc"], Foreground = (Brush)FindResource("Ink400Brush"), Margin = new Thickness(0, 0, 0, 24) });
 
         var perms = AppSettings.Profile.SitePermissions;
+        var ctx = App.RequestContexts.GetProfileContext(AppSettings.Global.CurrentProfile) ?? Cef.GetGlobalRequestContext();
         var ask = LanguageManager.Instance["Perm_Ask"];
         var allow = LanguageManager.Instance["Perm_Allow"];
         var block = LanguageManager.Instance["Perm_Block"];
 
-        void Row(string permKey, string key, string? cefKey = null)
+        void Row(string permKey, string propertyName)
         {
             var label = LanguageManager.Instance[permKey];
             var descKey = permKey + "_Desc";
             var desc = LanguageManager.Instance[descKey];
             if (desc == descKey) desc = string.Empty;
 
-            var value = (ContentPermission)typeof(SitePermissions).GetProperty(key)!.GetValue(perms)!;
+            var property = typeof(SitePermissions).GetProperty(propertyName);
+            if (property == null) return;
+
+            var value = (ContentPermission)(property.GetValue(perms) ?? ContentPermission.Ask);
             var combo = MakeCombo(160, (int)value, ask, allow, block);
-            combo.SelectionChanged += (s, e) =>
+            combo.SelectionChanged += async (s, e) =>
             {
                 if (combo.SelectedIndex < 0) return;
-                typeof(SitePermissions).GetProperty(key)!.SetValue(perms, (ContentPermission)combo.SelectedIndex);
-                AppSettings.SaveAll();
+                var permission = (ContentPermission)combo.SelectedIndex;
+                property.SetValue(perms, permission);
 
-                if (cefKey != null)
-                {
-                    var ctx = App.RequestContexts.GetProfileContext(AppSettings.Global.CurrentProfile) ?? Cef.GetGlobalRequestContext();
-                    // Cef values: 1 = Allow, 2 = Block, 3 = Ask
-                    int cefVal = combo.SelectedIndex == 1 ? 1 : (combo.SelectedIndex == 2 ? 2 : 3);
-                    ctx.SetPreferenceSafe("profile.default_content_setting_values." + cefKey, cefVal);
-                }
+                // CEF-first persistence where a public ContentSettingTypes mapping exists.
+                // Unsupported permission kinds intentionally remain Zidimi policy instead of
+                // writing undocumented Chromium preference keys.
+                if (CefContentSettingsBridge.TryGetContentType(propertyName, out var contentType))
+                    await CefContentSettingsBridge.SetDefaultAsync(ctx, contentType, permission);
             };
             panel.Children.Add(CreateSettingRow(label, desc, combo));
         }
 
-        Row("Perm_Camera", nameof(SitePermissions.Camera), "media_stream_camera");
-        Row("Perm_Microphone", nameof(SitePermissions.Microphone), "media_stream_mic");
-        Row("Perm_Location", nameof(SitePermissions.Geolocation), "geolocation");
-        Row("Perm_Notifications", nameof(SitePermissions.Notifications), "notifications");
-        Row("Perm_Clipboard", nameof(SitePermissions.Clipboard), "clipboard");
-        Row("Perm_PointerLock", nameof(SitePermissions.PointerLock), "mouselock");
-        Row("Perm_Midi", nameof(SitePermissions.MidiSysex), "midi_sysex");
-        Row("Perm_FileSystem", nameof(SitePermissions.FileSystemAccess), "file_system_write_guard");
-        Row("Perm_IdleDetection", nameof(SitePermissions.IdleDetection), "idle_detection");
-        Row("Perm_LocalFonts", nameof(SitePermissions.LocalFonts), "local_fonts");
-        Row("Perm_MultipleDownloads", nameof(SitePermissions.MultipleDownloads), "automatic_downloads");
-        Row("Perm_WindowManagement", nameof(SitePermissions.WindowManagement), "window_placement");
+        Row("Perm_Camera", nameof(SitePermissions.Camera));
+        Row("Perm_Microphone", nameof(SitePermissions.Microphone));
+        Row("Perm_Location", nameof(SitePermissions.Geolocation));
+        Row("Perm_Notifications", nameof(SitePermissions.Notifications));
+        Row("Perm_Clipboard", nameof(SitePermissions.Clipboard));
+        Row("Perm_PointerLock", nameof(SitePermissions.PointerLock));
+        Row("Perm_Midi", nameof(SitePermissions.MidiSysex));
+        Row("Perm_FileSystem", nameof(SitePermissions.FileSystemAccess));
+        Row("Perm_IdleDetection", nameof(SitePermissions.IdleDetection));
+        Row("Perm_LocalFonts", nameof(SitePermissions.LocalFonts));
+        Row("Perm_MultipleDownloads", nameof(SitePermissions.MultipleDownloads));
+        Row("Perm_WindowManagement", nameof(SitePermissions.WindowManagement));
         Row("Perm_KeyboardLock", nameof(SitePermissions.KeyboardLock));
-        Row("Perm_ProtectedMedia", nameof(SitePermissions.ProtectedMedia), "protected_media_identifier");
+        Row("Perm_ProtectedMedia", nameof(SitePermissions.ProtectedMedia));
         Row("Perm_HandTracking", nameof(SitePermissions.HandTracking));
         Row("Perm_CameraPanTilt", nameof(SitePermissions.CameraPanTiltZoom));
         Row("Perm_CapturedSurface", nameof(SitePermissions.CapturedSurfaceControl));
         Row("Perm_StorageAccess", nameof(SitePermissions.StorageAccess));
         Row("Perm_TopLevelStorage", nameof(SitePermissions.TopLevelStorageAccess));
         Row("Perm_DiskQuota", nameof(SitePermissions.DiskQuota));
-        Row("Perm_Vr", nameof(SitePermissions.VrSession), "vr");
-        Row("Perm_Ar", nameof(SitePermissions.ArSession), "ar");
+        Row("Perm_Vr", nameof(SitePermissions.VrSession));
+        Row("Perm_Ar", nameof(SitePermissions.ArSession));
         Row("Perm_ProtocolHandler", nameof(SitePermissions.RegisterProtocolHandler));
         Row("Perm_WebAppInstall", nameof(SitePermissions.WebAppInstallation));
         Row("Perm_IdentityProvider", nameof(SitePermissions.IdentityProvider));
@@ -533,19 +664,16 @@ public partial class PreferencesView : UserControl
         Row("Perm_LoopbackNetwork", nameof(SitePermissions.LoopbackNetwork));
 
         var blockPopupsLabel = LanguageManager.Instance["Pref_BlockPopups"];
-        if (blockPopupsLabel == "Pref_BlockPopups") blockPopupsLabel = LanguageManager.Instance["Pref_BlockPopups"] != "Pref_BlockPopups" ? LanguageManager.Instance["Pref_BlockPopups"] : "Chặn cửa sổ bật lên";
         var chkPopups = MakeCheck(blockPopupsLabel, AppSettings.Profile.SitePermissions.BlockPopups);
-        chkPopups.Checked += (s, e) => { 
-            AppSettings.Profile.SitePermissions.BlockPopups = true; 
-            AppSettings.SaveAll(); 
-            var ctx = App.RequestContexts.GetProfileContext(AppSettings.Global.CurrentProfile) ?? Cef.GetGlobalRequestContext();
-            ctx.SetPreferenceSafe("profile.default_content_setting_values.popups", 2);
+        chkPopups.Checked += async (s, e) =>
+        {
+            AppSettings.Profile.SitePermissions.BlockPopups = true;
+            await CefContentSettingsBridge.SetPopupBlockingAsync(ctx, true);
         };
-        chkPopups.Unchecked += (s, e) => { 
-            AppSettings.Profile.SitePermissions.BlockPopups = false; 
-            AppSettings.SaveAll(); 
-            var ctx = App.RequestContexts.GetProfileContext(AppSettings.Global.CurrentProfile) ?? Cef.GetGlobalRequestContext();
-            ctx.SetPreferenceSafe("profile.default_content_setting_values.popups", 1);
+        chkPopups.Unchecked += async (s, e) =>
+        {
+            AppSettings.Profile.SitePermissions.BlockPopups = false;
+            await CefContentSettingsBridge.SetPopupBlockingAsync(ctx, false);
         };
         var popupDesc = LanguageManager.Instance["Pref_Popups_Desc"];
         if (popupDesc == "Pref_Popups_Desc") popupDesc = string.Empty;
@@ -554,7 +682,6 @@ public partial class PreferencesView : UserControl
         panel.Children.Add(CreateSettingRow(popupTitle, popupDesc, chkPopups));
 
         var btnExceptionsText = LanguageManager.Instance["Pref_ManageExceptions"];
-        if (btnExceptionsText == "Pref_ManageExceptions") btnExceptionsText = "Quản lý ngoại lệ";
         var btnExceptions = MakeButton(btnExceptionsText, 180);
         btnExceptions.Click += (s, e) => {
             var w = new SiteExceptionsWindow { Owner = Window.GetWindow(this) };
@@ -563,7 +690,6 @@ public partial class PreferencesView : UserControl
         var excDesc = LanguageManager.Instance["Pref_Exceptions_Desc"];
         if (excDesc == "Pref_Exceptions_Desc") excDesc = string.Empty;
         var excTitle = LanguageManager.Instance["Pref_Exceptions"];
-        if (excTitle == "Pref_Exceptions") excTitle = "Ngoại lệ trang web";
         panel.Children.Add(CreateSettingRow(excTitle, excDesc, btnExceptions));
 
         return panel;
@@ -577,17 +703,17 @@ public partial class PreferencesView : UserControl
 
         var ctx = App.RequestContexts.GetProfileContext(AppSettings.Global.CurrentProfile) ?? Cef.GetGlobalRequestContext();
 
-        string currentDlPath = System.IO.Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile), "Downloads");
-        if (ctx.GetPreferenceSafe("download.default_directory") is string p && !string.IsNullOrEmpty(p)) currentDlPath = p;
+        string currentDlPath = Path.Combine(System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile), "Downloads");
+        if (ctx.GetPreferenceSafe(ChromiumPreferenceKeys.DownloadDefaultDirectory) is string p && !string.IsNullOrEmpty(p)) currentDlPath = p;
 
         var tbDownload = new TextBox { Text = currentDlPath, IsReadOnly = true, FontSize = 13 };
 
         var btnBrowse = MakeButton(LanguageManager.Instance["Pref_ChooseFolder"], 130);
-        btnBrowse.Click += (s, e) => 
+        btnBrowse.Click += async (s, e) =>
         {
             var dlg = new Microsoft.Win32.OpenFolderDialog
             {
-                InitialDirectory = System.IO.Directory.Exists(currentDlPath)
+                InitialDirectory = Directory.Exists(currentDlPath)
                     ? currentDlPath
                     : System.Environment.GetFolderPath(System.Environment.SpecialFolder.UserProfile),
                 Title = LanguageManager.Instance["Pref_ChooseDownloadFolder"],
@@ -595,7 +721,7 @@ public partial class PreferencesView : UserControl
             if (dlg.ShowDialog(Window.GetWindow(this)) == true)
             {
                 currentDlPath = dlg.FolderName;
-                ctx.SetPreferenceSafe("download.default_directory", currentDlPath);
+                await ctx.SetPreferenceSafeAsync(ChromiumPreferenceKeys.DownloadDefaultDirectory, currentDlPath);
                 tbDownload.Text = currentDlPath;
             }
         };
@@ -620,21 +746,16 @@ public partial class PreferencesView : UserControl
         btnOpen.Click += (s, e) => 
         {
             try { System.Diagnostics.Process.Start("explorer.exe", currentDlPath); }
-            catch { }
+            catch (Exception ex) { AppLogger.Log("Downloads", ex, $"Opening download folder '{currentDlPath}'."); }
         };
         panel.Children.Add(CreateSettingRow("", "", btnOpen));
 
         bool askBeforeSave = true;
-        if (ctx.GetPreferenceSafe("download.prompt_for_download") is bool ask) askBeforeSave = ask;
+        if (ctx.GetPreferenceSafe(ChromiumPreferenceKeys.DownloadPromptForDownload) is bool ask) askBeforeSave = ask;
         var chkAsk = MakeCheck(LanguageManager.Instance["Pref_AskWhereToSave"], askBeforeSave);
-        chkAsk.Checked += (s, e) => { ctx.SetPreferenceSafe("download.prompt_for_download", true); };
-        chkAsk.Unchecked += (s, e) => { ctx.SetPreferenceSafe("download.prompt_for_download", false); };
+        chkAsk.Checked += async (s, e) => { await ctx.SetPreferenceSafeAsync(ChromiumPreferenceKeys.DownloadPromptForDownload, true); };
+        chkAsk.Unchecked += async (s, e) => { await ctx.SetPreferenceSafeAsync(ChromiumPreferenceKeys.DownloadPromptForDownload, false); };
         panel.Children.Add(CreateSettingRow("", "", chkAsk));
-
-        var chkBar = MakeCheck(LanguageManager.Instance["Pref_ShowDownloadBar"], AppSettings.Profile.ShowDownloadBar);
-        chkBar.Checked += (s, e) => { AppSettings.Profile.ShowDownloadBar = true; AppSettings.SaveAll(); };
-        chkBar.Unchecked += (s, e) => { AppSettings.Profile.ShowDownloadBar = false; AppSettings.SaveAll(); };
-        panel.Children.Add(CreateSettingRow("", "", chkBar));
 
         return panel;
     }
@@ -657,9 +778,9 @@ public partial class PreferencesView : UserControl
                 var selectedLang = LanguageManager.Instance.AvailableLanguages.FirstOrDefault(l => l.Name == selectedName);
                 if (selectedLang != null && LanguageManager.Instance.CurrentLanguage != selectedLang)
                 {
+                    // CurrentLanguage updates AppSettings and applies native Chromium language
+                    // preferences through SaveGlobal; do not duplicate the write here.
                     LanguageManager.Instance.CurrentLanguage = selectedLang;
-                    AppSettings.Global.DisplayLanguage = selectedLang.Code;
-                    AppSettings.SaveAll();
                     
                     // Refresh the UI (because the texts in the content section are built hardcoded in C#)
                     LoadSettingsSection("Languages");
@@ -677,60 +798,33 @@ public partial class PreferencesView : UserControl
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_System"], FontSize = 20, FontWeight = FontWeights.Bold, Foreground = (Brush)FindResource("Ink100Brush"), Margin = new Thickness(0, 0, 0, 16) });
         panel.Children.Add(new TextBlock { Text = LanguageManager.Instance["Pref_SystemSettings"], Foreground = (Brush)FindResource("Ink400Brush"), Margin = new Thickness(0, 0, 0, 24) });
 
-        var gpuCheck = MakeCheck(LanguageManager.Instance["Pref_HardwareAccel"], AppSettings.Global.EnableGpu);
-        gpuCheck.Checked += (s, e) => { AppSettings.Global.EnableGpu = true; AppSettings.SaveAll(); };
-        gpuCheck.Unchecked += (s, e) => { AppSettings.Global.EnableGpu = false; AppSettings.SaveAll(); };
-        panel.Children.Add(CreateSettingRow("", "", gpuCheck));
+        void AddGlobalToggle(string key, Func<bool> get, Action<bool> set, Action onChanged)
+        {
+            var check = MakeCheck(LanguageManager.Instance[key], get());
+            check.Checked += (s, e) => { set(true); onChanged(); };
+            check.Unchecked += (s, e) => { set(false); onChanged(); };
+            panel.Children.Add(CreateSettingRow("", "", check));
+        }
 
-        var enhanceCheck = MakeCheck(LanguageManager.Instance["Pref_EnhanceVideos"], AppSettings.Global.EnhanceVideos);
-        enhanceCheck.Checked += (s, e) => { AppSettings.Global.EnhanceVideos = true; AppSettings.SaveAll(); };
-        enhanceCheck.Unchecked += (s, e) => { AppSettings.Global.EnhanceVideos = false; AppSettings.SaveAll(); };
-        panel.Children.Add(CreateSettingRow("", "", enhanceCheck));
-
-        var bgCheck = MakeCheck(LanguageManager.Instance["Pref_RunInBackground"], AppSettings.Global.RunInBackground);
-        bgCheck.Checked += (s, e) => { AppSettings.Global.RunInBackground = true; AppSettings.SaveAll(); };
-        bgCheck.Unchecked += (s, e) => { AppSettings.Global.RunInBackground = false; AppSettings.SaveAll(); };
-        panel.Children.Add(CreateSettingRow("", "", bgCheck));
-
-        var proxyCheck = MakeCheck(LanguageManager.Instance["Pref_UseSystemProxy"], AppSettings.Global.UseSystemProxy);
-        proxyCheck.Checked += (s, e) => { AppSettings.Global.UseSystemProxy = true; AppSettings.SaveAll(); };
-        proxyCheck.Unchecked += (s, e) => { AppSettings.Global.UseSystemProxy = false; AppSettings.SaveAll(); };
-        panel.Children.Add(CreateSettingRow("", "", proxyCheck));
-
-        var stableCheck = MakeCheck(LanguageManager.Instance["Pref_StableRendering"], AppSettings.Global.StableRendering);
-        stableCheck.Checked += (s, e) => { AppSettings.Global.StableRendering = true; AppSettings.SaveAll(); };
-        stableCheck.Unchecked += (s, e) => { AppSettings.Global.StableRendering = false; AppSettings.SaveAll(); };
-        panel.Children.Add(CreateSettingRow("", "", stableCheck));
-
-        var throttlingCheck = MakeCheck(LanguageManager.Instance["Pref_DisableBackgroundThrottling"], AppSettings.Global.DisableBackgroundThrottling);
-        throttlingCheck.Checked += (s, e) => { AppSettings.Global.DisableBackgroundThrottling = true; AppSettings.SaveAll(); };
-        throttlingCheck.Unchecked += (s, e) => { AppSettings.Global.DisableBackgroundThrottling = false; AppSettings.SaveAll(); };
-        panel.Children.Add(CreateSettingRow("", "", throttlingCheck));
-
-        var sandboxCheck = MakeCheck(LanguageManager.Instance["Pref_DisableSandbox"], AppSettings.Global.DisableSandbox);
-        sandboxCheck.Checked += (s, e) => { AppSettings.Global.DisableSandbox = true; AppSettings.SaveAll(); };
-        sandboxCheck.Unchecked += (s, e) => { AppSettings.Global.DisableSandbox = false; AppSettings.SaveAll(); };
-        panel.Children.Add(CreateSettingRow("", "", sandboxCheck));
-
-        var cefLogCheck = MakeCheck(LanguageManager.Instance["Pref_CefLog"], AppSettings.Global.CefLogEnabled);
-        cefLogCheck.Checked += (s, e) => { AppSettings.Global.CefLogEnabled = true; AppSettings.SaveAll(); };
-        cefLogCheck.Unchecked += (s, e) => { AppSettings.Global.CefLogEnabled = false; AppSettings.SaveAll(); };
-        panel.Children.Add(CreateSettingRow("", "", cefLogCheck));
+        // Proxy is a live per-profile Chromium preference. It is intentionally not a command-line
+        // switch, so toggling this updates the active RequestContext immediately and Chromium saves
+        // it in Preferences.
+        AddGlobalToggle("Pref_UseSystemProxy", () => AppSettings.Global.UseSystemProxy,
+            v => AppSettings.Global.UseSystemProxy = v, AppSettings.ApplyRuntimeGlobalPreferences);
 
         var btnProxy = MakeButton(LanguageManager.Instance["Pref_OpenProxySettings"], 200);
-        btnProxy.Click += (s, e) => 
+        btnProxy.Click += (s, e) =>
         {
             try
             {
                 System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("ms-settings:network-proxy") { UseShellExecute = true });
             }
-            catch
+            catch (Exception ex)
             {
-                try { System.Diagnostics.Process.Start("explorer.exe", "ms-settings:network-proxy"); }
-                catch (Exception ex)
-                {
-                    ZidimiMessageBox.Show(LanguageManager.Instance["Pref_ProxyError"] + ex.Message, LanguageManager.Instance["Pref_Error"], ZidimiMessageBoxButton.OK, ZidimiMessageBoxImage.Error, Window.GetWindow(this));
-                }
+                AppLogger.Log("Settings", ex, "Opening Windows proxy settings.");
+                ZidimiMessageBox.Show(LanguageManager.Instance["Pref_ProxyError"] + ex.Message,
+                    LanguageManager.Instance["Pref_Error"], ZidimiMessageBoxButton.OK,
+                    ZidimiMessageBoxImage.Error, Window.GetWindow(this));
             }
         };
         panel.Children.Add(CreateSettingRow("", "", btnProxy));
@@ -746,8 +840,8 @@ public partial class PreferencesView : UserControl
 
         var info = new[]
         {
-            (LanguageManager.Instance["Pref_Version"], "Zidimi Browser " + (System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "1.1.0")),
-            (LanguageManager.Instance["Pref_EngineLabel"], "Chromium (CefSharp 150)"),
+            (LanguageManager.Instance["Pref_Version"], "Zidimi Browser " + (System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0")),
+            (LanguageManager.Instance["Pref_EngineLabel"], "Chromium / CefSharp 150"),
             (LanguageManager.Instance["Pref_Runtime"], ".NET 8 (WPF, x86)"),
             (LanguageManager.Instance["Pref_SourceCode"], LanguageManager.Instance["Pref_AboutSourceCode"]),
             (LanguageManager.Instance["Pref_License"], LanguageManager.Instance["Pref_AboutLicense"]),
@@ -758,26 +852,72 @@ public partial class PreferencesView : UserControl
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(140) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.Children.Add(new TextBlock { Text = label, FontSize = 13, Foreground = (Brush)FindResource("Ink400Brush") });
-            grid.Children.Add(new TextBlock { Text = value, FontSize = 13, Foreground = (Brush)FindResource("Ink200Brush") });
-            Grid.SetColumn(grid.Children[1], 1);
+            var valueText = new TextBlock { Text = value, FontSize = 13, Foreground = (Brush)FindResource("Ink200Brush") };
+            Grid.SetColumn(valueText, 1);
+            grid.Children.Add(valueText);
             panel.Children.Add(grid);
         }
 
         var btnCheck = MakeButton(LanguageManager.Instance["Pref_CheckUpdate"], 160);
-        btnCheck.Click += async (s, e) => 
+        btnCheck.Click += async (s, e) =>
         {
             var originalContent = btnCheck.Content;
             btnCheck.Content = LanguageManager.Instance["Pref_CheckingUpdate"];
             btnCheck.IsEnabled = false;
-            await System.Threading.Tasks.Task.Delay(2000); // Simulate a network check
-            btnCheck.Content = originalContent;
-            btnCheck.IsEnabled = true;
-            ZidimiMessageBox.Show(LanguageManager.Instance["Pref_UpToDate"], LanguageManager.Instance["Pref_Update"], ZidimiMessageBoxButton.OK, ZidimiMessageBoxImage.Information, Window.GetWindow(this));
+            try
+            {
+                var result = await UpdateService.CheckAsync();
+                if (!result.Success)
+                {
+                    ZidimiMessageBox.Show(
+                        string.Format(LanguageManager.Instance["Pref_UpdateCheckFailed"], result.Error ?? "Unknown error"),
+                        LanguageManager.Instance["Pref_Update"], ZidimiMessageBoxButton.OK,
+                        ZidimiMessageBoxImage.Warning, Window.GetWindow(this));
+                }
+                else if (!result.IsUpdateAvailable)
+                {
+                    ZidimiMessageBox.Show(LanguageManager.Instance["Pref_UpToDate"],
+                        LanguageManager.Instance["Pref_Update"], ZidimiMessageBoxButton.OK,
+                        ZidimiMessageBoxImage.Information, Window.GetWindow(this));
+                }
+                else
+                {
+                    var open = ZidimiMessageBox.Show(
+                        string.Format(LanguageManager.Instance["Pref_UpdateAvailable"], result.LatestVersion),
+                        LanguageManager.Instance["Pref_Update"], ZidimiMessageBoxButton.YesNo,
+                        ZidimiMessageBoxImage.Information, Window.GetWindow(this));
+                    if (open == ZidimiMessageBoxResult.Yes && !string.IsNullOrWhiteSpace(result.PageUrl))
+                    {
+                        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(result.PageUrl)
+                        {
+                            UseShellExecute = true,
+                        });
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Log("Update", ex);
+                ZidimiMessageBox.Show(
+                    string.Format(LanguageManager.Instance["Pref_UpdateCheckFailed"], ex.Message),
+                    LanguageManager.Instance["Pref_Update"], ZidimiMessageBoxButton.OK,
+                    ZidimiMessageBoxImage.Error, Window.GetWindow(this));
+            }
+            finally
+            {
+                btnCheck.Content = originalContent;
+                btnCheck.IsEnabled = true;
+            }
         };
         btnCheck.Margin = new Thickness(0, 16, 0, 0);
         panel.Children.Add(btnCheck);
 
         return panel;
+    }
+
+    private static void OpenChromiumSettings(string url)
+    {
+        App.ViewModel?.NewTab(url);
     }
 
     private Border CreateSettingRow(string label, string desc, UIElement control)

@@ -23,7 +23,8 @@ public class RequestHandler : CefSharp.Handler.RequestHandler
         CefTerminationStatus status, int errorCode, string errorMessage)
     {
         string url = string.Empty;
-        try { url = browser?.MainFrame?.Url ?? string.Empty; } catch { }
+        try { url = browser?.MainFrame?.Url ?? string.Empty; }
+        catch (Exception ex) { AppLogger.Log("CefCrash", ex, "Reading renderer URL after termination."); }
 
         AppLogger.Log("CefCrash",
             $"Renderer terminated. Status={status}, ErrorCode={errorCode}, Error={errorMessage}, BrowserId={browser?.Identifier}, Url={url}");
@@ -65,19 +66,6 @@ public class RequestHandler : CefSharp.Handler.RequestHandler
     protected override bool OnCertificateError(IWebBrowser chromiumWebBrowser, IBrowser browser,
         CefErrorCode errorCode, string requestUrl, ISslInfo sslInfo, IRequestCallback callback)
     {
-        bool warn = true;
-        var ctx = chromiumWebBrowser?.GetBrowserHost()?.RequestContext;
-        if (ctx != null)
-        {
-            if (ctx.GetPreferenceSafe("safebrowsing.enabled") is bool sb) warn = sb;
-        }
-
-        if (!warn)
-        {
-            callback.Continue(false);
-            return true;
-        }
-
         Application.Current.Dispatcher.BeginInvoke(() =>
         {
             using (callback)

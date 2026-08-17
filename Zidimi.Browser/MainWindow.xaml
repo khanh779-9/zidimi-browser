@@ -3,17 +3,124 @@
                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                  xmlns:ctrl="clr-namespace:Zidimi.Browser.Controls"
                  xmlns:views="clr-namespace:Zidimi.Browser.Views"
+                 xmlns:infra="clr-namespace:Zidimi.Browser.Infrastructure"
                  Title="Zidimi Browser"
-                 
                  BrandText="Zidimi Browser"
                  Icon="/zidimi-icon.ico"
                  Height="481" Width="683">
 
     <ctrl:ZidimiWindow.TabStripContent>
-        <views:TabStrip x:Name="TheTabStrip" Margin="0,3,0,0" />
+        <views:TabStrip x:Name="TheTabStrip" Margin="0,3,0,0" Visibility="Collapsed" />
     </ctrl:ZidimiWindow.TabStripContent>
 
     <Grid Background="{DynamicResource ContentBackgroundBrush}">
-        <ContentControl x:Name="PageHost" Margin="1,0,1,1"/>
+        <!-- Real browser content is attached lazily only after CEF/profile bootstrap finishes.
+             This prevents HwndHost's native child HWND from punching through the startup UI. -->
+        <Grid x:Name="BrowserLayer" Visibility="Collapsed">
+            <ContentControl x:Name="PageHost" Margin="1,0,1,1" />
+        </Grid>
+
+        <!-- Startup UI now lives inside the real Zidimi shell. There is no separate StartupWindow
+             and therefore no window-handoff/off-screen warm-up phase that can expose a native
+             Chromium top-level window. -->
+        <Grid x:Name="StartupLayer" Background="{DynamicResource ContentBackgroundBrush}">
+            <Border Width="500"
+                    MaxWidth="500"
+                    Margin="28"
+                    Padding="32,28,32,24"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    CornerRadius="22"
+                    Background="{DynamicResource ZidimiBgElevatedBrush}"
+                    BorderBrush="{DynamicResource StrokeBrush}"
+                    BorderThickness="1">
+                <Border.Effect>
+                    <DropShadowEffect Color="#40000000" BlurRadius="28" ShadowDepth="8" Opacity="0.28" />
+                </Border.Effect>
+
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <Border Width="58" Height="58" CornerRadius="18"
+                                Background="{DynamicResource ZidimiPurpleBrush}">
+                            <TextBlock Text="Z"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Foreground="White"
+                                       FontSize="29"
+                                       FontWeight="Bold" />
+                        </Border>
+
+                        <StackPanel Grid.Column="1" Margin="16,3,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="Zidimi Browser"
+                                       FontSize="22"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource Ink100Brush}" />
+                            <TextBlock Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Startup_Subtitle]}"
+                                       Margin="0,4,0,0"
+                                       FontSize="12.5"
+                                       Foreground="{DynamicResource Ink400Brush}" />
+                        </StackPanel>
+
+                        <Border Grid.Column="2" Margin="12,0,0,0" Padding="10,5"
+                                VerticalAlignment="Top"
+                                CornerRadius="10"
+                                Background="{DynamicResource ZidimiBgSurfaceBrush}"
+                                BorderBrush="{DynamicResource StrokeBrush}"
+                                BorderThickness="1">
+                            <TextBlock Text="CEF"
+                                       FontSize="10"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource Ink300Brush}" />
+                        </Border>
+                    </Grid>
+
+                    <StackPanel Grid.Row="1" Margin="0,42,0,38">
+                        <TextBlock x:Name="StartupStatusText"
+                                   Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Startup_Preparing]}"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="{DynamicResource Ink100Brush}" />
+                        <TextBlock x:Name="StartupDetailText"
+                                   Margin="0,7,0,0"
+                                   MinHeight="18"
+                                   FontSize="12.5"
+                                   Foreground="{DynamicResource Ink400Brush}"
+                                   TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+
+                    <StackPanel Grid.Row="2">
+                        <Border Height="4" CornerRadius="2"
+                                Background="{DynamicResource ZidimiBgSurfaceBrush}"
+                                ClipToBounds="True">
+                            <ctrl:ZidimiProgressBar x:Name="StartupProgressBar"
+                                                    Height="4"
+                                                    IsIndeterminate="True" />
+                        </Border>
+                        <Grid Margin="0,12,0,0">
+                            <TextBlock Text="{Binding Source={x:Static infra:LanguageManager.Instance}, Path=[Startup_PleaseWait]}"
+                                       FontSize="11"
+                                       Foreground="{DynamicResource Ink500Brush}" />
+                            <TextBlock Text="1.7"
+                                       HorizontalAlignment="Right"
+                                       FontSize="11"
+                                       FontWeight="SemiBold"
+                                       Foreground="{DynamicResource Ink500Brush}" />
+                        </Grid>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
     </Grid>
 </ctrl:ZidimiWindow>

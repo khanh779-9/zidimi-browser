@@ -1,31 +1,38 @@
-using System;
-using System.Collections.Generic;
 using CefSharp;
+using CefSharp.Handler;
 
 namespace Zidimi.Browser.Infrastructure;
 
 /// <summary>
-/// Provides a RequestContext for a tab based on the browsing mode.
-/// Each profile has its own RequestContext whose CachePath points at its folder
-/// (User Data\&lt;ProfileFolder&gt; — a subfolder of the root, valid per the
-/// CefSettings.RootCachePath requirement), so cookies, session and localStorage are
-/// isolated per profile, following the Chromium model. Guest mode uses an in-memory
-/// context (empty CachePath) so nothing is written to disk.
+/// Creates one disk-backed CEF RequestContext per non-default Chromium profile. The Default
+/// profile uses Cef.GetGlobalRequestContext(), whose CefSettings.CachePath is configured to the
+/// Default profile directory. This avoids creating two CEF contexts that both own the same
+/// Default profile files.
 /// </summary>
 public sealed class RequestContextFactory : IDisposable
 {
-    private static readonly object Lock = new();
-    private readonly Dictionary<string, IRequestContext> _profileContexts = new();
+    private readonly object _gate = new();
+    private readonly Dictionary<string, IRequestContext> _profileContexts = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, TaskCompletionSource<bool>> _profileReady = new(StringComparer.OrdinalIgnoreCase);
     private IRequestContext? _guestContext;
 
-    /// <summary>The base context (default profile) — the default profile's profile context.</summary>
     public IRequestContext? GetDefaultContext()
-        => GetProfileContext(UserDataPaths.DefaultProfileName);
+    {
+        if (Cef.IsInitialized != true) return null;
+        try
+        {
+            var context = Cef.GetGlobalRequestContext();
+            return context is { IsDisposed: false } ? context : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
-    /// <summary>In-memory context (guest mode).</summary>
     public IRequestContext GetGuestContext()
     {
-        lock (Lock)
+        lock (_gate)
         {
             if (_guestContext == null || _guestContext.IsDisposed)
             {
@@ -41,57 +48,108 @@ public sealed class RequestContextFactory : IDisposable
 
     public void ResetGuestContext()
     {
-        lock (Lock)
+        lock (_gate)
         {
             if (_guestContext != null)
             {
-                try { _guestContext.Dispose(); } catch { }
+                try { _guestContext.Dispose(); }
+                catch (Exception ex) { AppLogger.Log("RequestContext", ex, "Disposing guest context."); }
                 _guestContext = null;
             }
         }
     }
 
-/// <summary>
-/// The context for the given Profile. CachePath points at the profile's own folder
-/// (User Data\&lt;ProfileName&gt;) so cookies/session are isolated per profile.
-/// </summary>
+    public void ReleaseProfileContext(string profileName)
+    {
+        if (string.IsNullOrWhiteSpace(profileName)) return;
+        var profileId = UserDataPaths.NormalizeProfileId(profileName);
+
+        // The global RequestContext is CEF-owned and must survive until Cef.Shutdown().
+        if (string.Equals(profileId, UserDataPaths.DefaultProfileId, StringComparison.OrdinalIgnoreCase)) return;
+
+        lock (_gate)
+        {
+            _profileReady.Remove(profileId);
+            if (_profileContexts.Remove(profileId, out var context))
+            {
+                try { context.Dispose(); }
+                catch (Exception ex) { AppLogger.Log("RequestContext", ex, $"Disposing profile context '{profileId}'."); }
+            }
+        }
+    }
+
     public IRequestContext? GetProfileContext(string profileName)
     {
-        if (string.IsNullOrWhiteSpace(profileName))
-            return null;
+        if (string.IsNullOrWhiteSpace(profileName) || Cef.IsInitialized != true) return null;
 
-        lock (Lock)
+        var profileId = UserDataPaths.NormalizeProfileId(profileName);
+        if (string.Equals(profileId, UserDataPaths.DefaultProfileId, StringComparison.OrdinalIgnoreCase))
+            return GetDefaultContext();
+
+        lock (_gate)
         {
-            if (_profileContexts.TryGetValue(profileName, out var existing) && !existing.IsDisposed)
+            if (_profileContexts.TryGetValue(profileId, out var existing) && !existing.IsDisposed)
                 return existing;
 
-            var cachePath = UserDataPaths.ProfileDir(profileName);
-            try { System.IO.Directory.CreateDirectory(cachePath); } catch { }
+            var cachePath = UserDataPaths.ProfileDir(profileId);
 
-            var context = new RequestContext(new RequestContextSettings
+            var ready = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            var handler = new RequestContextHandler();
+            handler.OnInitialize(_ => ready.TrySetResult(true));
+
+            try
             {
-                CachePath = cachePath,
-                PersistSessionCookies = true,
-            });
-            _profileContexts[profileName] = context;
+                var context = new RequestContext(new RequestContextSettings
+                {
+                    CachePath = cachePath,
+                }, handler);
 
-            // Chromium only exposes unpacked extension loading when developer mode is enabled
-            // for this profile. Set it before the first tab starts loading extensions.
-            context.SetPreferenceSafe("extensions.ui.developer_mode", true);
-            ExtensionService.Instance.LoadProfileExtensions(context);
-            return context;
+                _profileContexts[profileId] = context;
+                _profileReady[profileId] = ready;
+                return context;
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Log("RequestContext", ex, $"Creating CEF RequestContext for '{profileId}'.");
+                return null;
+            }
         }
+    }
+
+    public async Task<IRequestContext?> GetProfileContextReadyAsync(string profileName)
+    {
+        var profileId = UserDataPaths.NormalizeProfileId(profileName);
+        var context = GetProfileContext(profileId);
+        if (context == null) return null;
+
+        if (string.Equals(profileId, UserDataPaths.DefaultProfileId, StringComparison.OrdinalIgnoreCase))
+            return context;
+
+        Task readyTask;
+        lock (_gate)
+        {
+            readyTask = _profileReady.TryGetValue(profileId, out var ready)
+                ? ready.Task
+                : Task.CompletedTask;
+        }
+
+        await Task.WhenAny(readyTask, Task.Delay(TimeSpan.FromSeconds(5))).ConfigureAwait(false);
+        return context.IsDisposed ? null : context;
     }
 
     public void Dispose()
     {
-        lock (Lock)
+        lock (_gate)
         {
             foreach (var ctx in _profileContexts.Values)
-                try { ctx.Dispose(); } catch { }
+            {
+                try { ctx.Dispose(); }
+                catch (Exception ex) { AppLogger.Log("RequestContext", ex, "Disposing profile context."); }
+            }
             _profileContexts.Clear();
+            _profileReady.Clear();
 
-            _guestContext?.Dispose();
+            try { _guestContext?.Dispose(); } catch { }
             _guestContext = null;
         }
     }

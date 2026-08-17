@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 
 namespace Zidimi.Browser.Controls;
 
@@ -14,8 +15,8 @@ public enum ZidimiButtonVariant
 
 /// <summary>
 /// Custom Button themed for Zidimi. Supports:
-///   - Variant: Primary (purple gradient), Secondary (surface), Ghost (transparent), Danger (red).
-///   - IconData: an SVG path data string shown to the left of the label.
+///   - Variant: Primary (theme accent gradient), Secondary (surface), Ghost (transparent), Danger (red).
+///   - IconData: vector geometry shown to the left of the label.
 ///   - Customizable corner radius.
 /// Use in place of the base <c>Button</c> to keep the theme consistent.
 /// </summary>
@@ -32,7 +33,7 @@ public class ZidimiButton : Button
         new PropertyMetadata(ZidimiButtonVariant.Secondary));
 
     public static readonly DependencyProperty IconDataProperty = DependencyProperty.Register(
-        nameof(IconData), typeof(string), typeof(ZidimiButton),
+        nameof(IconData), typeof(Geometry), typeof(ZidimiButton),
         new PropertyMetadata(null));
 
     public static readonly DependencyProperty CornerRadiusProperty = DependencyProperty.Register(
@@ -45,10 +46,10 @@ public class ZidimiButton : Button
         set => SetValue(VariantProperty, value);
     }
 
-    /// <summary>The icon's SVG path data (see <see cref="IconPaths"/>).</summary>
-    public string? IconData
+    /// <summary>The icon geometry (see <see cref="IconPaths"/>).</summary>
+    public Geometry? IconData
     {
-        get => (string?)GetValue(IconDataProperty);
+        get => (Geometry?)GetValue(IconDataProperty);
         set => SetValue(IconDataProperty, value);
     }
 

@@ -84,18 +84,32 @@ public partial class TabStrip : UserControl
     }
 
     private TabViewModel? _dragTab;
+    private int _dragTabId;
     private Point _dragStart;
+
+    private void SelectRuntimeTab(TabViewModel tab)
+    {
+        if (tab.TabId > 0) _vm.SelectTabById(tab.TabId);
+        else _vm.ActiveTab = tab;
+    }
+
+    private void CloseRuntimeTab(TabViewModel tab)
+    {
+        if (tab.TabId > 0) _vm.CloseTabById(tab.TabId);
+        else _vm.CloseTab(tab);
+    }
 
     private void Tab_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
         if (sender is FrameworkElement fe && fe.DataContext is TabViewModel tab)
         {
-            _vm.ActiveTab = tab;
+            SelectRuntimeTab(tab);
             _dragTab = tab;
+            _dragTabId = tab.TabId;
             _dragStart = e.GetPosition(this);
             if (e.ClickCount == 2)
             {
-                _vm.CloseTabCommand.Execute(tab);
+                CloseRuntimeTab(tab);
                 e.Handled = true;
             }
         }
@@ -115,6 +129,7 @@ public partial class TabStrip : UserControl
     private void Tab_MouseLeftButtonUp(object sender, MouseButtonEventArgs e)
     {
         _dragTab = null;
+        _dragTabId = 0;
     }
 
     private void Tab_DragOver(object sender, DragEventArgs e)
@@ -130,8 +145,12 @@ public partial class TabStrip : UserControl
         if (sender is not FrameworkElement fe || fe.DataContext is not TabViewModel target) return;
         if (ReferenceEquals(dragged, target)) return;
 
-        _vm.MoveTab(dragged, target);
+        if (_dragTabId > 0 && target.TabId > 0)
+            _vm.MoveTabById(_dragTabId, target.TabId);
+        else
+            _vm.MoveTab(dragged, target);
         _dragTab = null;
+        _dragTabId = 0;
         e.Handled = true;
     }
 
@@ -139,7 +158,7 @@ public partial class TabStrip : UserControl
     {
         if (sender is FrameworkElement fe && fe.DataContext is TabViewModel tab)
         {
-            _vm.ActiveTab = tab;
+            SelectRuntimeTab(tab);
             ShowTabContextMenu(fe, tab);
             e.Handled = true;
         }
@@ -154,7 +173,11 @@ public partial class TabStrip : UserControl
             Content = tab.IsPinned ? LanguageManager.Instance["Tab_UnpinTab"] : LanguageManager.Instance["Tab_PinTab"],
             IconData = tab.IsPinned ? IconPaths.Close : IconPaths.Star,
         };
-        pin.Click += (_, _) => _vm.TogglePinTab(tab);
+        pin.Click += (_, _) =>
+        {
+            if (tab.TabId > 0) _vm.TogglePinTabById(tab.TabId);
+            else _vm.TogglePinTab(tab);
+        };
         menu.Items.Add(pin);
 
         var mute = new ZidimiMenuItem
@@ -166,15 +189,23 @@ public partial class TabStrip : UserControl
         menu.Items.Add(mute);
 
         var reload = new ZidimiMenuItem { Content = LanguageManager.Instance["Tab_ReloadTab"], IconData = IconPaths.Reload };
-        reload.Click += (_, _) => _vm.ReloadTab(tab);
+        reload.Click += (_, _) =>
+        {
+            if (tab.TabId > 0) _vm.ReloadTabById(tab.TabId);
+            else _vm.ReloadTab(tab);
+        };
         menu.Items.Add(reload);
 
         var dup = new ZidimiMenuItem { Content = LanguageManager.Instance["Tab_DuplicateTab"] };
-        dup.Click += (_, _) => _vm.DuplicateTab(tab);
+        dup.Click += (_, _) =>
+        {
+            if (tab.TabId > 0) _vm.DuplicateTabById(tab.TabId);
+            else _vm.DuplicateTab(tab);
+        };
         menu.Items.Add(dup);
 
         var close = new ZidimiMenuItem { Content = LanguageManager.Instance["Tab_CloseTab"], IsDanger = true, IconData = IconPaths.Close };
-        close.Click += (_, _) => _vm.CloseTabCommand.Execute(tab);
+        close.Click += (_, _) => CloseRuntimeTab(tab);
         menu.Items.Add(close);
 
         menu.PlacementTarget = anchor;
@@ -192,7 +223,8 @@ public partial class TabStrip : UserControl
 
     private void ToggleMute(TabViewModel tab)
     {
-        if (App.ViewModel.GetBrowser(tab) is var browser && browser != null)
+        var browser = tab.TabId > 0 ? App.ViewModel.GetBrowser(tab.TabId) : App.ViewModel.GetBrowser(tab);
+        if (browser != null)
         {
             var host = browser.GetBrowserHost();
             if (host != null)
@@ -207,7 +239,7 @@ public partial class TabStrip : UserControl
     private void CloseTab_Click(object sender, RoutedEventArgs e)
     {
         if (sender is Button btn && btn.Tag is TabViewModel tab)
-            _vm.CloseTabCommand.Execute(tab);
+            CloseRuntimeTab(tab);
     }
 
     private void AllTabs_Click(object sender, RoutedEventArgs e)
@@ -222,7 +254,7 @@ public partial class TabStrip : UserControl
                 IconData = tab.Favicon == null ? IconPaths.Home : null,
                 FontWeight = ReferenceEquals(tab, _vm.ActiveTab) ? FontWeights.SemiBold : FontWeights.Normal,
             };
-            item.Click += (_, _) => _vm.ActiveTab = tab;
+            item.Click += (_, _) => SelectRuntimeTab(tab);
             menu.Items.Add(item);
         }
 
@@ -290,7 +322,7 @@ public partial class TabStrip : UserControl
         {
             if (TabSearchList.SelectedItem is System.Windows.Controls.ListBoxItem sel && sel.Tag is TabViewModel selected)
             {
-                _vm.ActiveTab = selected;
+                SelectRuntimeTab(selected);
                 TabSearchPopup.IsOpen = false;
             }
             e.Handled = true;
@@ -312,6 +344,6 @@ public partial class TabStrip : UserControl
         if (sender == null) return;
         var sel = TabSearchList.SelectedItem as System.Windows.Controls.ListBoxItem;
         if (sel?.Tag is TabViewModel tab)
-            _vm.ActiveTab = tab;
+            SelectRuntimeTab(tab);
     }
 }

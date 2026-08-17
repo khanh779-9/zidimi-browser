@@ -1,22 +1,22 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-
 namespace Zidimi.Browser.Models;
 
+/// <summary>
+/// In-memory view of an active Chromium profile. Persistent browser fields are read/written through
+/// IRequestContext preferences/content settings. Pure WPF-shell choices are session-only instead of
+/// being disguised as browser cookies or serialized into a Zidimi-owned store.
+/// </summary>
 public class ProfileSettings
 {
-    public string HomePageUrl { get; set; } = "https://duckduckgo.com";
-    public string SearchEngine { get; set; } = "DuckDuckGo"; 
-    public int StartupBehavior { get; set; } = 0; // 0: New page, 1: Continue, 2: Specific set of pages
+    public string DisplayName { get; set; } = string.Empty;
+    public string HomePageUrl { get; set; } = "chrome://newtab/";
+    public string SearchEngine { get; set; } = "DuckDuckGo";
+    public string SearchUrlTemplate { get; set; } = string.Empty;
+    public int StartupBehavior { get; set; }
     public List<string> StartupPages { get; set; } = new();
-    public List<string> LastSessionTabs { get; set; } = new();
     public bool SearchSuggestEnabled { get; set; } = true;
 
-    public string Theme { get; set; } = "classic"; // classic / system / dark / light
-    public bool ShowDownloadBar { get; set; } = true;
+    // Persisted through Chromium's browser.theme.color_scheme2 profile preference.
+    public string Theme { get; set; } = "system";
 
     public SitePermissions SitePermissions { get; set; } = new();
-
-    public List<ExtensionInfo> Extensions { get; set; } = new();
 }

@@ -4,34 +4,35 @@ using System.Linq;
 namespace Zidimi.Browser.Models;
 
 /// <summary>
-/// Single source of truth for the list of search engines, the default engine, and how to build search URLs.
-/// Everywhere (address bar, autocomplete, settings) must share this to avoid default engine drift.
+/// Fallback URL resolver for Zidimi's WPF omnibox. Chromium remains the owner of the selected
+/// default search provider (TemplateURLService/Web Data). Zidimi reads the provider name through
+/// CEF when available and uses these known templates only to turn WPF omnibox text into a URL.
 /// </summary>
 public static class SearchEngines
 {
-    /// <summary>Order matches how they appear in the settings dropdown.</summary>
+    /// <summary>Known Chromium providers that the WPF omnibox can resolve without its own database.</summary>
     public static readonly string[] All =
     {
         "DuckDuckGo", "Google", "Bing", "Brave Search", "Yahoo", "Yandex",
         "Baidu", "Ecosia", "Startpage", "Qwant", "Ask.com",
     };
 
-    /// <summary>The app's default search engine (matches the default HomePageUrl in ProfileSettings).</summary>
+    /// <summary>Safe fallback only when Chromium does not expose a recognizable provider name.</summary>
     public const string Default = "DuckDuckGo";
 
     /// <summary>Normalizes a value that exists in All; invalid values fall back to Default (DuckDuckGo).</summary>
     public static string Normalize(string? engine)
-        => string.IsNullOrWhiteSpace(engine) ? Default
-         : All.Contains(engine) ? engine
-         : Default;
-
-    public static int IndexOf(string? engine) => Array.IndexOf(All, Normalize(engine));
+    {
+        if (string.IsNullOrWhiteSpace(engine)) return Default;
+        return All.FirstOrDefault(item => item.Equals(engine.Trim(), StringComparison.OrdinalIgnoreCase)) ?? Default;
+    }
 
     /// <summary>Builds the search URL for an engine given a query (already escaped).</summary>
     public static string BuildUrl(string engine, string escapedQuery)
         => Normalize(engine) switch
         {
             "DuckDuckGo" => "https://duckduckgo.com/?q=" + escapedQuery,
+            "Google" => "https://www.google.com/search?q=" + escapedQuery,
             "Bing" => "https://www.bing.com/search?q=" + escapedQuery,
             "Brave Search" => "https://search.brave.com/search?q=" + escapedQuery,
             "Yahoo" => "https://search.yahoo.com/search?p=" + escapedQuery,
@@ -45,22 +46,28 @@ public static class SearchEngines
         };
 
 
-    public static string GetEngineUrl(string engine)
+    /// <summary>
+    /// Uses a Chromium default_search_provider.search_url template when CEF exposes one.
+    /// Unsupported TemplateURL tokens deliberately fall back to the known-provider resolver.
+    /// </summary>
+    public static string BuildFromChromiumTemplate(string? template, string engine, string rawQuery)
     {
-        return Normalize(engine) switch
+        var escaped = Uri.EscapeDataString(rawQuery ?? string.Empty);
+        if (!string.IsNullOrWhiteSpace(template) && template.Contains("{searchTerms}", StringComparison.Ordinal))
         {
-            "DuckDuckGo" => "https://duckduckgo.com/",
-            "Google" => "https://www.google.com/",
-            "Bing" => "https://www.bing.com/",
-            "Brave Search" => "https://search.brave.com/",
-            "Yahoo" => "https://search.yahoo.com/",
-            "Yandex" => "https://yandex.com/",
-            "Baidu" => "https://www.baidu.com/",
-            "Ecosia" => "https://www.ecosia.org/",
-            "Startpage" => "https://www.startpage.com/",
-            "Qwant" => "https://www.qwant.com/",
-            "Ask.com" => "https://www.ask.com/",
-            _ => "https://duckduckgo.com/",
-        };
+            var candidate = template
+                .Replace("{searchTerms}", escaped, StringComparison.Ordinal)
+                .Replace("{inputEncoding}", "UTF-8", StringComparison.Ordinal)
+                .Replace("{outputEncoding}", "UTF-8", StringComparison.Ordinal);
+
+            // TemplateURL supports many provider-specific replacement tokens. If any remain,
+            // leave expansion to Chromium by falling back instead of generating a malformed URL.
+            if (!candidate.Contains('{') &&
+                Uri.TryCreate(candidate, UriKind.Absolute, out var uri) &&
+                (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps))
+                return uri.AbsoluteUri;
+        }
+
+        return BuildUrl(engine, escaped);
     }
 }

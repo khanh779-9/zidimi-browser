@@ -6,28 +6,31 @@ namespace Zidimi.Browser.Infrastructure;
 
 /// <summary>
 /// Manages the Dark/Light/System themes for Zidimi Browser.
-/// How it works: each theme has its own ResourceDictionary (Themes/Colors.xaml holds the
-/// fixed colors/brushes; DarkTheme.xaml & LightTheme.xaml hold the brushes that change by theme).
-/// The theme is switched by swapping the dictionary in Application.Current.Resources —
-/// the whole UI uses DynamicResource so it refreshes automatically, including hover/press states.
+/// How it works: Themes/Colors.xaml contains only theme-independent tokens (status colors,
+/// corner radii). DarkTheme.xaml / LightTheme.xaml expose the same complete set of
+/// theme-sensitive brushes (surfaces, text, accent, hover/pressed, shadows).
+/// Switching theme swaps exactly one dictionary in Application.Current.Resources. Theme-aware
+/// XAML uses DynamicResource; code-built persistent surfaces listen to ThemeChanged and refresh.
 /// </summary>
 public static class ThemeManager
 {
-    public enum AppTheme { Classic, Dark, Light, System }
+    public enum AppTheme { Dark, Light, System }
 
     public static event Action<AppTheme>? ThemeChanged;
 
-    private static AppTheme _current = AppTheme.Classic;
+    private static AppTheme _current = AppTheme.System;
     public static AppTheme Current => _current;
 
+    /// <summary>The concrete palette currently in use after resolving the System option.</summary>
+    public static AppTheme EffectiveCurrent => _current == AppTheme.System ? DetectSystemTheme() : _current;
+
     // ResourceDictionaries holding theme-dependent brushes.
-    private static ResourceDictionary? _classicDict;
     private static ResourceDictionary? _darkDict;
     private static ResourceDictionary? _lightDict;
 
     /// <summary>
-    /// Applies a theme from the stable keys "classic" / "system" / "dark" / "light".
-    /// Also supports legacy values that are localized labels.
+    /// Applies Chromium's native browser color-scheme choices: system / dark / light.
+    /// Legacy "classic" values are normalized to system.
     /// </summary>
     public static void ApplyFromSettings(string? themeName)
     {
@@ -36,46 +39,38 @@ public static class ThemeManager
 
     private static AppTheme ToAppTheme(string key) => key switch
     {
-        "classic" => AppTheme.Classic,
         "dark" => AppTheme.Dark,
         "light" => AppTheme.Light,
-        "system" => AppTheme.System,
-        _ => AppTheme.Classic,
+        _ => AppTheme.System,
     };
 
-    /// <summary>Normalizes the Theme value in AppSettings to a stable key (classic/system/dark/light).</summary>
+    /// <summary>Normalizes to Chromium BrowserColorScheme keys: system / dark / light.</summary>
     public static string NormalizeThemeKey(string? themeName)
     {
-        if (string.IsNullOrEmpty(themeName)) return "classic";
+        if (string.IsNullOrEmpty(themeName)) return "system";
         var t = themeName.Trim();
-        if (t is "classic" or "system" or "dark" or "light") return t;
+        if (t is "system" or "dark" or "light") return t;
+        if (t == "classic") return "system";
 
         // Localized labels check
         var lm = LanguageManager.Instance;
         if (t == lm["Pref_ThemeClassic"] || t == "Classic" || t == "Cổ điển" || t == "Klassisch" || t == "Classique" || t == "Classico" || t == "Классическая" || t == "经典")
-            return "classic";
+            return "system";
         if (t == lm["Pref_ThemeDark"] || t == "Dark" || t == "Tối" || t == "Scuro" || t == "Sombre" || t == "Темная" || t == "深色" || t == "dunkel")
             return "dark";
         if (t == lm["Pref_ThemeLight"] || t == "Light" || t == "Sáng" || t == "Chiaro" || t == "Clair" || t == "Светлая" || t == "浅色" || t == "hell")
             return "light";
-        return "classic";
+        return "system";
     }
 
     public static void Apply(AppTheme theme)
     {
-        EnsureLoaded();
         _current = theme;
         var effective = theme == AppTheme.System
             ? DetectSystemTheme()
             : theme;
 
-        ResourceDictionary? targetDict = effective switch
-        {
-            AppTheme.Light => _lightDict,
-            AppTheme.Dark => _darkDict,
-            _ => _classicDict
-        };
-
+        var targetDict = GetOrLoad(effective);
         SwapDictionary(targetDict);
         ThemeChanged?.Invoke(theme);
     }
@@ -92,7 +87,7 @@ public static class ThemeManager
         for (int i = 0; i < res.MergedDictionaries.Count; i++)
         {
             var d = res.MergedDictionaries[i];
-            if (ReferenceEquals(d, _classicDict) || ReferenceEquals(d, _darkDict) || ReferenceEquals(d, _lightDict))
+            if (ReferenceEquals(d, _darkDict) || ReferenceEquals(d, _lightDict))
             {
                 active = d;
                 insertAt = i;
@@ -106,23 +101,27 @@ public static class ThemeManager
         res.MergedDictionaries.Insert(insertAt, target);
     }
 
-    /// <summary>Loads and initializes the theme dictionaries. Called once when the app starts (App.OnStartup).</summary>
+    /// <summary>
+    /// Compatibility hook for callers that want the current theme resources ready. Only the
+    /// effective theme is loaded; the other dictionaries stay lazy until the user switches.
+    /// </summary>
     public static void EnsureLoaded()
+        => _ = GetOrLoad(_current == AppTheme.System ? DetectSystemTheme() : _current);
+
+    private static ResourceDictionary GetOrLoad(AppTheme theme)
     {
-        if (_classicDict != null && _darkDict != null && _lightDict != null) return;
-        _classicDict = new ResourceDictionary
+        return theme switch
         {
-            Source = new Uri("pack://application:,,,/Zidimi.Browser;component/Themes/ClassicTheme.xaml", UriKind.Absolute)
-        };
-        _darkDict = new ResourceDictionary
-        {
-            Source = new Uri("pack://application:,,,/Zidimi.Browser;component/Themes/DarkTheme.xaml", UriKind.Absolute)
-        };
-        _lightDict = new ResourceDictionary
-        {
-            Source = new Uri("pack://application:,,,/Zidimi.Browser;component/Themes/LightTheme.xaml", UriKind.Absolute)
+            AppTheme.Light => _lightDict ??= LoadDictionary("LightTheme.xaml"),
+            _ => _darkDict ??= LoadDictionary("DarkTheme.xaml"),
         };
     }
+
+    private static ResourceDictionary LoadDictionary(string fileName)
+        => new()
+        {
+            Source = new Uri($"pack://application:,,,/Zidimi.Browser;component/Themes/{fileName}", UriKind.Absolute)
+        };
 
     public static AppTheme DetectSystemTheme()
     {
@@ -134,7 +133,10 @@ public static class ThemeManager
             if (key?.GetValue("AppsUseLightTheme") is int v)
                 return v == 1 ? AppTheme.Light : AppTheme.Dark;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Log("Theme", ex, "Reading Windows theme preference; falling back to dark.");
+        }
         return AppTheme.Dark;
     }
 }

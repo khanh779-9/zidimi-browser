@@ -142,7 +142,7 @@
                                     MaxHeight="320"
                                     SnapsToDevicePixels="True">
                                 <Border.Effect>
-                                    <DropShadowEffect Color="#000000" BlurRadius="12" ShadowDepth="2" Opacity="0.15" />
+                                    <DropShadowEffect Color="{DynamicResource ShadowColor}" BlurRadius="12" ShadowDepth="2" Opacity="0.15" />
                                 </Border.Effect>
                                 <Grid>
                                     <Border x:Name="mask" Background="{DynamicResource ZidimiBgElevatedBrush}" CornerRadius="7" />

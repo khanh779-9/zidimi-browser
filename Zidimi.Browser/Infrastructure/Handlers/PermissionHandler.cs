@@ -5,6 +5,7 @@ using System.Text;
 using System.Windows;
 using CefSharp;
 using CefSharp.Handler;
+using CefSharp.Enums;
 using Zidimi.Browser.Controls;
 using Zidimi.Browser.Infrastructure;
 using Zidimi.Browser.Models;
@@ -67,8 +68,7 @@ public sealed class ZidimiPermissionHandler : CefSharp.Handler.PermissionHandler
                 try
                 {
                     var allowed = ShowPermissionDialog(question, title);
-                    PersistException(chromiumWebBrowser, requestingOrigin,
-                        GetCefPrefKey(requestedPermissions), allowed);
+                    PersistMediaExceptions(chromiumWebBrowser, requestingOrigin, requestedPermissions, allowed);
 
                     if (allowed) callback.Continue(requestedPermissions);
                     else callback.Cancel();
@@ -157,8 +157,7 @@ public sealed class ZidimiPermissionHandler : CefSharp.Handler.PermissionHandler
                 try
                 {
                     var allowed = ShowPermissionDialog(question, title);
-                    PersistException(chromiumWebBrowser, requestingOrigin,
-                        GetCefPrefKey(requestedPermissions), allowed);
+                    PersistPermissionExceptions(chromiumWebBrowser, requestingOrigin, requestedPermissions, allowed);
                     callback.Continue(allowed ? PermissionRequestResult.Accept : PermissionRequestResult.Deny);
                 }
                 catch (ObjectDisposedException)
@@ -248,57 +247,54 @@ public sealed class ZidimiPermissionHandler : CefSharp.Handler.PermissionHandler
     private static string Localize(string key, params string[] args)
         => string.Format(LanguageManager.Instance[key], args);
 
-    private static string? GetCefPrefKey(MediaAccessPermissionType perms)
+    private static void PersistMediaExceptions(
+        IWebBrowser browser, string origin, MediaAccessPermissionType permissions, bool allow)
     {
-        if ((perms & MediaAccessPermissionType.AudioCapture) != 0) return "media_stream_mic";
-        if ((perms & MediaAccessPermissionType.VideoCapture) != 0) return "media_stream_camera";
-        return null;
+        if ((permissions & MediaAccessPermissionType.AudioCapture) != 0)
+            _ = PersistContentSettingAsync(browser, origin, ContentSettingTypes.MediaStreamMic, allow);
+        if ((permissions & MediaAccessPermissionType.VideoCapture) != 0)
+            _ = PersistContentSettingAsync(browser, origin, ContentSettingTypes.MediaStreamCamera, allow);
     }
 
-    private static string? GetCefPrefKey(PermissionRequestType type)
+    private static void PersistPermissionExceptions(
+        IWebBrowser browser, string origin, PermissionRequestType permissions, bool allow)
     {
-        // Maps a few common types, returns null if it shouldn't or can't be persisted this way.
-        if ((type & PermissionRequestType.Geolocation) != 0) return "geolocation";
-        if ((type & PermissionRequestType.Notifications) != 0) return "notifications";
-        if ((type & PermissionRequestType.CameraStream) != 0) return "media_stream_camera";
-        if ((type & PermissionRequestType.MicStream) != 0) return "media_stream_mic";
-        if ((type & PermissionRequestType.Clipboard) != 0) return "clipboard";
-        if ((type & PermissionRequestType.PointerLock) != 0) return "mouselock";
-        if ((type & PermissionRequestType.MidiSysex) != 0) return "midi_sysex";
-        if ((type & PermissionRequestType.MultipleDownloads) != 0) return "automatic_downloads";
-        if ((type & PermissionRequestType.WindowManagement) != 0) return "window_placement";
-        if ((type & PermissionRequestType.ProtectedMediaIdentifier) != 0) return "protected_media_identifier";
-        if ((type & PermissionRequestType.IdleDetection) != 0) return "idle_detection";
-        if ((type & PermissionRequestType.FileSystemAccess) != 0) return "file_system_write_guard";
-        if ((type & PermissionRequestType.LocalFonts) != 0) return "local_fonts";
-        if ((type & PermissionRequestType.ArSession) != 0) return "ar";
-        if ((type & PermissionRequestType.VrSession) != 0) return "vr";
-        return null;
+        var mappings = new (PermissionRequestType Flag, ContentSettingTypes Type)[]
+        {
+            (PermissionRequestType.Geolocation, ContentSettingTypes.Geolocation),
+            (PermissionRequestType.Notifications, ContentSettingTypes.Notifications),
+            (PermissionRequestType.CameraStream, ContentSettingTypes.MediaStreamCamera),
+            (PermissionRequestType.MicStream, ContentSettingTypes.MediaStreamMic),
+            (PermissionRequestType.Clipboard, ContentSettingTypes.ClipboardReadWrite),
+            (PermissionRequestType.MidiSysex, ContentSettingTypes.MidiSysex),
+            (PermissionRequestType.MultipleDownloads, ContentSettingTypes.AutomaticDownloads),
+            (PermissionRequestType.ProtectedMediaIdentifier, ContentSettingTypes.ProtectedMediaIdentifier),
+        };
+
+        foreach (var (flag, type) in mappings)
+        {
+            if ((permissions & flag) != 0)
+                _ = PersistContentSettingAsync(browser, origin, type, allow);
+        }
     }
 
-    private static void PersistException(IWebBrowser browser, string origin, string? prefKey, bool allow)
+    private static async Task PersistContentSettingAsync(
+        IWebBrowser browser, string origin, ContentSettingTypes type, bool allow)
     {
-        if (prefKey == null) return;
         try
         {
-            var ctx = browser.GetBrowserHost().RequestContext;
-            if (ctx == null) return;
-            var fullKey = "profile.content_settings.exceptions." + prefKey;
+            if (!Uri.TryCreate(origin, UriKind.Absolute, out _)) return;
+            var context = browser.GetBrowserHost().RequestContext;
+            if (context == null) return;
 
-            var exceptions = ctx.GetPreferenceSafe(fullKey);
-            var dict = exceptions as IDictionary<string, object> ?? new System.Dynamic.ExpandoObject() as IDictionary<string, object>;
-
-            var uri = new Uri(origin);
-            string port = uri.Port > 0 ? uri.Port.ToString() : (uri.Scheme == "https" ? "443" : "80");
-            string originPattern = $"{uri.Scheme}://{uri.Host}:{port},*";
-
-            var settingNode = new System.Dynamic.ExpandoObject() as IDictionary<string, object>;
-            settingNode["setting"] = allow ? 1 : 2;
-            settingNode["last_modified"] = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString();
-
-            dict[originPattern] = settingNode;
-            ctx.SetPreferenceSafe(fullKey, dict);
+            await CefProfileDataHelper.SetContentSettingAsync(
+                context, origin, origin, type,
+                allow ? ContentSettingValues.Allow : ContentSettingValues.Block);
         }
-        catch { }
+        catch (Exception ex)
+        {
+            AppLogger.Log("Permission", ex, $"Persisting {type} for {origin}.");
+        }
     }
+
 }

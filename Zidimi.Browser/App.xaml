@@ -79,6 +79,69 @@
         </Style>
 
         
+        <!-- Standard WPF Button theme. Raw <Button> controls otherwise fall back to
+             Windows system colors and visually break when Zidimi switches theme. -->
+        <Style TargetType="{x:Type Button}">
+            <Setter Property="Background" Value="{DynamicResource ZidimiBgElevatedBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource Ink200Brush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource StrokeBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="FontFamily" Value="{StaticResource AppFont}" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="FontWeight" Value="Medium" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="SnapsToDevicePixels" Value="True" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <Border x:Name="bd"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{StaticResource CornerRadiusMd}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              TextBlock.Foreground="{TemplateBinding Foreground}"
+                                              TextBlock.FontWeight="{TemplateBinding FontWeight}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource ZidimiBgHoverBrush}" />
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource StrokeLightBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Ink100Brush}" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource ZidimiBgActiveBrush}" />
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentBorderBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45" />
+                                <Setter Property="Cursor" Value="Arrow" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- For hit targets whose visuals are provided by their child/card. -->
+        <Style x:Key="BareButton" TargetType="{x:Type Button}">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Button}">
+                        <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="IconButton" TargetType="{x:Type Button}">
             <Setter Property="Width" Value="36" />
             <Setter Property="Height" Value="36" />
@@ -115,7 +178,7 @@
 
         
         <Style x:Key="CtaButton" TargetType="{x:Type Button}">
-            <Setter Property="Background" Value="{StaticResource CtaBrush}" />
+            <Setter Property="Background" Value="{DynamicResource CtaBrush}" />
             <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
             <Setter Property="FontWeight" Value="SemiBold" />
             <Setter Property="FontSize" Value="13" />
@@ -133,11 +196,16 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource CtaHoverBrush}" />
                                 <Setter TargetName="bd" Property="Effect">
                                     <Setter.Value>
-                                        <DropShadowEffect Color="#6D4AFF" BlurRadius="18" ShadowDepth="0" Opacity="0.6" />
+                                        <DropShadowEffect Color="{DynamicResource AccentShadowColor}" BlurRadius="18" ShadowDepth="0" Opacity="0.35" />
                                     </Setter.Value>
                                 </Setter>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource CtaActiveBrush}" />
+                                <Setter TargetName="bd" Property="Effect" Value="{x:Null}" />
                             </Trigger>
                             <Trigger Property="IsEnabled" Value="False">
                                 <Setter Property="Opacity" Value="0.5" />
@@ -178,11 +246,11 @@
                                 <Setter Property="Foreground" Value="{DynamicResource Ink100Brush}" />
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter TargetName="bd" Property="Background" Value="{StaticResource SidebarActiveBrush}" />
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource SidebarActiveBrush}" />
                                 <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentBorderBrush}" />
                                 <Setter TargetName="bd" Property="BorderThickness" Value="1" />
-                                <Setter Property="Foreground" Value="{StaticResource ZidimiPurpleBrush}" />
-                                <Setter TargetName="Accent" Property="Fill" Value="{StaticResource ZidimiPurpleLightBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource ZidimiPurpleBrush}" />
+                                <Setter TargetName="Accent" Property="Fill" Value="{DynamicResource ZidimiPurpleLightBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -197,8 +265,8 @@
             <Setter Property="BorderBrush" Value="{DynamicResource StrokeBrush}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="Padding" Value="10,8" />
-            <Setter Property="CaretBrush" Value="{StaticResource ZidimiPurpleLightBrush}" />
-            <Setter Property="SelectionBrush" Value="{StaticResource ZidimiPurpleBrush}" />
+            <Setter Property="CaretBrush" Value="{DynamicResource ZidimiPurpleLightBrush}" />
+            <Setter Property="SelectionBrush" Value="{DynamicResource TextSelectionBrush}" />
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type TextBox}">
@@ -218,7 +286,7 @@
                                 <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource StrokeLightBrush}" />
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource ZidimiPurpleBrush}" />
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource ZidimiPurpleBrush}" />
                                 <Setter TargetName="bd" Property="Background" Value="{DynamicResource ZidimiBgElevatedBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -266,7 +334,7 @@
                                 <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource StrokeLightBrush}" />
                             </Trigger>
                             <Trigger Property="IsKeyboardFocused" Value="True">
-                                <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource ZidimiPurpleBrush}" />
+                                <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource ZidimiPurpleBrush}" />
                                 <Setter TargetName="bd" Property="Background" Value="{DynamicResource ZidimiBgElevatedBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
@@ -287,7 +355,7 @@
                                 Margin="2" SnapsToDevicePixels="True" />
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="thumbBd" Property="Background" Value="{StaticResource ZidimiPurpleBrush}" />
+                                <Setter TargetName="thumbBd" Property="Background" Value="{DynamicResource ZidimiPurpleBrush}" />
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -367,6 +435,101 @@
         </Style>
 
         
+        <!-- Native ContextMenu/MenuItem controls are still used by a few WPF host surfaces.
+             Theme them here so they never fall back to Windows light/system colors. -->
+        <Style TargetType="{x:Type ContextMenu}">
+            <Setter Property="Background" Value="{DynamicResource ZidimiBgElevatedBrush}" />
+            <Setter Property="Foreground" Value="{DynamicResource Ink200Brush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource StrokeBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ContextMenu}">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="{StaticResource CornerRadiusLg}"
+                                Padding="{TemplateBinding Padding}"
+                                SnapsToDevicePixels="True">
+                            <Border.Effect>
+                                <DropShadowEffect Color="{DynamicResource ShadowColor}" BlurRadius="20" ShadowDepth="4" Opacity="0.2" />
+                            </Border.Effect>
+                            <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Cycle" />
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="{x:Type MenuItem}">
+            <Setter Property="Foreground" Value="{DynamicResource Ink200Brush}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type MenuItem}">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                CornerRadius="{StaticResource CornerRadiusMd}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter ContentSource="Header"
+                                              TextBlock.Foreground="{TemplateBinding Foreground}" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource ZidimiBgHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Native lists (cookies, recent items, tab search) inherit Zidimi colors instead
+             of Windows' default selection blue. Local ItemContainerStyle still takes precedence. -->
+        <Style TargetType="{x:Type ListBox}">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{DynamicResource Ink200Brush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource StrokeBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Disabled" />
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+        </Style>
+
+        <Style TargetType="{x:Type ListBoxItem}">
+            <Setter Property="Foreground" Value="{DynamicResource Ink200Brush}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type ListBoxItem}">
+                        <Border x:Name="bd" Background="{TemplateBinding Background}"
+                                CornerRadius="{StaticResource CornerRadiusMd}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource ZidimiBgHoverBrush}" />
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="bd" Property="Background" Value="{DynamicResource SidebarActiveBrush}" />
+                                <Setter Property="Foreground" Value="{DynamicResource Ink100Brush}" />
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.45" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
         <Style x:Key="BrowserTabItem" TargetType="{x:Type TabItem}" />
         
         <Style x:Key="ListItemCard" TargetType="{x:Type Border}">
@@ -416,7 +579,7 @@
                                 Margin="0,0,10,10"
                                 SnapsToDevicePixels="True">
                             <Border.Effect>
-                                <DropShadowEffect Color="#000000" BlurRadius="12" ShadowDepth="4" Opacity="0.15" />
+                                <DropShadowEffect Color="{DynamicResource ShadowColor}" BlurRadius="12" ShadowDepth="4" Opacity="0.15" />
                             </Border.Effect>
                             
                             <Grid>

@@ -24,7 +24,7 @@
                             CornerRadius="10"
                             Padding="14,12">
                         <Border.Effect>
-                            <DropShadowEffect Color="#000000" BlurRadius="20" ShadowDepth="0" Opacity="0.5" />
+                            <DropShadowEffect Color="{DynamicResource ShadowColor}" BlurRadius="20" ShadowDepth="0" Opacity="0.5" />
                         </Border.Effect>
                         <Grid>
                             <Grid.ColumnDefinitions>

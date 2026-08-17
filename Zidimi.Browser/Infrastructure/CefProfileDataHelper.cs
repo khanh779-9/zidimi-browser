@@ -1,4 +1,5 @@
 using CefSharp;
+using CefSharp.Enums;
 
 namespace Zidimi.Browser.Infrastructure;
 
@@ -9,86 +10,133 @@ namespace Zidimi.Browser.Infrastructure;
 /// </summary>
 public static class CefProfileDataHelper
 {
+    private static readonly string[] PortablePreferenceKeys =
+    {
+        ChromiumPreferenceKeys.Homepage,
+        ChromiumPreferenceKeys.HomepageIsNewTabPage,
+        ChromiumPreferenceKeys.SessionRestoreOnStartup,
+        ChromiumPreferenceKeys.SessionStartupUrls,
+        ChromiumPreferenceKeys.SearchSuggestEnabled,
+        ChromiumPreferenceKeys.AcceptLanguages,
+        ChromiumPreferenceKeys.SelectedLanguages,
+        ChromiumPreferenceKeys.BrowserColorScheme,
+        ChromiumPreferenceKeys.DefaultFontSize,
+        ChromiumPreferenceKeys.DefaultFixedFontSize,
+        ChromiumPreferenceKeys.DefaultZoomLevel,
+        ChromiumPreferenceKeys.CookieControlsMode,
+        ChromiumPreferenceKeys.EnableDoNotTrack,
+        ChromiumPreferenceKeys.SafeBrowsingEnabled,
+        ChromiumPreferenceKeys.DownloadDefaultDirectory,
+        ChromiumPreferenceKeys.DownloadPromptForDownload,
+        ChromiumPreferenceKeys.Proxy,
+    };
+
     /// <summary>
-    /// Copies all modifiable Preferences from <paramref name="source"/> into <paramref name="target"/>
-    /// using <c>GetAllPreferences</c> / <c>SetPreference</c>.
-    /// CEF will persist the changes to the target profile's <c>Preferences</c> JSON file automatically.
+    /// Copies only an allow-list of portable Chromium preferences through CEF GetPreference/
+    /// SetPreference. Never bulk-serializes GetAllPreferences: protected/deep values such as
+    /// extensions.settings, profile identity and Chromium-internal dictionaries are intentionally
+    /// excluded so copying a profile cannot corrupt extension registration or Secure Preferences.
     /// </summary>
     public static async Task CopyPreferencesAsync(IRequestContext source, IRequestContext target)
     {
-        IDictionary<string, object>? prefs = null;
-
-        // GetAllPreferences must run on the CEF UI thread.
-        await Cef.UIThreadTaskFactory.StartNew(() =>
+        foreach (var key in PortablePreferenceKeys)
         {
-            prefs = source.GetAllPreferences(includeDefaults: false);
-        });
-
-        if (prefs == null) return;
-
-        // SetPreference can fail silently for read-only keys; we just skip errors.
-        foreach (var kvp in prefs)
-        {
-            target.SetPreference(kvp.Key, kvp.Value, out _);
+            var value = await source.GetPreferenceSafeAsync(key).ConfigureAwait(false);
+            if (value == null) continue;
+            await target.SetPreferenceSafeAsync(key, value).ConfigureAwait(false);
         }
     }
 
-    /// <summary>
-    /// Copies all Cookies from the <paramref name="source"/> context into <paramref name="target"/>.
-    /// CEF will persist them to the target profile's <c>Network/Cookies</c> SQLite DB automatically.
-    /// </summary>
+    /// <summary>Copies browsing cookies exclusively through Chromium's CEF CookieManager.</summary>
     public static async Task CopyCookiesAsync(IRequestContext source, IRequestContext target)
     {
-        var srcManager = source.GetCookieManager(null);
-        var dstManager = target.GetCookieManager(null);
-        if (srcManager == null || dstManager == null) return;
+        var srcManager = await source.GetCookieManagerAsync().ConfigureAwait(false);
+        var dstManager = await target.GetCookieManagerAsync().ConfigureAwait(false);
+        if (srcManager == null || srcManager.IsDisposed || dstManager == null || dstManager.IsDisposed) return;
 
-        var cookies = await srcManager.VisitAllCookiesAsync();
+        var cookies = await srcManager.VisitAllCookiesAsync().ConfigureAwait(false);
         if (cookies == null) return;
 
         foreach (var cookie in cookies)
         {
-            string domain = cookie.Domain.TrimStart('.');
-            string url = (cookie.Secure ? "https://" : "http://") + domain + cookie.Path;
-            await dstManager.SetCookieAsync(url, cookie);
+            if (cookie == null || string.IsNullOrWhiteSpace(cookie.Domain)) continue;
+            var domain = cookie.Domain.TrimStart('.');
+            var url = (cookie.Secure ? "https://" : "http://") + domain +
+                      (string.IsNullOrWhiteSpace(cookie.Path) ? "/" : cookie.Path);
+            await dstManager.SetCookieAsync(url, cookie).ConfigureAwait(false);
         }
+
+        await dstManager.FlushStoreAsync().ConfigureAwait(false);
     }
 
     /// <summary>
-    /// Copies both Preferences and Cookies from one profile context to another.
+    /// Copies profile data exposed safely through public CefSharp APIs: allow-listed preferences
+    /// and cookies. Chromium extension/internal state is never copied or rewritten.
     /// </summary>
     public static async Task CopyAllAsync(IRequestContext source, IRequestContext target)
     {
-        await CopyPreferencesAsync(source, target);
-        await CopyCookiesAsync(source, target);
+        await CopyPreferencesAsync(source, target).ConfigureAwait(false);
+        await CopyCookiesAsync(source, target).ConfigureAwait(false);
     }
 
-    /// <summary>
-    /// Applies a set of individual preference key/value pairs to the given context.
-    /// Convenience wrapper around <c>ctx.SetPreference</c>.
-    /// </summary>
-    public static void ApplyPreferences(IRequestContext ctx, IDictionary<string, object> preferences)
-    {
-        foreach (var kvp in preferences)
-        {
-            ctx.SetPreference(kvp.Key, kvp.Value, out _);
-        }
-    }
+    public static Task<ContentSettingValues> GetContentSettingAsync(
+        IRequestContext ctx, string requestingUrl, string topLevelUrl, ContentSettingTypes contentType)
+        => Cef.UIThreadTaskFactory.StartNew(
+            () => ctx.GetContentSetting(requestingUrl, topLevelUrl, contentType));
 
-    /// <summary>
-    /// Reads all non-default preferences from the given context.
-    /// Must be called from the CEF UI thread or wrapped in <c>Cef.UIThreadTaskFactory</c>.
-    /// </summary>
-    public static IDictionary<string, object>? ReadPreferences(IRequestContext ctx)
-    {
-        return ctx.GetAllPreferences(includeDefaults: false);
-    }
+    public static Task SetContentSettingAsync(
+        IRequestContext ctx, string requestingUrl, string topLevelUrl,
+        ContentSettingTypes contentType, ContentSettingValues value)
+        => Cef.UIThreadTaskFactory.StartNew(
+            () => ctx.SetContentSetting(requestingUrl, topLevelUrl, contentType, value));
 }
 
 public static class CefPreferenceExtensions
 {
     /// <summary>
-    /// Safely gets a CEF preference on the CEF UI thread regardless of caller thread.
+    /// Async preference read for hot/UI paths. Prefer this over the synchronous compatibility
+    /// wrapper when the caller can await; CEF requires preference access on its UI thread.
+    /// </summary>
+    public static async Task<object?> GetPreferenceSafeAsync(this IRequestContext? ctx, string name)
+    {
+        if (ctx == null || Cef.IsInitialized != true) return null;
+        try
+        {
+            if (Cef.CurrentlyOnThread(CefThreadIds.TID_UI))
+                return ctx.GetPreference(name);
+            return await Cef.UIThreadTaskFactory.StartNew(() => ctx.GetPreference(name)).ConfigureAwait(false);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Async preference write through CefSharp's native RequestContext SetPreferenceAsync helper.
+    /// Chromium validates the key/value on its UI thread and owns persistence in the disk-backed
+    /// context; Zidimi never mirrors the result into Preferences/Secure Preferences itself.
+    /// </summary>
+    public static async Task<bool> SetPreferenceSafeAsync(this IRequestContext? ctx, string name, object? value)
+    {
+        if (ctx == null || ctx.IsDisposed || Cef.IsInitialized != true) return false;
+        try
+        {
+            var response = await ctx.SetPreferenceAsync(name, value!).ConfigureAwait(false);
+            if (!response.Success && !string.IsNullOrWhiteSpace(response.ErrorMessage))
+                AppLogger.Log("Preferences", $"CEF rejected '{name}': {response.ErrorMessage}");
+            return response.Success;
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Log("Preferences", ex, $"Setting Chromium preference '{name}'.");
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Synchronous compatibility wrapper for small, infrequent Settings UI reads. New hot paths
+    /// should use GetPreferenceSafeAsync so WPF is not blocked waiting for the CEF UI thread.
     /// </summary>
     public static object? GetPreferenceSafe(this IRequestContext? ctx, string name)
     {
@@ -100,7 +148,7 @@ public static class CefPreferenceExtensions
                 return ctx.GetPreference(name);
             }
             var targetCtx = ctx;
-            return Cef.UIThreadTaskFactory.StartNew(() => targetCtx.GetPreference(name)).Result;
+            return Cef.UIThreadTaskFactory.StartNew(() => targetCtx.GetPreference(name)).GetAwaiter().GetResult();
         }
         catch
         {
@@ -108,24 +156,4 @@ public static class CefPreferenceExtensions
         }
     }
 
-    /// <summary>
-    /// Safely sets a CEF preference on the CEF UI thread regardless of caller thread.
-    /// </summary>
-    public static bool SetPreferenceSafe(this IRequestContext? ctx, string name, object value)
-    {
-        if (ctx == null || Cef.IsInitialized != true) return false;
-        try
-        {
-            if (Cef.CurrentlyOnThread(CefThreadIds.TID_UI))
-            {
-                return ctx.SetPreference(name, value, out _);
-            }
-            var targetCtx = ctx;
-            return Cef.UIThreadTaskFactory.StartNew(() => targetCtx.SetPreference(name, value, out _)).Result;
-        }
-        catch
-        {
-            return false;
-        }
-    }
 }

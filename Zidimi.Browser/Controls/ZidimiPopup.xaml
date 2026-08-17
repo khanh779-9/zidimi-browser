@@ -36,7 +36,7 @@
                                     MaxHeight="{TemplateBinding MaxHeight}"
                                     SnapsToDevicePixels="True">
                                 <Border.Effect>
-                                    <DropShadowEffect Color="#000000" BlurRadius="24" ShadowDepth="8" Opacity="0.12" />
+                                    <DropShadowEffect Color="{DynamicResource ShadowColor}" BlurRadius="24" ShadowDepth="8" Opacity="0.12" />
                                 </Border.Effect>
                                 
                                 

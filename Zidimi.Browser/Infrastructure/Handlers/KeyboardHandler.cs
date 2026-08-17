@@ -6,6 +6,13 @@ namespace Zidimi.Browser.Infrastructure.Handlers;
 
 public class KeyboardHandler : IKeyboardHandler
 {
+    private readonly Action? _toggleDevTools;
+
+    public KeyboardHandler(Action? toggleDevTools = null)
+    {
+        _toggleDevTools = toggleDevTools;
+    }
+
     // CefSharp calls these on a CEF background thread.
     // We need to use Dispatcher to interact with WPF UI.
 
@@ -54,8 +61,11 @@ public class KeyboardHandler : IKeyboardHandler
         // F12 (DevTools)
         if (windowsKeyCode == (int)Key.F12)
         {
-            browser.ShowDevTools();
-            return true; // Handled
+            if (_toggleDevTools != null)
+            {
+                Application.Current.Dispatcher.BeginInvoke(_toggleDevTools);
+            }
+            return true; // Never fall back to CEF's native DevTools window.
         }
 
         // Ctrl + L (Focus Address Bar) - Tricky because AddressBar is in BrowserView

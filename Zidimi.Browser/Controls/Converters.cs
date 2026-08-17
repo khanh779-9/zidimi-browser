@@ -9,8 +9,12 @@ public sealed class BoolToVisibilityConverter : IValueConverter
 {
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
-        var b = value is bool bb && bb;
-        if (parameter is string s && s == "invert") b = !b;
+        var mode = parameter as string;
+        var b = mode?.Equals("notempty", StringComparison.OrdinalIgnoreCase) == true
+            ? value is string text && !string.IsNullOrWhiteSpace(text)
+            : value is bool flag && flag;
+
+        if (mode?.Equals("invert", StringComparison.OrdinalIgnoreCase) == true) b = !b;
         return b ? Visibility.Visible : Visibility.Collapsed;
     }
 
@@ -32,26 +36,3 @@ public sealed class NullToVisibilityConverter : IValueConverter
     public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         => throw new NotSupportedException();
 }
-
-/// <summary>Turns the string entered in the address bar into a valid URL (prepends http:// when missing).</summary>
-public sealed class StringToUrlConverter : IValueConverter{
-    public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-        => value ?? "";
-
-    public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-    {
-        if (value is string s)
-        {
-            s = s.Trim();
-            if (string.IsNullOrEmpty(s)) return "";
-            if (Uri.IsWellFormedUriString(s, UriKind.Absolute)) return s;
-            if (s.Contains('.') && !s.Contains(' '))
-                return "https://" + s;
-
-var engine = Zidimi.Browser.Models.AppSettings.Profile.SearchEngine;
-            return Zidimi.Browser.Models.SearchEngines.BuildUrl(engine, Uri.EscapeDataString(s));
-        }
-        return "";
-    }
-}
-

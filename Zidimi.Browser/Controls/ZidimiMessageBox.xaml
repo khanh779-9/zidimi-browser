@@ -16,7 +16,6 @@
     <Window.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
-                <ResourceDictionary Source="../Themes/Colors.xaml" />
                 <ResourceDictionary Source="ZidimiButton.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
@@ -29,7 +28,7 @@
             BorderThickness="1"
             CornerRadius="10">
         <Border.Effect>
-            <DropShadowEffect Color="#000000" BlurRadius="20" ShadowDepth="0" Opacity="0.4" />
+            <DropShadowEffect Color="{DynamicResource ShadowColor}" BlurRadius="20" ShadowDepth="0" Opacity="0.4" />
         </Border.Effect>
         <Grid>
             <Grid.RowDefinitions>

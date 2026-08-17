@@ -17,8 +17,13 @@ public enum ContentPermission
 }
 
 /// <summary>
-/// Per-capability default permission policies tied to a profile. Stored in the
-/// app's own settings; Chromium's Preferences file stays untouched.
+/// Browser-shell permission defaults tied to a profile.
+///
+/// CefContentSettingsBridge mirrors the subset with a stable public CEF content-setting API into
+/// the profile IRequestContext (camera, microphone, location, notifications, etc.). The remaining
+/// values live here as a deliberate fallback for PermissionRequestType capabilities that CEF does
+/// not expose as a safe/stable ContentSettingTypes value. Chromium-owned Preferences files are
+/// never edited directly.
 /// </summary>
 public class SitePermissions
 {
@@ -51,6 +56,6 @@ public class SitePermissions
     public ContentPermission LocalNetwork { get; set; } = ContentPermission.Ask;
     public ContentPermission LoopbackNetwork { get; set; } = ContentPermission.Ask;
 
-    /// <summary>When set, pop-ups (window.open / target=_blank) are blocked entirely.</summary>
+    /// <summary>When set, unrequested pop-ups are blocked; user-initiated new tabs stay in Zidimi.</summary>
     public bool BlockPopups { get; set; } = false;
 }

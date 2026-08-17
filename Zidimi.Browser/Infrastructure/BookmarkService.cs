@@ -1,166 +1,115 @@
 using System.Collections.ObjectModel;
-using Zidimi.Browser.Models;
-using System.IO;
-using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading;
 using System.Windows;
+using Zidimi.Browser.Models;
 
 namespace Zidimi.Browser.Infrastructure;
 
-/// <summary>Bookmark service with per-profile JSON persistence (User Data\&lt;profile&gt;\Bookmarks — like Chrome).</summary>
-public sealed class BookmarkService
+/// <summary>
+/// Native Chromium Bookmarks reader. Zidimi does not create bookmarks.json of its own.
+///
+/// CEF currently does not expose Chromium's full BookmarkModel mutation API. Zidimi therefore
+/// treats the native Bookmarks file as read-only metadata for the omnibox/toolbar and sends bookmark
+/// management to Chromium's own <c>chrome://bookmarks</c> UI instead of editing the JSON itself.
+/// </summary>
+public sealed class BookmarkService : IDisposable
 {
     private string _profileName = AppSettings.Global.CurrentProfile;
+    private int _loadGeneration;
+    private readonly HashSet<string> _urls = new(StringComparer.OrdinalIgnoreCase);
 
     public ObservableCollection<Bookmark> Items { get; } = new();
 
-    private string DataFile => UserDataPaths.BookmarksFile(_profileName);
+    public Task InitializeAsync() => LoadAsync(_profileName);
 
-    public BookmarkService()
-    {
-        Load();
-    }
-
-    /// <summary>Switch to another profile — reload that profile's bookmarks.</summary>
     public void SwitchProfile(string profileName)
     {
-        if (string.IsNullOrWhiteSpace(profileName) || profileName == _profileName) return;
-        _profileName = profileName;
-        Application.Current?.Dispatcher.Invoke(Items.Clear);
-        Load();
+        var profileId = UserDataPaths.NormalizeProfileId(profileName);
+        if (string.Equals(profileId, _profileName, StringComparison.OrdinalIgnoreCase)) return;
+        _profileName = profileId;
+        Interlocked.Increment(ref _loadGeneration);
+        Application.Current?.Dispatcher.Invoke(ClearMemory);
+        _ = LoadAsync(profileId);
     }
 
-    public void Add(string url, string title)
+    private async Task LoadAsync(string profileId)
     {
-        if (string.IsNullOrWhiteSpace(url)) return;
-        if (Items.Any(b => b.Url == url)) return;
-        var bm = new Bookmark { Url = url, Title = string.IsNullOrWhiteSpace(title) ? url : title, CreatedAt = DateTime.Now };
-        Application.Current?.Dispatcher.Invoke(() => Items.Add(bm));
-        Save();
-    }
-
-    public void Remove(Bookmark bm)
-    {
-        Application.Current?.Dispatcher.Invoke(() =>
-        {
-            if (Items.Contains(bm)) Items.Remove(bm);
-        });
-        Save();
-    }
-
-    public bool Contains(string url) => Items.Any(b => b.Url == url);
-
-    private void Load()
-    {
+        var generation = Interlocked.Increment(ref _loadGeneration);
         try
         {
-            if (!File.Exists(DataFile)) return;
-            var json = File.ReadAllText(DataFile);
-            var root = JsonNode.Parse(json);
-            var roots = root?["roots"];
-            if (roots != null)
+            var list = await Task.Run(() => ReadNativeBookmarks(UserDataPaths.BookmarksFile(profileId))).ConfigureAwait(false);
+            var dispatcher = Application.Current?.Dispatcher;
+            if (dispatcher == null) return;
+            await dispatcher.InvokeAsync(() =>
             {
-                ExtractBookmarks(roots["bookmark_bar"]);
-                ExtractBookmarks(roots["other"]);
-                ExtractBookmarks(roots["synced"]);
-            }
+                if (generation != _loadGeneration ||
+                    !string.Equals(profileId, _profileName, StringComparison.OrdinalIgnoreCase))
+                    return;
+                ClearMemory();
+                foreach (var item in list)
+                    if (_urls.Add(item.Url)) Items.Add(item);
+            });
         }
-        catch { /* ignore corrupted file */ }
-    }
-
-    private void ExtractBookmarks(JsonNode? folder)
-    {
-        var children = folder?["children"] as JsonArray;
-        if (children == null) return;
-        foreach (var child in children)
+        catch (Exception ex)
         {
-            if (child?["type"]?.GetValue<string>() == "url")
-            {
-                var bm = new Bookmark
-                {
-                    Url = child["url"]?.GetValue<string>() ?? "",
-                    Title = child["name"]?.GetValue<string>() ?? ""
-                };
-                Items.Add(bm);
-            }
-            else if (child?["type"]?.GetValue<string>() == "folder")
-            {
-                ExtractBookmarks(child);
-            }
+            AppLogger.Log("Bookmarks", ex, $"Reading native Chromium Bookmarks for '{profileId}'.");
         }
     }
 
-    public void Save()
+    private static List<Bookmark> ReadNativeBookmarks(string path)
     {
+        var items = new List<Bookmark>();
+        if (!File.Exists(path)) return items;
         try
         {
-            UserDataPaths.EnsureProfileDir(_profileName);
-            JsonNode? rootNode = null;
-            if (File.Exists(DataFile))
-            {
-                try { rootNode = JsonNode.Parse(File.ReadAllText(DataFile)); } catch { }
-            }
-            
-            if (rootNode == null)
-            {
-                rootNode = new JsonObject
-                {
-                    ["version"] = 1,
-                    ["roots"] = new JsonObject
-                    {
-                        ["bookmark_bar"] = new JsonObject
-                        {
-                            ["id"] = "1",
-                            ["name"] = "Bookmarks bar",
-                            ["type"] = "folder",
-                            ["children"] = new JsonArray()
-                        },
-                        ["other"] = new JsonObject
-                        {
-                            ["id"] = "2",
-                            ["name"] = "Other bookmarks",
-                            ["type"] = "folder",
-                            ["children"] = new JsonArray()
-                        },
-                        ["synced"] = new JsonObject
-                        {
-                            ["id"] = "3",
-                            ["name"] = "Mobile bookmarks",
-                            ["type"] = "folder",
-                            ["children"] = new JsonArray()
-                        }
-                    }
-                };
-            }
-            
-            // Replace the bookmark_bar children
-            var children = new JsonArray();
-            int id = 10;
-            foreach (var b in Items)
-            {
-                children.Add(new JsonObject
-                {
-                    ["id"] = (id++).ToString(),
-                    ["name"] = b.Title,
-                    ["type"] = "url",
-                    ["url"] = b.Url,
-                    ["guid"] = Guid.NewGuid().ToString()
-                });
-            }
-            
-            var roots = rootNode["roots"] as JsonObject;
-            if (roots != null)
-            {
-                var bbar = roots["bookmark_bar"] as JsonObject;
-                if (bbar != null)
-                {
-                    bbar["children"] = children;
-                }
-            }
-            
-            File.WriteAllText(DataFile, rootNode.ToJsonString(new JsonSerializerOptions { WriteIndented = true }));
+            var root = JsonNode.Parse(File.ReadAllText(path));
+            if (root?["roots"] is not JsonObject roots) return items;
+            var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var (_, node) in roots)
+                Extract(node, seen, items);
         }
-        catch { /* ignore write errors */ }
+        catch (Exception ex)
+        {
+            AppLogger.Log("Bookmarks", ex, "Parsing Chromium Bookmarks.");
+        }
+        return items;
+    }
+
+    private static void Extract(JsonNode? node, ISet<string> seen, ICollection<Bookmark> output)
+    {
+        if (node is not JsonObject obj) return;
+        var type = obj["type"]?.GetValue<string>();
+        if (string.Equals(type, "url", StringComparison.OrdinalIgnoreCase))
+        {
+            var url = obj["url"]?.GetValue<string>()?.Trim();
+            if (string.IsNullOrWhiteSpace(url) || !seen.Add(url)) return;
+            var title = obj["name"]?.GetValue<string>();
+            output.Add(new Bookmark
+            {
+                Url = url,
+                Title = string.IsNullOrWhiteSpace(title) ? url : title,
+                CreatedAt = ParseChromeBookmarkTime(obj["date_added"]?.GetValue<string>()),
+            });
+            return;
+        }
+        if (obj["children"] is JsonArray children)
+            foreach (var child in children) Extract(child, seen, output);
+    }
+
+    private static DateTime ParseChromeBookmarkTime(string? value)
+        => long.TryParse(value, out var micros) ? SqliteHelper.FromChromeTime(micros) : DateTime.Now;
+
+    private void ClearMemory()
+    {
+        Items.Clear();
+        _urls.Clear();
+    }
+
+    public void Dispose()
+    {
+        // Invalidate any read-only Chromium Bookmarks load still running in the background so it
+        // cannot repopulate the WPF collection after the owning browser window has been disposed.
+        Interlocked.Increment(ref _loadGeneration);
     }
 }
-

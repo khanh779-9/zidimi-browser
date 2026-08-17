@@ -1,19 +1,14 @@
 using System.Collections.ObjectModel;
-using System.IO;
-using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Windows;
 using Zidimi.Browser.Controls;
 using Zidimi.Browser.Infrastructure;
 using Zidimi.Browser.Models;
-using CefSharp;
 
 namespace Zidimi.Browser.Views;
 
 public partial class ProfileSelectorWindow : ZidimiWindow
 {
     public ObservableCollection<ProfileSelectorItem> Profiles { get; } = new();
-    private bool _isUpdating = true;
 
     public ProfileSelectorWindow()
     {
@@ -24,258 +19,185 @@ public partial class ProfileSelectorWindow : ZidimiWindow
 
     private void LoadProfiles()
     {
-        _isUpdating = true;
         Profiles.Clear();
+        var globalChanged = false;
 
-        try
+        var discovered = ChromiumProfileCatalog.GetProfiles(AppSettings.Global.Profiles);
+        foreach (var profile in discovered)
         {
-            if (File.Exists(UserDataPaths.LocalStatePath))
+            if (!AppSettings.Global.Profiles.Contains(profile.Id, StringComparer.OrdinalIgnoreCase))
             {
-                var json = File.ReadAllText(UserDataPaths.LocalStatePath);
-                if (JsonSerializer.Deserialize<JsonNode>(json) is JsonObject root && 
-                    root.TryGetPropertyValue("profile", out var profileNode) && 
-                    profileNode is JsonObject profileObj)
-                {
-                    if (profileObj.TryGetPropertyValue("show_picker_on_startup", out var showPickerNode) && showPickerNode != null)
-                    {
-                        ShowOnStartupToggle.IsChecked = showPickerNode.GetValue<bool>();
-                    }
-                    else
-                    {
-                        ShowOnStartupToggle.IsChecked = true;
-                    }
-
-                    if (profileObj.TryGetPropertyValue("info_cache", out var infoCacheNode) && infoCacheNode is JsonObject infoCache)
-                    {
-                        var orderedFolders = new List<string>();
-                        if (profileObj.TryGetPropertyValue("profiles_order", out var orderNode) && orderNode is JsonArray orderArray)
-                        {
-                            foreach (var item in orderArray)
-                            {
-                                if (item != null) orderedFolders.Add(item.GetValue<string>());
-                            }
-                        }
-
-                        foreach (var kvp in infoCache)
-                        {
-                            if (!orderedFolders.Contains(kvp.Key))
-                            {
-                                orderedFolders.Add(kvp.Key);
-                            }
-                        }
-
-                        foreach (var folderName in orderedFolders)
-                        {
-                            if (!infoCache.TryGetPropertyValue(folderName, out var itemNode) || !(itemNode is JsonObject itemObj))
-                                continue;
-
-                            var name = folderName;
-                            if (itemObj.TryGetPropertyValue("name", out var nameNode) && nameNode != null)
-                            {
-                                name = nameNode.GetValue<string>();
-                            }
-
-                            var avatarPath = UserDataPaths.AvatarIconFile(folderName);
-                            if (!File.Exists(avatarPath))
-                            {
-                                AvatarGenerator.GenerateAndSave(folderName);
-                            }
-
-                            Profiles.Add(new ProfileSelectorItem
-                            {
-                                FolderName = folderName,
-                                Name = name,
-                                AvatarPath = avatarPath,
-                                IsAddButton = false
-                            });
-                        }
-                    }
-                }
+                AppSettings.Global.Profiles.Add(profile.Id);
+                globalChanged = true;
             }
-        }
-        catch { }
-
-        // Fallback for first run / empty
-        if (Profiles.Count == 0)
-        {
-            var defaultName = UserDataPaths.DefaultProfileName;
-            var folderName = UserDataPaths.ProfileFolder(defaultName);
-            var avatarPath = UserDataPaths.AvatarIconFile(folderName);
-            if (!File.Exists(avatarPath)) AvatarGenerator.GenerateAndSave(folderName);
 
             Profiles.Add(new ProfileSelectorItem
             {
-                FolderName = folderName,
-                Name = defaultName,
-                AvatarPath = avatarPath,
-                IsAddButton = false
+                ProfileId = profile.Id,
+                FolderName = profile.Id,
+                Name = profile.DisplayName,
+                UserName = profile.UserName,
+                AvatarSource = AvatarGenerator.CreateImageSource(profile.Id),
+                IsAddButton = false,
             });
-            ShowOnStartupToggle.IsChecked = true;
         }
 
-        // Add Button
+        if (Profiles.Count == 0)
+        {
+            AppSettings.Global.Profiles.Add(UserDataPaths.DefaultProfileId);
+            AppSettings.Global.CurrentProfile = UserDataPaths.DefaultProfileId;
+            AppSettings.SaveGlobal();
+            LoadProfiles();
+            return;
+        }
+
         Profiles.Add(new ProfileSelectorItem { IsAddButton = true });
-        _isUpdating = false;
+        // The directory catalog is derived state; only shell state is persisted through CEF.
+        if (globalChanged) AppSettings.SaveGlobal();
     }
 
     private void Profile_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is FrameworkElement fe && fe.Tag is ProfileSelectorItem item)
+        if (sender is not FrameworkElement { Tag: ProfileSelectorItem item }) return;
+
+        if (item.IsAddButton)
         {
-            if (item.IsAddButton)
-            {
-                // Inline add-profile logic (formerly in ProfileManagerWindow.Add_Click)
-                var newProfile = AppSettings.NextProfileName();
-                AppSettings.Global.Profiles.Add(newProfile);
-                AppSettings.Global.CurrentProfile = newProfile;
-                AppSettings.LoadProfile(newProfile);
-                AppSettings.SaveAll();
+            var profileId = ChromiumProfileCatalog.NextProfileId(AppSettings.Global.Profiles);
+            var displayName = AppSettings.NextProfileName();
 
-                UserDataPaths.EnsureProfileDir(newProfile);
-                AvatarGenerator.GenerateAndSave(newProfile);
-                UserDataPaths.RegisterProfile(newProfile);
-                App.ViewModel?.SwitchProfile(newProfile);
-                ThemeManager.ApplyFromSettings(AppSettings.Profile.Theme);
+            // Selecting the new CachePath is enough; CEF creates and owns the profile files.
+            AppSettings.Global.Profiles.Add(profileId);
+            AppSettings.Global.CurrentProfile = profileId;
+            AppSettings.LoadProfile(profileId);
+            AppSettings.Profile.DisplayName = displayName;
+            AppSettings.SaveAll();
 
-                LoadProfiles();
-                return;
-            }
-
-            LaunchProfile(item.Name);
+            App.ViewModel?.SwitchProfile(profileId);
+            ThemeManager.ApplyFromSettings(AppSettings.Profile.Theme);
+            LoadProfiles();
+            return;
         }
+
+        LaunchProfile(item.ProfileId);
     }
 
     private void MoreOptions_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is System.Windows.Controls.Button btn && btn.ContextMenu != null)
+        if (sender is System.Windows.Controls.Button { ContextMenu: not null } button)
         {
-            btn.ContextMenu.PlacementTarget = btn;
-            btn.ContextMenu.IsOpen = true;
+            button.ContextMenu.PlacementTarget = button;
+            button.ContextMenu.IsOpen = true;
         }
         e.Handled = true;
     }
 
     private void DeleteProfile_Click(object sender, RoutedEventArgs e)
     {
-        if (sender is System.Windows.Controls.MenuItem mi && mi.Parent is System.Windows.Controls.ContextMenu cm && 
-            cm.PlacementTarget is FrameworkElement b && b.Tag is ProfileSelectorItem p)
-        {
-            if (AppSettings.Global.Profiles.Count <= 1 ||
-                string.Equals(AppSettings.Global.CurrentProfile, p.Name, StringComparison.OrdinalIgnoreCase))
-            {
-                ZidimiMessageBox.Show(
-                    LanguageManager.Instance["ProfileManager_CantDeleteActiveMsg"],
-                    LanguageManager.Instance["ProfileManager_CantDeleteActiveTitle"],
-                    ZidimiMessageBoxButton.OK,
-                    ZidimiMessageBoxImage.Warning,
-                    this);
-                return;
-            }
+        if (sender is not System.Windows.Controls.MenuItem { Parent: System.Windows.Controls.ContextMenu menu } ||
+            menu.PlacementTarget is not FrameworkElement { Tag: ProfileSelectorItem profile })
+            return;
 
-            var res = ZidimiMessageBox.Show(
-                LanguageManager.Instance["ProfileManager_DeleteConfirmMsg"],
-                LanguageManager.Instance["ProfileManager_DeleteConfirmTitle"],
-                ZidimiMessageBoxButton.YesNo,
+        if (AppSettings.Global.Profiles.Count <= 1 ||
+            string.Equals(profile.ProfileId, UserDataPaths.DefaultProfileId, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(AppSettings.Global.CurrentProfile, profile.ProfileId, StringComparison.OrdinalIgnoreCase))
+        {
+            ZidimiMessageBox.Show(
+                LanguageManager.Instance["ProfileManager_CantDeleteActiveMsg"],
+                LanguageManager.Instance["ProfileManager_CantDeleteActiveTitle"],
+                ZidimiMessageBoxButton.OK,
                 ZidimiMessageBoxImage.Warning,
                 this);
+            return;
+        }
 
-            if (res == ZidimiMessageBoxResult.Yes)
-            {
-                AppSettings.Global.Profiles.Remove(p.Name);
-                AppSettings.SaveAll();
+        var result = ZidimiMessageBox.Show(
+            LanguageManager.Instance["ProfileManager_DeleteConfirmMsg"],
+            LanguageManager.Instance["ProfileManager_DeleteConfirmTitle"],
+            ZidimiMessageBoxButton.YesNo,
+            ZidimiMessageBoxImage.Warning,
+            this);
 
-                UserDataPaths.UpdateLocalState(root =>
-                {
-                    if (root["profile"] is JsonObject prof)
-                    {
-                        if (prof["info_cache"] is JsonObject cache)
-                            cache.Remove(p.FolderName);
-                        
-                        if (prof["profiles_order"] is JsonArray order)
-                        {
-                            var toRemove = System.Linq.Enumerable.FirstOrDefault(order, x => x?.GetValue<string>() == p.FolderName);
-                            if (toRemove != null) order.Remove(toRemove);
-                        }
-                    }
-                });
+        if (result != ZidimiMessageBoxResult.Yes) return;
 
-                try
-                {
-                    var dir = UserDataPaths.ProfileDir(p.Name);
-                    if (Directory.Exists(dir))
-                        Directory.Delete(dir, true);
-                }
-                catch { }
+        App.RequestContexts?.ReleaseProfileContext(profile.ProfileId);
 
-                LoadProfiles();
-            }
+        try
+        {
+            var directory = UserDataPaths.ProfileDir(profile.ProfileId);
+            if (Directory.Exists(directory))
+                Directory.Delete(directory, recursive: true);
+
+            AppSettings.Global.Profiles.RemoveAll(id =>
+                string.Equals(id, profile.ProfileId, StringComparison.OrdinalIgnoreCase));
+            ChromiumProfileCatalog.ForgetProfile(profile.ProfileId);
+            AppSettings.SaveGlobal();
+            LoadProfiles();
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Log("Profile", ex, $"Deleting profile folder '{profile.ProfileId}'.");
+            ZidimiMessageBox.Show(
+                ex.Message,
+                LanguageManager.Instance["Pref_Error"],
+                ZidimiMessageBoxButton.OK,
+                ZidimiMessageBoxImage.Error,
+                this);
         }
     }
 
     private void Guest_Click(object sender, RoutedEventArgs e)
     {
-        if (App.ViewModel is null)
-        {
-            ((App)Application.Current).InitializeBrowser();
-        }
-
         if (App.ViewModel is not null && !App.ViewModel.IsGuestMode)
-        {
             App.ViewModel.ToggleGuestMode();
-        }
+
+        ((App)Application.Current).InitializeBrowser();
         Close();
     }
 
-    private void ShowOnStartup_Toggled(object sender, RoutedEventArgs e)
+    private void LaunchProfile(string profileId)
     {
-        if (_isUpdating) return;
-        bool show = ShowOnStartupToggle.IsChecked == true;
-        App.ShowPickerOnStartupPreference = show;
+        var app = (App)Application.Current;
+        var resolvedId = ChromiumProfileCatalog.ResolveProfileId(profileId, AppSettings.Global.Profiles);
 
-        UserDataPaths.UpdateLocalState(root =>
-        {
-            var profileObj = (JsonObject?)root["profile"] ?? (JsonObject)(root["profile"] = new JsonObject());
-            profileObj["show_picker_on_startup"] = show;
-        });
-
-        if (App.CefReady)
-        {
-            var ctx = App.RequestContexts?.GetProfileContext(AppSettings.Global.CurrentProfile) ?? Cef.GetGlobalRequestContext();
-            ctx?.SetPreferenceSafe("profile.show_picker_on_startup", show);
-        }
-    }
-
-    private void LaunchProfile(string profileName)
-    {
-        var alreadyRunning = App.ViewModel is not null;
+        // App.ViewModel is created before CEF starts so the splash/profile selector can use the
+        // same services. Therefore ViewModel != null does NOT mean that a browser window exists.
+        // The old test skipped InitializeBrowser() during startup, then closed the picker (the last
+        // WPF window), which made the process exit with no MainWindow.
+        var browserAlreadyRunning = app.HasLiveBrowserWindow;
         var profileChanged = !string.Equals(
-            AppSettings.Global.CurrentProfile, profileName, StringComparison.OrdinalIgnoreCase);
+            AppSettings.Global.CurrentProfile, resolvedId, StringComparison.OrdinalIgnoreCase);
 
-        AppSettings.Global.CurrentProfile = profileName;
+        AppSettings.Global.CurrentProfile = resolvedId;
         AppSettings.SaveGlobal();
-        AppSettings.LoadProfile(profileName);
+        AppSettings.LoadProfile(resolvedId);
 
-        if (alreadyRunning && App.ViewModel is not null)
+        if (browserAlreadyRunning)
         {
             if (profileChanged || App.ViewModel.IsGuestMode)
             {
-                App.ViewModel.SwitchProfile(profileName);
+                App.ViewModel.SwitchProfile(resolvedId);
                 ThemeManager.ApplyFromSettings(AppSettings.Profile.Theme);
             }
-        }
-        else
-        {
-            ((App)Application.Current).InitializeBrowser();
+
+            // This picker was opened from the live browser (normally as a modal dialog).
+            // The owner/main browser stays alive, so it is safe to close only the picker.
+            Close();
+            return;
         }
 
+        // Startup picker path. InitializeBrowser() synchronously re-shows the integrated Zidimi
+        // shell before returning, so this picker can close without leaving WPF with zero windows.
+        app.InitializeBrowser();
         Close();
     }
 }
 
 public class ProfileSelectorItem
 {
-    public string FolderName { get; set; } = "";
-    public string Name { get; set; } = "";
-    public string AvatarPath { get; set; } = "";
+    public string ProfileId { get; set; } = string.Empty;
+    public string FolderName { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string UserName { get; set; } = string.Empty;
+    public System.Windows.Media.ImageSource? AvatarSource { get; set; }
     public bool IsAddButton { get; set; }
 }

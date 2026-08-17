@@ -12,6 +12,13 @@ namespace Zidimi.Browser.Infrastructure.Handlers;
 /// </summary>
 public sealed class ContextMenuHandler : IContextMenuHandler
 {
+    private readonly Action<int, int>? _inspectElement;
+
+    public ContextMenuHandler(Action<int, int>? inspectElement = null)
+    {
+        _inspectElement = inspectElement;
+    }
+
     private const int CustomOpenLinkNewTab = 26500;
     private const int CustomCopyLinkAddress = 26501;
     private const int CustomSaveLinkAs = 26502;
@@ -100,8 +107,12 @@ public sealed class ContextMenuHandler : IContextMenuHandler
                 return true;
 
             case CustomInspectElement:
-                Application.Current?.Dispatcher.BeginInvoke(() =>
-                    browserControl.ShowDevTools());
+                if (_inspectElement != null)
+                {
+                    var x = parameters.XCoord;
+                    var y = parameters.YCoord;
+                    Application.Current?.Dispatcher.BeginInvoke(() => _inspectElement(x, y));
+                }
                 return true;
 
             default:

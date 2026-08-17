@@ -1,9 +1,9 @@
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 using System.Windows.Shapes;
 using System.Windows.Shell;
 using Zidimi.Browser.Infrastructure;
+using Path = System.Windows.Shapes.Path;
 
 namespace Zidimi.Browser.Controls;
 
@@ -94,7 +94,7 @@ public class ZidimiWindow : Window
     {
         ApplyChrome();
         Style = (Style)Application.Current.FindResource("ZidimiWindowStyle");
-        Background = (Brush)Application.Current.FindResource("AppBackgroundBrush");
+        SetResourceReference(BackgroundProperty, "AppBackgroundBrush");
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         StateChanged += OnStateChanged;
     }

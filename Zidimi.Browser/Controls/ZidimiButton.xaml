@@ -2,8 +2,12 @@
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:local="clr-namespace:Zidimi.Browser.Controls">
 
-    
     <Style TargetType="{x:Type local:ZidimiButton}">
+        <!-- Secondary is the neutral default. Every state uses DynamicResource so a live
+             theme switch updates the control without recreating the window. -->
+        <Setter Property="Background" Value="{DynamicResource ZidimiBgElevatedBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource StrokeBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Foreground" Value="{DynamicResource Ink200Brush}" />
         <Setter Property="FontSize" Value="13" />
         <Setter Property="FontWeight" Value="Medium" />
@@ -19,77 +23,104 @@
                             BorderThickness="{TemplateBinding BorderThickness}"
                             CornerRadius="{TemplateBinding CornerRadius}"
                             Padding="{TemplateBinding Padding}">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
-                                          TextBlock.FontSize="{TemplateBinding FontSize}"
-                                          TextBlock.FontWeight="{TemplateBinding FontWeight}"
-                                          TextBlock.Foreground="{TemplateBinding Foreground}" />
+                        <StackPanel Orientation="Horizontal"
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center">
+                            <Path x:Name="Icon"
+                                  Width="16" Height="16"
+                                  Stretch="Uniform"
+                                  Data="{TemplateBinding IconData}"
+                                  Stroke="{TemplateBinding Foreground}"
+                                  StrokeThickness="1.7"
+                                  StrokeStartLineCap="Round"
+                                  StrokeEndLineCap="Round"
+                                  StrokeLineJoin="Round"
+                                  Fill="Transparent" />
+                            <ContentPresenter x:Name="ContentHost"
+                                              Margin="8,0,0,0"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              TextBlock.FontSize="{TemplateBinding FontSize}"
+                                              TextBlock.FontWeight="{TemplateBinding FontWeight}"
+                                              TextBlock.Foreground="{TemplateBinding Foreground}" />
+                        </StackPanel>
                     </Border>
                     <ControlTemplate.Triggers>
-                        
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="bd" Property="Opacity" Value="0.92" />
+                        <Trigger Property="IconData" Value="{x:Null}">
+                            <Setter TargetName="Icon" Property="Visibility" Value="Collapsed" />
+                            <Setter TargetName="ContentHost" Property="Margin" Value="0" />
                         </Trigger>
-                        <Trigger Property="IsPressed" Value="True">
-                            <Setter TargetName="bd" Property="Opacity" Value="0.8" />
+                        <Trigger Property="Content" Value="{x:Null}">
+                            <Setter TargetName="ContentHost" Property="Visibility" Value="Collapsed" />
                         </Trigger>
-                        <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Opacity" Value="0.45" />
-                            <Setter Property="Cursor" Value="Arrow" />
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
 
-    
-    <Style TargetType="{x:Type local:ZidimiButton}"
-           x:Key="ZidimiButtonPrimary"
-           BasedOn="{StaticResource {x:Type local:ZidimiButton}}">
-        <Setter Property="Background" Value="{DynamicResource CtaBrush}" />
-        <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
-        <Setter Property="FontWeight" Value="SemiBold" />
-        
-        <Style.Triggers>
-            <Trigger Property="IsMouseOver" Value="True">
-                
-                <Setter Property="Background" Value="{StaticResource CtaHoverBrush}" />
-            </Trigger>
-            <Trigger Property="IsPressed" Value="True">
-                <Setter Property="Background" Value="{StaticResource CtaActiveBrush}" />
-            </Trigger>
-        </Style.Triggers>
-    </Style>
-
-    
-    <Style TargetType="{x:Type local:ZidimiButton}"
-           x:Key="ZidimiButtonGhost"
-           BasedOn="{StaticResource {x:Type local:ZidimiButton}}">
-        <Setter Property="Background" Value="Transparent" />
-        <Setter Property="BorderThickness" Value="0" />
-        <Setter Property="Foreground" Value="{DynamicResource Ink300Brush}" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="{x:Type local:ZidimiButton}">
-                    <Border x:Name="bd"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            CornerRadius="{TemplateBinding CornerRadius}"
-                            Padding="{TemplateBinding Padding}">
-                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
-                                          TextBlock.FontSize="{TemplateBinding FontSize}"
-                                          TextBlock.FontWeight="{TemplateBinding FontWeight}"
-                                          TextBlock.Foreground="{TemplateBinding Foreground}" />
-                    </Border>
-                    <ControlTemplate.Triggers>
+                        <!-- Secondary/default states. -->
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="bd" Property="Background" Value="{DynamicResource ZidimiBgHoverBrush}" />
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource StrokeLightBrush}" />
                             <Setter Property="Foreground" Value="{DynamicResource Ink100Brush}" />
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="bd" Property="Background" Value="{DynamicResource ZidimiBgActiveBrush}" />
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource AccentBorderBrush}" />
                         </Trigger>
+
+                        <!-- Primary states use the theme's accent gradient, not opacity tricks. -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="Variant" Value="Primary" />
+                                <Condition Property="IsMouseOver" Value="True" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource CtaHoverBrush}" />
+                            <Setter TargetName="bd" Property="BorderBrush" Value="Transparent" />
+                            <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+                        </MultiTrigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="Variant" Value="Primary" />
+                                <Condition Property="IsPressed" Value="True" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource CtaActiveBrush}" />
+                            <Setter TargetName="bd" Property="BorderBrush" Value="Transparent" />
+                            <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+                        </MultiTrigger>
+
+                        <!-- Ghost only paints a surface while interacting. -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="Variant" Value="Ghost" />
+                                <Condition Property="IsMouseOver" Value="True" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource ZidimiBgHoverBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource Ink100Brush}" />
+                        </MultiTrigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="Variant" Value="Ghost" />
+                                <Condition Property="IsPressed" Value="True" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource ZidimiBgActiveBrush}" />
+                        </MultiTrigger>
+
+                        <!-- Danger remains a semantic destructive surface in every theme. -->
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="Variant" Value="Danger" />
+                                <Condition Property="IsMouseOver" Value="True" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource DangerHoverBgBrush}" />
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
+                            <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+                        </MultiTrigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="Variant" Value="Danger" />
+                                <Condition Property="IsPressed" Value="True" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="bd" Property="Background" Value="{DynamicResource DangerActiveBgBrush}" />
+                            <Setter TargetName="bd" Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
+                        </MultiTrigger>
+
                         <Trigger Property="IsEnabled" Value="False">
                             <Setter Property="Opacity" Value="0.45" />
                             <Setter Property="Cursor" Value="Arrow" />
@@ -98,25 +129,51 @@
                 </ControlTemplate>
             </Setter.Value>
         </Setter>
+        <Style.Triggers>
+            <Trigger Property="Variant" Value="Primary">
+                <Setter Property="Background" Value="{DynamicResource CtaBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource OnAccentBrush}" />
+                <Setter Property="BorderBrush" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </Trigger>
+            <Trigger Property="Variant" Value="Ghost">
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderBrush" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Foreground" Value="{DynamicResource Ink300Brush}" />
+            </Trigger>
+            <Trigger Property="Variant" Value="Danger">
+                <Setter Property="Background" Value="{DynamicResource DangerBgBrush}" />
+                <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+                <Setter Property="BorderBrush" Value="{DynamicResource StrokeLightBrush}" />
+                <Setter Property="BorderThickness" Value="1" />
+            </Trigger>
+        </Style.Triggers>
     </Style>
 
-    
+    <Style TargetType="{x:Type local:ZidimiButton}"
+           x:Key="ZidimiButtonSecondary"
+           BasedOn="{StaticResource {x:Type local:ZidimiButton}}">
+        <Setter Property="Variant" Value="Secondary" />
+    </Style>
+
+    <Style TargetType="{x:Type local:ZidimiButton}"
+           x:Key="ZidimiButtonPrimary"
+           BasedOn="{StaticResource {x:Type local:ZidimiButton}}">
+        <Setter Property="Variant" Value="Primary" />
+    </Style>
+
+    <Style TargetType="{x:Type local:ZidimiButton}"
+           x:Key="ZidimiButtonGhost"
+           BasedOn="{StaticResource {x:Type local:ZidimiButton}}">
+        <Setter Property="Variant" Value="Ghost" />
+    </Style>
+
     <Style TargetType="{x:Type local:ZidimiButton}"
            x:Key="ZidimiButtonDanger"
            BasedOn="{StaticResource {x:Type local:ZidimiButton}}">
-        <Setter Property="Background" Value="{DynamicResource DangerBgBrush}" />
-        <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource StrokeLightBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
-        
-        <Style.Triggers>
-            <Trigger Property="IsMouseOver" Value="True">
-                <Setter Property="Background" Value="{StaticResource DangerHoverBgBrush}" />
-            </Trigger>
-            <Trigger Property="IsPressed" Value="True">
-                <Setter Property="Background" Value="{StaticResource DangerActiveBgBrush}" />
-            </Trigger>
-        </Style.Triggers>
+        <Setter Property="Variant" Value="Danger" />
     </Style>
 
 </ResourceDictionary>

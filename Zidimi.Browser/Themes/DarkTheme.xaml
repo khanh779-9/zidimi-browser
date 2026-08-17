@@ -1,44 +1,84 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    
+    <!-- Dark theme: layered violet-neutral surfaces + brighter accent for contrast. -->
 
-    
+    <!-- Surfaces -->
     <SolidColorBrush x:Key="ZidimiBgDarkestBrush" Color="#0F0E1A" />
     <SolidColorBrush x:Key="ZidimiBgDarkBrush" Color="#1A1829" />
     <SolidColorBrush x:Key="ZidimiBgSurfaceBrush" Color="#222135" />
     <SolidColorBrush x:Key="ZidimiBgElevatedBrush" Color="#2C2B40" />
     <SolidColorBrush x:Key="ZidimiBgHoverBrush" Color="#363552" />
+    <SolidColorBrush x:Key="ZidimiBgActiveBrush" Color="#403A66" />
+    <SolidColorBrush x:Key="CardHoverBrush" Color="#302F47" />
+    <SolidColorBrush x:Key="Surface0Brush" Color="#222135" />
 
-    
+    <!-- Browser chrome / structure -->
     <SolidColorBrush x:Key="TabActiveBgBrush" Color="#2A2840" />
     <SolidColorBrush x:Key="OmniboxFocusBgBrush" Color="#34324F" />
-    <SolidColorBrush x:Key="DangerBgBrush" Color="#3A1A22" />
     <SolidColorBrush x:Key="TabBarBgBrush" Color="#16151F" />
-
-    
     <SolidColorBrush x:Key="AppBackgroundBrush" Color="#0F0E1A" />
     <SolidColorBrush x:Key="SidebarBackgroundBrush" Color="#1A1829" />
     <SolidColorBrush x:Key="TabBarBackgroundBrush" Color="#16151F" />
     <SolidColorBrush x:Key="ToolbarBackgroundBrush" Color="#1A1829" />
     <SolidColorBrush x:Key="ContentBackgroundBrush" Color="#222135" />
-    <SolidColorBrush x:Key="GlassCardBrush" Color="#CC222135" />
+    <SolidColorBrush x:Key="GlassCardBrush" Color="#F0222135" />
 
-    
+    <!-- Text -->
     <SolidColorBrush x:Key="Ink100Brush" Color="#F4F2FF" />
     <SolidColorBrush x:Key="Ink200Brush" Color="#C8C4E8" />
-    <SolidColorBrush x:Key="Ink300Brush" Color="#8E89B5" />
-    <SolidColorBrush x:Key="Ink400Brush" Color="#615C8A" />
-    <SolidColorBrush x:Key="Ink500Brush" Color="#3D3A5C" />
+    <SolidColorBrush x:Key="Ink300Brush" Color="#9A95C0" />
+    <SolidColorBrush x:Key="Ink400Brush" Color="#77719E" />
+    <SolidColorBrush x:Key="Ink500Brush" Color="#555174" />
 
-    
-    <SolidColorBrush x:Key="StrokeBrush" Color="#2A2942" />
-    <SolidColorBrush x:Key="StrokeLightBrush" Color="#3A3960" />
+    <!-- Borders / scrollbar -->
+    <SolidColorBrush x:Key="StrokeBrush" Color="#34324D" />
+    <SolidColorBrush x:Key="StrokeLightBrush" Color="#49466B" />
+    <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#49466B" />
 
-    
-    <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#363552" />
+    <!-- Accent -->
+    <SolidColorBrush x:Key="ZidimiPurpleBrush" Color="#8B6FFF" />
+    <SolidColorBrush x:Key="ZidimiPurpleLightBrush" Color="#A18CFF" />
+    <SolidColorBrush x:Key="ZidimiPurpleDarkBrush" Color="#6D4AFF" />
+    <SolidColorBrush x:Key="ZidimiPurpleHoverBrush" Color="#9B82FF" />
+    <SolidColorBrush x:Key="ZidimiPurplePressedBrush" Color="#7C60E6" />
+    <SolidColorBrush x:Key="ZidimiPurpleGlowBrush" Color="#4D8B6FFF" />
+    <SolidColorBrush x:Key="AccentBorderBrush" Color="#738B6FFF" />
+    <SolidColorBrush x:Key="TextSelectionBrush" Color="#808B6FFF" />
 
-    
+    <LinearGradientBrush x:Key="CtaBrush" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Offset="0" Color="#A18CFF" />
+        <GradientStop Offset="1" Color="#7C5CFF" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="CtaHoverBrush" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Offset="0" Color="#B09EFF" />
+        <GradientStop Offset="1" Color="#8B6FFF" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="CtaActiveBrush" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Offset="0" Color="#8B72E8" />
+        <GradientStop Offset="1" Color="#6949D9" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="SidebarActiveBrush" StartPoint="0,0" EndPoint="1,0">
+        <GradientStop Offset="0" Color="#3D8B6FFF" />
+        <GradientStop Offset="1" Color="#188B6FFF" />
+    </LinearGradientBrush>
+    <LinearGradientBrush x:Key="BrandBadgeBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Offset="0" Color="#A18CFF" />
+        <GradientStop Offset="1" Color="#6D4AFF" />
+    </LinearGradientBrush>
+    <RadialGradientBrush x:Key="BannerHaloBrush" GradientOrigin="0.5,0" Center="0.5,0" RadiusX="0.8" RadiusY="1.2">
+        <GradientStop Offset="0.0" Color="#408B6FFF" />
+        <GradientStop Offset="0.6" Color="#008B6FFF" />
+    </RadialGradientBrush>
+
+    <!-- Danger surfaces -->
+    <SolidColorBrush x:Key="DangerBgBrush" Color="#3A1A22" />
+    <SolidColorBrush x:Key="DangerHoverBgBrush" Color="#4D232D" />
+    <SolidColorBrush x:Key="DangerActiveBgBrush" Color="#5B2835" />
+
+    <!-- Overlays / effects -->
     <SolidColorBrush x:Key="OverlayBackdropBrush" Color="#A60F0E1A" />
+    <Color x:Key="ShadowColor">#000000</Color>
+    <Color x:Key="AccentShadowColor">#8B6FFF</Color>
 
 </ResourceDictionary>

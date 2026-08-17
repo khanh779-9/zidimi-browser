@@ -1,83 +1,90 @@
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Windows.Controls;
+using System.Windows;
 using Zidimi.Browser.Controls;
-using Zidimi.Browser.Infrastructure;
-using Zidimi.Browser.Models;
 using Zidimi.Browser.Views;
 
 namespace Zidimi.Browser;
 
 public partial class MainWindow : ZidimiWindow
 {
-    private readonly MainViewModel _vm;
-    private readonly Dictionary<PageId, UserControl> _pages = new();
+    private BrowserView? _browserView;
+    private bool _browserHostAttached;
 
     public MainWindow()
     {
-InitializeComponent();
-        _vm = App.ViewModel;
-        DataContext = _vm;
-
-        _vm.PropertyChanged += OnVmPropertyChanged;
-
-        SwitchPage(_vm.ActivePage);
-
-        // Apply the default FontSize from AppSettings to the whole UI at startup.
-        UpdateAppFontSize();
-
-        Closing += OnMainWindowClosing;
-    }
-
-    private void UpdateAppFontSize()
-    {
+        InitializeComponent();
+        DataContext = App.ViewModel;
         FontSize = 14;
     }
 
-    private void OnMainWindowClosing(object? sender, CancelEventArgs e)
+    public bool HasBrowserHost => _browserHostAttached && _browserView != null;
+
+    public void SetStartupStatus(string status, string? detail = null)
     {
-// "RunInBackground": hide the window instead of exiting so CEF keeps running in the background,
-        // and show the system tray icon so the user can reopen it or quit completely.
-        if (Models.AppSettings.Global.RunInBackground)
+        if (!Dispatcher.CheckAccess())
         {
-            e.Cancel = true;
-            Hide();
-            App.TrayIcon?.Show();
+            _ = Dispatcher.BeginInvoke(() => SetStartupStatus(status, detail));
+            return;
         }
+
+        StartupLayer.Visibility = Visibility.Visible;
+        BrowserLayer.Visibility = Visibility.Collapsed;
+        TheTabStrip.Visibility = Visibility.Collapsed;
+        StartupStatusText.Text = status;
+        StartupDetailText.Text = detail ?? string.Empty;
+        StartupProgressBar.IsIndeterminate = true;
     }
 
-private void OnVmPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    public void SetStartupReady(string status)
     {
-        if (e.PropertyName == nameof(MainViewModel.ActivePage) || string.IsNullOrEmpty(e.PropertyName))
-            SwitchPage(_vm.ActivePage);
+        if (!Dispatcher.CheckAccess())
+        {
+            _ = Dispatcher.BeginInvoke(() => SetStartupReady(status));
+            return;
+        }
+
+        StartupStatusText.Text = status;
+        StartupProgressBar.IsIndeterminate = false;
+        StartupProgressBar.Minimum = 0;
+        StartupProgressBar.Maximum = 1;
+        StartupProgressBar.Value = 1;
     }
 
-    private void SwitchPage(PageId id)
+    /// <summary>
+    /// Switches from the startup layer to the browser layer and only then constructs BrowserView.
+    /// HwndHost is therefore never created underneath a WPF loading overlay (WPF airspace would
+    /// allow the native child HWND to paint above that overlay).
+    /// </summary>
+    public void AttachBrowserHost()
     {
-        PageHost.Content = GetPage(id);
-    }
+        if (!Dispatcher.CheckAccess())
+        {
+            Dispatcher.Invoke(AttachBrowserHost);
+            return;
+        }
 
-    /// <summary>Get the page lazily on demand — avoids creating BrowserView (and dragging along the loading of
-    /// CefSharp/native CEF) right when the window opens, so the window appears quickly.</summary>
-    private UserControl GetPage(PageId id)
-    {
-        _pages.TryGetValue(id, out var page);
-        return page ??= CreatePage(id);
-    }
+        StartupLayer.Visibility = Visibility.Collapsed;
+        BrowserLayer.Visibility = Visibility.Visible;
+        TheTabStrip.Visibility = Visibility.Visible;
 
-    private static UserControl CreatePage(PageId id) => id switch
-    {
-        PageId.Browser => new BrowserView(),
-        PageId.History => new HistoryView(),
-        PageId.Bookmarks => new BookmarksView(),
-        PageId.Preferences => new PreferencesView(),
-        PageId.Downloads => new DownloadsView(),
-        _ => new UserControl(),
-    };
+        if (_browserHostAttached) return;
+
+        _browserView = new BrowserView();
+        PageHost.Content = _browserView;
+        _browserHostAttached = true;
+    }
 
     public void OpenTabSearch()
     {
         TheTabStrip?.OpenTabSearch();
     }
-}
 
+    internal void DisposeBrowserHost()
+    {
+        if (_browserView == null) return;
+
+        _browserView.Dispose();
+        PageHost.Content = null;
+        _browserView = null;
+        _browserHostAttached = false;
+    }
+}

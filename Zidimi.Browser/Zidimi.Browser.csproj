@@ -1,15 +1,15 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
-<OutputType>WinExe</OutputType>
+    <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
-<Version>1.7.0</Version>
+    <Version>1.7.0</Version>
     <AssemblyVersion>1.7.0.0</AssemblyVersion>
     <FileVersion>1.7.0.0</FileVersion>
     <InformationalVersion>1.7.0</InformationalVersion>
     <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
+    <ImplicitUsings>disable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>Zidimi.Browser</RootNamespace>
     <AssemblyName>Zidimi.Browser</AssemblyName>
     <!-- Khóa toàn bộ ứng dụng ở nền tảng x86 (32-bit). -->
@@ -23,31 +23,44 @@
     <ApplicationIcon>zidimi-icon.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
-
   <ItemGroup>
     <Content Include="zidimi-icon.ico">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-
   <ItemGroup>
     <PackageReference Include="CefSharp.Wpf.NETCore" Version="150.0.110" />
     <!-- Chrome-runtime/HWND host: required for real Chromium extension support. -->
     <PackageReference Include="CefSharp.Wpf.HwndHost" Version="150.0.110" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.11" />
-    <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.142" />
   </ItemGroup>
-
-  <!-- NotifyIcon (system tray) dùng WinForms nhưng không bật UseWindowsForms global
-       để tránh xung đột tên type giữa WPF và WinForms. -->
+  <!-- Upgrade guard: these files belonged to the retired native/manual-settings path.
+       SDK-style projects include every *.cs/*.xaml automatically, so a user who extracts a
+       newer source archive over an older folder could otherwise compile stale dead files. -->
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.WindowsDesktop.App.WindowsForms" />
+    <Compile Remove="Infrastructure\ChromiumNativeSettingsStore.cs" />
+    <Compile Remove="Infrastructure\CefGlobalPreferenceManager.cs" />
+    <Compile Remove="Infrastructure\Handlers\NativeSettingsBrowserProcessHandler.cs" />
+    <Compile Remove="Infrastructure\Handlers\SchemeHandlerFactory.cs" />
+    <Compile Remove="Infrastructure\NativePopupStyler.cs" />
+    <Compile Remove="Models\AutofillManager.cs" />
+    <Compile Remove="Views\DataManagerWindow.xaml.cs" />
+    <Page Remove="Views\DataManagerWindow.xaml" />
+    <Compile Remove="Infrastructure\CefShellStateStore.cs" />
+    <Compile Remove="Infrastructure\AtomicFile.cs" />
+    <Compile Remove="Infrastructure\TrayIconManager.cs" />
+    <Compile Remove="Views\ClearDataWindow.xaml.cs" />
+    <Page Remove="Views\ClearDataWindow.xaml" />
+    <Compile Remove="Views\ExtensionsView.xaml.cs" />
+    <Page Remove="Views\ExtensionsView.xaml" />
+    <Compile Remove="Views\HistoryView.xaml.cs" />
+    <Page Remove="Views\HistoryView.xaml" />
+    <Compile Remove="Views\BookmarksView.xaml.cs" />
+    <Page Remove="Views\BookmarksView.xaml" />
+    <Compile Remove="Views\DownloadsView.xaml.cs" />
+    <Page Remove="Views\DownloadsView.xaml" />
+    <Compile Remove="Views\LoginWindow.xaml.cs" />
+    <Page Remove="Views\LoginWindow.xaml" />
+    <Page Remove="Themes\ClassicTheme.xaml" />
   </ItemGroup>
-
-  <ItemGroup>
-    <None Update="language\*.lng">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
-  </ItemGroup>
-
 </Project>

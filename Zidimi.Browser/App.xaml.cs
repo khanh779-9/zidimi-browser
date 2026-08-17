@@ -1,9 +1,10 @@
-using System.IO;
+using System.Diagnostics;
 using System.Windows;
 using CefSharp;
 using CefSharp.Wpf;
 using Zidimi.Browser.Controls;
 using Zidimi.Browser.Infrastructure;
+using Zidimi.Browser.Infrastructure.Handlers;
 using Zidimi.Browser.Models;
 
 namespace Zidimi.Browser;
@@ -12,30 +13,35 @@ public partial class App : Application
 {
     public static MainViewModel ViewModel { get; private set; } = null!;
     public static RequestContextFactory RequestContexts { get; private set; } = null!;
-    public static TrayIconManager? TrayIcon { get; private set; }
 
-    /// <summary>true once CEF has finished initializing — no ChromiumWebBrowser may be created before that.</summary>
     public static bool CefReady { get; private set; }
     public static event Action? CefReadyChanged;
+
+    /// <summary>
+    /// True only when the real browser window already exists. ViewModel is intentionally created
+    /// before CEF/profile selection, so ViewModel != null must never be used as a proxy for this.
+    /// </summary>
+    public bool HasLiveBrowserWindow
+        => _browserInitialized && _shellWindow is { IsLoaded: true, HasBrowserHost: true };
 
     private static readonly System.Threading.Mutex SingleInstanceMutex =
         new(false, @"Local\Zidimi.Browser.SingleInstance");
 
-    public static bool ShowPickerOnStartupPreference { get; set; } = true;
-
+    private readonly Stopwatch _startupClock = Stopwatch.StartNew();
+    private bool _browserServicesReady;
     private bool _browserInitialized;
+    private bool _cefBootstrapStarted;
+    private Zidimi.Browser.MainWindow? _shellWindow;
 
     protected override void OnStartup(StartupEventArgs e)
     {
         AppLogger.Init();
-        AppSettings.Load();
-        UserDataPaths.RegisterProfiles(AppSettings.Global.Profiles);
-        ThemeManager.EnsureLoaded();
+        AppSettings.InitializeDefaults();
+        _ = LanguageManager.Instance;
         ThemeManager.ApplyFromSettings(AppSettings.Profile.Theme);
 
         if (!SingleInstanceMutex.WaitOne(0, false))
         {
-            // A Zidimi.Browser instance is already running — CEF doesn't allow two instances to share cache.
             ZidimiMessageBox.Show(LanguageManager.Instance["App_AlreadyRunning"],
                 "Zidimi Browser", ZidimiMessageBoxButton.OK, ZidimiMessageBoxImage.Information);
             Shutdown();
@@ -44,119 +50,215 @@ public partial class App : Application
 
         DispatcherUnhandledException += OnUnhandled;
         AppDomain.CurrentDomain.UnhandledException += OnDomainException;
-        var dummy = LanguageManager.Instance; // Initialize LanguageManager
-
         base.OnStartup(e);
 
-        bool showPicker = true;
-        try
-        {
-            if (File.Exists(UserDataPaths.LocalStatePath))
-            {
-                var json = File.ReadAllText(UserDataPaths.LocalStatePath);
-                if (System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.Nodes.JsonNode>(json) is System.Text.Json.Nodes.JsonObject root &&
-                    root.TryGetPropertyValue("profile", out var profileNode) &&
-                    profileNode is System.Text.Json.Nodes.JsonObject profileObj &&
-                    profileObj.TryGetPropertyValue("show_picker_on_startup", out var showPickerNode) && showPickerNode != null)
-                {
-                    showPicker = showPickerNode.GetValue<bool>();
-                }
-            }
-        }
-        catch { }
-
-        ShowPickerOnStartupPreference = showPicker;
-
-        if (showPicker)
-        {
-            var picker = new Zidimi.Browser.Views.ProfileSelectorWindow();
-            picker.Show();
-        }
-        else
-        {
-            InitializeBrowser();
-        }
+        EnsureBrowserServices();
+        ShowStartupShell(LanguageManager.Instance["Startup_Preparing"]);
+        StartCefBootstrap();
     }
 
+    private void EnsureBrowserServices()
+    {
+        if (_browserServicesReady) return;
+        _browserServicesReady = true;
+
+        var history = new HistoryService();
+        var bookmarks = new BookmarkService();
+        var downloads = new DownloadService();
+        RequestContexts = new RequestContextFactory();
+        ViewModel = new MainViewModel(history, bookmarks, downloads);
+        AppLogger.Log("Startup", $"Browser services ready at {_startupClock.ElapsedMilliseconds} ms.");
+    }
+
+    private void StartCefBootstrap()
+    {
+        if (_cefBootstrapStarted) return;
+        _cefBootstrapStarted = true;
+        Dispatcher.BeginInvoke(InitializeCefAfterStart,
+            System.Windows.Threading.DispatcherPriority.Background);
+    }
+
+    /// <summary>
+    /// Called after profile selection (or by defensive legacy callers). CEF is initialized first so
+    /// every settings decision is based on CEF GetPreference rather than a JSON snapshot.
+    /// </summary>
     public void InitializeBrowser()
     {
+        EnsureBrowserServices();
+        if (!CefReady)
+        {
+            ShowStartupShell(LanguageManager.Instance["Startup_Chromium"]);
+            StartCefBootstrap();
+            return;
+        }
+
         if (_browserInitialized)
         {
-            if (MainWindow is { IsLoaded: true } window)
+            if (MainWindow is Zidimi.Browser.MainWindow { IsLoaded: true } window)
             {
                 if (!window.IsVisible) window.Show();
-                window.Activate();
+                if (window.Opacity > 0.99) window.Activate();
             }
             return;
         }
 
         _browserInitialized = true;
-        try
-        {
-            var history = new HistoryService();
-            var bookmarks = new BookmarkService();
-            var downloads = new DownloadService();
-            RequestContexts = new RequestContextFactory();
-            ViewModel = new MainViewModel(history, bookmarks, downloads);
-
-            TrayIcon = new TrayIconManager();
-
-            var mainWindow = new MainWindow();
-            Application.Current.MainWindow = mainWindow;
-            mainWindow.Show();
-            AppLogger.Log("Lifecycle", "Main window shown.");
-
-            Dispatcher.BeginInvoke(InitializeCefAfterStart,
-                System.Windows.Threading.DispatcherPriority.ApplicationIdle);
-        }
-        catch
-        {
-            _browserInitialized = false;
-            throw;
-        }
+        ShowStartupShell(LanguageManager.Instance["Startup_Browser"], AppSettings.Profile.DisplayName);
+        _ = CreateAndRevealMainWindowObservedAsync();
     }
 
-    private static void InitializeCefAfterStart()
+    private async Task CreateAndRevealMainWindowObservedAsync()
     {
         try
         {
-            InitializeCef();
-            CefReady = true;
-            AppLogger.Log("Lifecycle",
-                $"CEF initialized. CefSharp={Cef.CefSharpVersion}, Chromium={Cef.ChromiumVersion}.");
+            await ViewModel.InitializeProfileDataAsync();
+            await CreateAndRevealMainWindowAsync();
+        }
+        catch (Exception ex)
+        {
+            _browserInitialized = false;
+            AppLogger.Log("Startup", ex, "Creating main browser window.");
+            _shellWindow?.SetStartupStatus(LanguageManager.Instance["Startup_Failed"], ex.Message);
+            ZidimiMessageBox.Show(ex.Message, "Zidimi Browser", ZidimiMessageBoxButton.OK,
+                ZidimiMessageBoxImage.Error, _shellWindow);
+        }
+    }
 
-            try
-            {
-                bool showPicker = true;
-                if (File.Exists(UserDataPaths.LocalStatePath))
-                {
-                    var json = File.ReadAllText(UserDataPaths.LocalStatePath);
-                    if (System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.Nodes.JsonNode>(json) is System.Text.Json.Nodes.JsonObject root &&
-                        root.TryGetPropertyValue("profile", out var profileNode) &&
-                        profileNode is System.Text.Json.Nodes.JsonObject profileObj &&
-                        profileObj.TryGetPropertyValue("show_picker_on_startup", out var showPickerNode) && showPickerNode != null)
-                    {
-                        showPicker = showPickerNode.GetValue<bool>();
-                    }
-                }
-                var ctx = RequestContexts?.GetProfileContext(AppSettings.Global.CurrentProfile) ?? Cef.GetGlobalRequestContext();
-                ctx?.SetPreferenceSafe("profile.show_picker_on_startup", showPicker);
-            }
-            catch { }
+    private Zidimi.Browser.MainWindow EnsureStartupShell()
+    {
+        if (_shellWindow != null)
+            return _shellWindow;
+
+        _shellWindow = new Zidimi.Browser.MainWindow
+        {
+            WindowStartupLocation = WindowStartupLocation.CenterScreen
+        };
+        return _shellWindow;
+    }
+
+    private void ShowStartupShell(string status, string? detail = null)
+    {
+        var shell = EnsureStartupShell();
+        shell.SetStartupStatus(status, detail);
+        MainWindow = shell;
+
+        if (!shell.IsVisible)
+            shell.Show();
+        shell.Activate();
+    }
+
+    private async void InitializeCefAfterStart()
+    {
+        try
+        {
+            _shellWindow?.SetStartupStatus(LanguageManager.Instance["Startup_Extensions"]);
+            _shellWindow?.SetStartupStatus(LanguageManager.Instance["Startup_Chromium"]);
+
+            var processHandler = InitializeCef();
+            var contextSignal = await Task.WhenAny(processHandler.ContextReady, Task.Delay(TimeSpan.FromSeconds(10)));
+            if (!ReferenceEquals(contextSignal, processHandler.ContextReady))
+                throw new TimeoutException("CEF global RequestContext initialization timed out.");
+
+            CefReady = true;
+            await AppSettings.LoadFromCefAsync();
+
+            // Apply the values that CEF just read. This path deliberately does not write them back.
+            LanguageManager.Instance.ApplyFromSettings(AppSettings.Global.DisplayLanguage);
+            ThemeManager.ApplyFromSettings(AppSettings.Profile.Theme);
+
+            AppLogger.Log("Startup",
+                $"CEF settings loaded at {_startupClock.ElapsedMilliseconds} ms. " +
+                $"Profile={AppSettings.Global.CurrentProfile}; picker={AppSettings.Global.ShowProfilePickerOnStartup}; " +
+                $"CefSharp={Cef.CefSharpVersion}; Chromium={Cef.ChromiumVersion}.");
 
             CefReadyChanged?.Invoke();
+
+            if (AppSettings.Global.ShowProfilePickerOnStartup)
+            {
+                // The integrated Zidimi shell contains no BrowserView/HwndHost yet. Show the picker
+                // first, then hide the shell so WPF always has a live top-level window.
+                var picker = new Zidimi.Browser.Views.ProfileSelectorWindow();
+                picker.Closed += (_, _) =>
+                {
+                    // Closing the startup picker without choosing a profile must not leave a
+                    // hidden bootstrap shell/process running forever.
+                    if (!_browserInitialized && _shellWindow is { IsVisible: false })
+                        Shutdown();
+                };
+                MainWindow = picker;
+                picker.Show();
+                _shellWindow?.Hide();
+                picker.Activate();
+                AppLogger.Log("Startup", $"Profile selector shown at {_startupClock.ElapsedMilliseconds} ms.");
+                return;
+            }
+
+            InitializeBrowser();
         }
         catch (Exception ex)
         {
             AppLogger.Log("CefInit", ex);
-            throw;
+            _shellWindow?.SetStartupStatus(LanguageManager.Instance["Startup_Failed"], ex.Message);
+            ZidimiMessageBox.Show(ex.Message, "Zidimi Browser", ZidimiMessageBoxButton.OK,
+                ZidimiMessageBoxImage.Error, _shellWindow);
+            Shutdown(-1);
         }
+    }
+
+    private async Task CreateAndRevealMainWindowAsync()
+    {
+        var mainWindow = EnsureStartupShell();
+        MainWindow = mainWindow;
+
+        if (!mainWindow.IsVisible)
+            mainWindow.Show();
+
+        mainWindow.SetStartupStatus(
+            LanguageManager.Instance["Startup_Browser"],
+            AppSettings.Profile.DisplayName);
+        mainWindow.Activate();
+
+        // Give the integrated startup card one final paint turn, then remove it BEFORE creating
+        // BrowserView/HwndHost. This avoids WPF airspace leaks while keeping the whole bootstrap
+        // inside one stable Zidimi top-level window.
+        mainWindow.SetStartupReady(LanguageManager.Instance["Startup_Ready"]);
+        await Task.Delay(90);
+        mainWindow.AttachBrowserHost();
+        mainWindow.Activate();
+
+        AppLogger.Log("Startup", $"Integrated main-window startup completed at {_startupClock.ElapsedMilliseconds} ms.");
     }
 
     protected override void OnExit(ExitEventArgs e)
     {
+        // Hand the final in-memory settings snapshot to CEF, then drain the serialized preference
+        // queue while RequestContexts and the CEF UI thread are still alive. This closes the old
+        // shutdown race without ever patching Local State/Preferences behind Chromium's back.
+        try
+        {
+            if (Cef.IsInitialized == true && CefReady)
+            {
+                AppSettings.SaveAll();
+                var drained = AppSettings.DrainPendingCefWrites(TimeSpan.FromSeconds(4));
+                AppLogger.Log("Lifecycle", $"CEF preference queue drained={drained} before shutdown.");
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Log("Lifecycle", ex, "Saving/draining native settings before Chromium shutdown.");
+        }
+
+        // Dispose native tab HWND/browser instances first, then profile RequestContexts, and only
+        // then shut down CEF. This mirrors Chromium ownership and prevents a closed tab/profile from
+        // keeping renderer, LevelDB or SQLite handles alive after the window is gone.
+        try { _shellWindow?.DisposeBrowserHost(); }
+        catch (Exception ex) { AppLogger.Log("Lifecycle", ex, "Disposing browser host."); }
+
+        try { ViewModel?.Dispose(); }
+        catch (Exception ex) { AppLogger.Log("Lifecycle", ex, "Disposing app data services."); }
+
+        try { ChromiumTopLevelTargetRouter.Instance.Dispose(); } catch { }
         RequestContexts?.Dispose();
-        TrayIcon?.Dispose();
 
         if (Cef.IsInitialized == true)
         {
@@ -164,43 +266,34 @@ public partial class App : Application
             {
                 Cef.Shutdown();
             }
-            catch { }
+            catch (Exception ex)
+            {
+                AppLogger.Log("Lifecycle", ex, "CEF shutdown failed.");
+            }
         }
 
-        // Save all session tabs, app settings, and Local State metadata strictly AFTER CEF shuts down,
-        // so CEF's file locks and exit flushes can never overwrite or corrupt any data.
-        try
-        {
-            ViewModel?.SaveSession();
-            AppSettings.SaveAll();
-            UserDataPaths.SaveLocalStateOnExit();
-        }
-        catch { }
+        // Cef.Shutdown is the single persistence boundary. No post-shutdown JSON patching is
+        // performed, so a stale shell snapshot cannot overwrite newer Chromium/extension state.
 
-        try
-        {
-            AppLogger.Log("Lifecycle", $"Exiting with {ViewModel?.Tabs.Count ?? 0} tab(s).");
-        }
-        catch { }
+        AppLogger.Log("Lifecycle", $"Exiting with {ViewModel?.Tabs.Count ?? 0} tab(s).");
         AppLogger.MarkCleanExit();
 
         base.OnExit(e);
     }
 
-    private static void InitializeCef()
+    private static CefBootstrapBrowserProcessHandler InitializeCef()
     {
-        // CefSharp must be initialized before using any ChromiumWebBrowser control.
-        // All CEF tuning (GPU, proxy, stability switches, locale, DevTools, ...) is
-        // centralized in CefConfigurator and driven by GlobalSettings.
         var settings = CefConfigurator.BuildSettings();
+        var dependencyCheckSetting = Environment.GetEnvironmentVariable("ZIDIMI_CEF_DEPENDENCY_CHECK");
+        var performDependencyCheck = string.Equals(dependencyCheckSetting, "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(dependencyCheckSetting, "true", StringComparison.OrdinalIgnoreCase);
 
-        // Profile-specific settings like cookies and Do-Not-Track are managed dynamically
-        // via CefSharp RequestContext preferences in PreferencesView.xaml.cs.
-
-        var ok = Cef.Initialize(settings, performDependencyCheck: true, browserProcessHandler: null);
+        var handler = new CefBootstrapBrowserProcessHandler();
+        var ok = Cef.Initialize(settings, performDependencyCheck, handler);
         if (!ok)
             throw new InvalidOperationException(
-                "Cef.Initialize trả về false — kiểm tra log CEF (debug.log) và các subprocess CefSharp.BrowserSubprocess còn sót.");
+                "Cef.Initialize trả về false — kiểm tra log CEF và các subprocess CefSharp.BrowserSubprocess còn sót.");
+        return handler;
     }
 
     private void OnUnhandled(object sender, System.Windows.Threading.DispatcherUnhandledExceptionEventArgs e)

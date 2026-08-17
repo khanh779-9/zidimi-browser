@@ -99,7 +99,7 @@ public sealed partial class ZidimiMessageBox : Window
         };
 
         BodyIcon.Data = Geometry.Parse(geometry);
-        BodyIcon.Stroke = (Brush)Application.Current.FindResource(stroke);
+        BodyIcon.SetResourceReference(System.Windows.Shapes.Shape.StrokeProperty, stroke);
         if (image == ZidimiMessageBoxImage.None)
         {
             BodyIcon.Visibility = Visibility.Collapsed;

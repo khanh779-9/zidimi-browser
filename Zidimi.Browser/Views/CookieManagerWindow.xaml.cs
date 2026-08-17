@@ -40,8 +40,9 @@ namespace Zidimi.Browser.Views
                           ?? Cef.GetGlobalRequestContext();
                 _manager = ctx.GetCookieManager(null);
             }
-            catch
+            catch (Exception ex)
             {
+                AppLogger.Log("Cookies", ex, "Getting the profile cookie manager.");
                 _manager = null;
             }
 
@@ -57,14 +58,9 @@ namespace Zidimi.Browser.Views
                 return;
             }
 
-            var baseHost = "";
-            try
-            {
-                var uri = new Uri(_url);
-                baseHost = uri.Host;
-                if (uri.Scheme != "https" && uri.Scheme != "http") baseHost = uri.Host;
-            }
-            catch { }
+            var baseHost = Uri.TryCreate(_url, UriKind.Absolute, out var pageUri)
+                ? pageUri.Host
+                : string.Empty;
 
             // Get cookies for the current URL (host cookies) plus all of them to filter by domain.
             var items = new List<CookieItem>();
@@ -79,7 +75,10 @@ namespace Zidimi.Browser.Views
                         items.Add(ToItem(c));
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                AppLogger.Log("Cookies", ex, $"Visiting cookies for '{_url}'.");
+            }
 
             // fallback: list all cookies if URL filtering is not available
             if (items.Count == 0 && !string.IsNullOrEmpty(baseHost))
@@ -90,11 +89,14 @@ namespace Zidimi.Browser.Views
                     _manager.VisitAllCookies(allVisitor);
                     var all = await allVisitor.Task;
                     items = all
-                        .Where(c => (c.Domain ?? "").Contains(baseHost, StringComparison.OrdinalIgnoreCase))
+                        .Where(c => DomainMatchesHost(c.Domain ?? string.Empty, baseHost))
                         .Select(ToItem)
                         .ToList();
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    AppLogger.Log("Cookies", ex, "Visiting all cookies as fallback.");
+                }
             }
 
             _items = items.OrderBy(i => i.Domain).ThenBy(i => i.Name).ToList();
@@ -124,12 +126,33 @@ namespace Zidimi.Browser.Views
             {
                 try
                 {
-                    await _manager.DeleteCookiesAsync(null, item.Name);
+                    var cookieUrl = BuildCookieUrl(item);
+                    await _manager.DeleteCookiesAsync(cookieUrl, item.Name);
                 }
-                catch { }
+                catch (Exception ex)
+                {
+                    AppLogger.Log("Cookies", ex, $"Deleting cookie '{item.Name}' for '{item.Domain}'.");
+                }
             }
 
             await LoadCookies();
+        }
+
+
+        private static bool DomainMatchesHost(string domain, string host)
+        {
+            domain = domain.Trim().TrimStart('.');
+            host = host.Trim().TrimEnd('.');
+            return host.Equals(domain, StringComparison.OrdinalIgnoreCase) ||
+                   host.EndsWith("." + domain, StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static string BuildCookieUrl(CookieItem item)
+        {
+            var host = item.Domain.Trim().TrimStart('.');
+            var path = string.IsNullOrWhiteSpace(item.Path) ? "/" : item.Path;
+            if (!path.StartsWith('/')) path = "/" + path;
+            return $"{(item.Secure ? "https" : "http")}://{host}{path}";
         }
 
         private void Close_Click(object sender, RoutedEventArgs e) => Close();
